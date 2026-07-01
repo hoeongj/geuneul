@@ -49,7 +49,7 @@ resource "aws_route_table_association" "public" {
 # --- 보안 그룹 (ALB → ECS → RDS 로 계단식 잠금) ---
 resource "aws_security_group" "alb" {
   name        = "${var.project}-alb-sg"
-  description = "ALB: 인터넷에서 HTTP만"
+  description = "ALB: HTTP from internet only" # SG description은 ASCII만 허용(한글 불가)
   vpc_id      = aws_vpc.main.id
   ingress {
     description = "HTTP from anywhere"
@@ -69,7 +69,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs" {
   name        = "${var.project}-ecs-sg"
-  description = "ECS 태스크: ALB에서 8080만 인바운드"
+  description = "ECS tasks: inbound 8080 from ALB only"
   vpc_id      = aws_vpc.main.id
   ingress {
     description     = "App port from ALB only"
@@ -89,7 +89,7 @@ resource "aws_security_group" "ecs" {
 
 resource "aws_security_group" "rds" {
   name        = "${var.project}-rds-sg"
-  description = "RDS: ECS 태스크에서 5432만"
+  description = "RDS: inbound 5432 from ECS tasks only"
   vpc_id      = aws_vpc.main.id
   ingress {
     description     = "Postgres from ECS tasks only"
