@@ -1,0 +1,35 @@
+# === 비밀/개인정보 (절대 커밋 금지) ===
+.local/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# === Java / Gradle (Spring Boot) ===
+.gradle/
+build/
+out/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+
+# === IntelliJ ===
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# === Node / Next.js (프론트) ===
+node_modules/
+.next/
+.turbo/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# === OS / 기타 ===
+.DS_Store
+*.log

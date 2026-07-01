@@ -1,0 +1,121 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    id 'org.springframework.boot' version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.geuneul'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        // Spring Boot 4 플랫폼은 standalone testcontainers 아티팩트 버전을 관리하지 않음
+        // → BOM으로 고정(com.redis:testcontainers-redis:2.2.2가 빌드된 1.20.x 라인). (mp와 동일)
+        mavenBom 'org.testcontainers:testcontainers-bom:1.20.6'
+    }
+}
+
+// --- 보안 권고 오버라이드 (mp 하드닝과 정렬) ---
+// Tomcat 11.0.21 -> 11.0.22, pgjdbc 42.7.10 -> 42.7.11 (SCRAM CPU 고갈 GHSA-98qh-xjc8-98pq).
+ext['tomcat.version'] = '11.0.22'
+ext['postgresql.version'] = '42.7.11'
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    // PostGIS 공간 매핑: Hibernate Spatial (JTS geometry <-> PostGIS geometry). JTS는 전이 의존.
+    // Boot BOM이 hibernate 버전을 관리하므로 버전 명시 불필요.
+    implementation 'org.hibernate.orm:hibernate-spatial'
+
+    // Flyway = 스키마의 단일 진실원천 (JPA ddl-auto=validate). Boot 4는 flyway 통합이 별도 모듈.
+    implementation 'org.springframework.boot:spring-boot-flyway'
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    implementation 'org.postgresql:postgresql'
+
+    // API 문서 (Swagger UI)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // 프로덕션 동등 백킹서비스(PostGIS/Redis)로 통합테스트 — H2가 놓치는 dialect/타입 drift 포착.
+    // Docker 없으면 자동 skip(disabledWithoutDocker) → 로컬 오프라인 `./gradlew test`도 green.
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'com.redis:testcontainers-redis:2.2.2'   // Boot BOM 미관리 -> 위 BOM으로 고정
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += '-parameters'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    systemProperty 'spring.profiles.active', 'test'
+    finalizedBy 'jacocoTestReport'
+}
+
+// --- 커버리지 측정 + 회귀 ratchet (mp 철학과 동일) ---
+// W0은 로직이 거의 없어 floor=0.00. 도메인 로직이 붙기 시작하면 측정치 바로 아래로 올려 회귀만 차단.
+jacoco {
+    toolVersion = '0.8.13'
+}
+
+def jacocoExcludes = [
+        '**/*Config*',
+        '**/dto/**',
+        '**/*Application*'
+]
+
+tasks.named('jacocoTestReport') {
+    dependsOn tasks.named('test')
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('test')
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.00
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    def applyExcludes = { jacocoTask ->
+        jacocoTask.classDirectories.setFrom(files(jacocoTask.classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludes)
+        }))
+    }
+    applyExcludes(tasks.named('jacocoTestReport').get())
+    applyExcludes(tasks.named('jacocoTestCoverageVerification').get())
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
