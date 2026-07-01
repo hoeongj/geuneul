@@ -154,8 +154,10 @@ report_freshness_score:
 - **Auth**: **카카오/구글 소셜 로그인(OAuth2) + JWT 세션**
 - **Map**: Kakao Maps (국내 POI/UX)
 - **AI**: Claude API (장소 요약, 제보 분류, 상태 정규화) — 곁다리
-- **Infra (PaaS 경량)**: 백엔드 **Railway**(GitHub push→자동배포), DB **Supabase**(관리형 Postgres+PostGIS 내장), 프론트 **Vercel**. Docker Compose는 로컬 개발용. GitHub Actions CI(테스트 게이트).
-  - 이유: **mp가 이미 k3s+ArgoCD GitOps를 최고 수준으로 증명**했으므로 그늘에서 복제하지 않는다(중복·오버엔지니어링 신호 회피). PaaS는 (1)다른 배포 패러다임=breadth, (2)관리형 PostGIS로 단일노드 용량 리스크 제거, (3)에너지를 간판(지리공간 백엔드)에 집중. **진짜 새 DevOps 신호(오토스케일링/HPA)는 P4에서 k6 부하테스트와 함께 additive하게.**
+- **Infra (AWS — 회사 실사용 스택)**: **ECS Fargate**(관리형 컨테이너) + **RDS PostgreSQL(PostGIS)** + **Terraform(IaC)** + **GitHub Actions(OIDC로 키 없이 배포)** + **ECR** + ALB. 프론트는 Vercel. Docker Compose는 로컬 개발용.
+  - 이유(취업 기준): 국내 백엔드 JD가 실제로 요구하는 건 **AWS·컨테이너·IaC**(당근/배민=AWS, EKS/ECS/Terraform 우대). mp는 자가호스팅 k3s(관리형 클라우드 아님)+Terraform 없음 → **그늘이 AWS(ECS/RDS/Terraform)로 그 갭을 채워 상호보완**. PaaS(Railway/Supabase)는 회사 스택이 아니라 배제.
+  - 비용: 신규계정 $200 크레딧 + RDS 프리티어 + ECS control plane 무료. **EKS는 $73/월(프리 아님)이라 배제**(mp가 이미 k8s 증명). NAT 게이트웨이 없이 Fargate는 퍼블릭 서브넷(SG로 잠금)에서 비용 절감.
+  - **진짜 새 DevOps 심화(오토스케일링/HPA=ECS Service Auto Scaling)는 P4에서 k6 부하테스트와 함께 additive하게.**
 - **Test/Ops**: Testcontainers(PG16+PostGIS/Redis), JaCoCo, k6(부하테스트), OpenTelemetry/Grafana(관측성), gitleaks.
 
 ## 8. ERD 초안

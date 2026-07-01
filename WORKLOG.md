@@ -68,3 +68,16 @@
 - 트렌드 근거(웹검색): Railway Spring Boot 배포 가이드/무료티어, Fly.io 무료티어 폐지, Supabase vs Neon PostGIS 확장 비교(2026).
 - 관련: `CLAUDE.md`(§7 인프라·§10 P5 개정), 레포 `github.com/hoeongj/geuneul`, CI run 28539003609(success)
 - 다음 할 일: 배포 아티팩트(Dockerfile, DEPLOY.md, 프로파일) 준비 → 사용자가 Supabase/Railway 계정 연결 → skeleton 라이브 확인.
+
+### 2026-07-02 — CD 재재검토: PaaS → AWS(ECS Fargate + RDS + Terraform)로 최종 선회
+- 한 일: PaaS(Railway/Supabase) PR #1 닫고, **AWS 인프라를 Terraform으로 구축**(infra/terraform/*: VPC·RDS·ECS·ALB·ECR·IAM OIDC) + **GitHub Actions 배포 워크플로우(deploy.yml, OIDC)** + AWS용 DEPLOY.md. Redis 헬스체크 비활성(미프로비저닝 단계 ALB 헬스 방해 방지).
+- 결정 & 이유(why):
+  - **PaaS → AWS 선회 (사용자 지적 반영):** "회사가 실제 쓰는 걸 해야 취업에 유리". 국내 백엔드/DevOps JD가 요구하는 건 **AWS·컨테이너·IaC**(당근/배민=AWS, EKS/ECS/Terraform 우대). Railway/Supabase는 인디 툴이라 취업 신호 약함 → 배제. **교훈: 포트폴리오 기술선택 1순위 = 회사 실사용 스택.**
+  - **ECS Fargate 채택**(EKS 아님): control plane 무료 vs EKS $73/월(프리 아님) + mp가 이미 k8s 증명 → 돈 대비 새 신호는 ECS로 충분. 대안 EC2+Docker(더 저렴하나 오케스트레이션 신호 약함) 검토 후 Fargate 선택.
+  - **RDS PostgreSQL(PostGIS)**: 프리티어 db.t3.micro. PostGIS는 Flyway CREATE EXTENSION으로. RDS가 관리형이라 백업/가용성 확보.
+  - **Terraform(IaC) + GitHub Actions OIDC**: mp에 없던 축(IaC·키없는 배포) = 새 포트폴리오 신호. OIDC로 장기 액세스키 제거(2026 베스트프랙티스).
+  - **비용 절감 설계**: NAT 게이트웨이 없음(Fargate 퍼블릭 서브넷+SG 잠금), ECS containerInsights off, ECR 라이프사이클(10개), RDS 프리티어. 상시 비용은 ALB ~$16/월 → $200 크레딧으로 커버. mp의 "필요없는 것 안 쓰기" 성숙 신호와 정렬.
+  - **재사용:** PaaS 브랜치의 Dockerfile·application.yml(PORT/redis)은 AWS에도 그대로 유효 → 이어감.
+- 트렌드 근거(웹검색): AWS 프리티어 2026($200 크레딧, RDS 프리티어, ECS 무료/EKS $73), 국내 JD의 EKS/ECS/Terraform 우대.
+- 관련: `infra/terraform/*`, `.github/workflows/deploy.yml`, `DEPLOY.md`, `CLAUDE.md`(§7), 닫힌 PR #1
+- 다음 할 일: (검증) 사용자가 `terraform init/validate/plan`로 syntax 확인(로컬 terraform 미설치라 미검증) → AWS 계정 연결 → apply → skeleton 라이브. 이후 P1 백엔드 본론.

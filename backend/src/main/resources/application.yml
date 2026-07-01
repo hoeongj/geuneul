@@ -40,3 +40,6 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    redis:
+      enabled: false     # Redis 미프로비저닝 단계 — ALB 헬스체크(/actuator/health) 방해 방지. P3 캐시 도입 시 재활성화.
