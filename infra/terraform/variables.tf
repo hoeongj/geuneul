@@ -49,7 +49,7 @@ variable "task_cpu" {
 }
 
 variable "task_memory" {
-  description = "Fargate 메모리(MB)"
+  description = "Fargate 메모리(MB). Spring Boot+Hibernate+Flyway엔 512는 빠듯 → 1024 권장(cpu 256과 유효 조합)."
   type        = string
-  default     = "512"
+  default     = "1024"
 }

@@ -58,6 +58,9 @@ resource "aws_ecs_service" "app" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  # Spring Boot 부팅+Flyway 마이그레이션 동안 ALB 헬스체크 실패로 태스크가 죽지 않도록 유예.
+  health_check_grace_period_seconds = 120
+
   network_configuration {
     subnets          = aws_subnet.public[*].id
     security_groups  = [aws_security_group.ecs.id]
