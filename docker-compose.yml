@@ -1,0 +1,31 @@
+# 그늘 로컬 개발 인프라 (PostGIS + Redis). 프로덕션은 기존 k3s+ArgoCD 재사용.
+# 사용: `docker compose up -d` → 백엔드는 backend/에서 `./gradlew bootRun`.
+services:
+  postgres:
+    image: postgis/postgis:16-3.4        # 순정 postgres 아님 — PostGIS 확장 포함 이미지
+    environment:
+      POSTGRES_DB: geuneul
+      POSTGRES_USER: geuneul
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-geuneul}   # 로컬 기본값. 실제 비밀은 .env 로만.
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geuneul -d geuneul"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
