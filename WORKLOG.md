@@ -57,3 +57,14 @@
   - **JaCoCo floor 0.00(W0)** — 로직 전이라 시작점. 도메인 붙으면 측정치 바로 아래로 ratchet 상향.
 - 관련 파일: `backend/build.gradle`·`application.yml`·`db/migration/V1,V2`·`GeuneulApplicationTests.java`, `docker-compose.yml`, `.github/workflows/ci.yml`, `.env.example`
 - 다음 할 일: (a) W0 프론트 — Next.js(PWA)+Kakao Maps SDK, 또는 (b) P1 — 공공데이터 idempotent 인제스천 + 반경/kNN 검색 API + JPA 엔티티.
+
+### 2026-07-02 — CD 방향 재검토: mp GitOps 복제 대신 PaaS 경량 배포로 선회
+- 한 일: GitHub public 레포 생성(hoeongj/geuneul) + push → **CI 실제 GREEN**(GitHub 러너에서 PostGIS/Redis 통합테스트·Flyway·GiST까지 통과, 1m33s). 이후 배포(CD) 방식을 포트폴리오 기준으로 재검토.
+- 결정 & 이유(why):
+  - **mp의 k3s+ArgoCD+Helm GitOps를 그늘에 복제하지 않기로.** 판단 근거(기준 1순위=포트폴리오): mp가 이미 자가호스팅 k8s/GitOps를 최고 수준으로 증명 → 그늘이 동일 반복 시 **새 신호 0 + 솔로에 무거운 인프라 2벌 = 오버엔지니어링 신호**(mp의 "필요없는 Kafka 거부" 성숙 신호와 모순). 오히려 기준 1순위에 어긋남을 발견하고 방향 전환.
+  - **PaaS 경량 채택: 백엔드 Railway + DB Supabase(PostGIS) + 프론트 Vercel.** 대안 검토: (A)기존 k3s에 thin-add=인프라 일관성이나 단일노드(4OCPU/24GB) 용량 리스크+PostGIS 클러스터 구축 필요, (C)배포 보류. → PaaS가 (1)mp와 다른 배포 패러다임=**breadth**, (2)관리형 PostGIS로 용량 리스크 제거, (3)에너지를 간판(지리공간 백엔드)에 집중, (4)push→자동배포 즉시.
+  - **호스트 선택 근거(2026 웹검증):** Railway = GitHub push 자동감지·자동배포, 실질 무료 크레딧 유지. Fly.io = 2024 무료티어 폐지(CC 필수·트라이얼만) → 배제. Supabase = PostGIS 등 확장 기본 내장(Neon은 serverless라 일부 확장 제약) + pgrouting(향후 루트 기능) 보유 → Neon보다 우위.
+  - **진짜 새 DevOps 신호는 P4로 이연** — mp가 안 한 것(오토스케일링/HPA를 k6 부하테스트로 증명)이 additive. 지금 억지 배포 심화 대신, 부하 스토리와 함께 만들 때 가치.
+- 트렌드 근거(웹검색): Railway Spring Boot 배포 가이드/무료티어, Fly.io 무료티어 폐지, Supabase vs Neon PostGIS 확장 비교(2026).
+- 관련: `CLAUDE.md`(§7 인프라·§10 P5 개정), 레포 `github.com/hoeongj/geuneul`, CI run 28539003609(success)
+- 다음 할 일: 배포 아티팩트(Dockerfile, DEPLOY.md, 프로파일) 준비 → 사용자가 Supabase/Railway 계정 연결 → skeleton 라이브 확인.
