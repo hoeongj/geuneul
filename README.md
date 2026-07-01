@@ -17,4 +17,20 @@
 🟢 **Live** — [http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com](http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com/actuator/health) (AWS ECS Fargate + RDS PostGIS, `main` push 시 자동배포)
 
 - W0 완료(2026-07-02): Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + **AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인**
-- 다음: P1 지리 코어 — 공공데이터 idempotent 인제스천 + 반경/kNN 검색 API
+- P1 진행 중: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API + 무더위쉼터 idempotent 인제스천** — 의사결정은 [`docs/adr/`](./docs/adr) 참고
+
+## API 맛보기 (P1)
+```bash
+# 숭실대 정문 반경 1km — 가까운 순 + 거리(m)
+GET /places?lat=37.4963&lng=126.9575&radius=1000
+
+# 지도 뷰포트(bounds) 마커
+GET /places?bounds=126.93,37.49,126.97,37.52&category=TOILET
+
+# 가장 가까운 화장실 3곳 (kNN)
+GET /places/nearest?lat=37.4963&lng=126.9575&category=TOILET&limit=3
+```
+공공데이터 적재(멱등 — 재실행해도 중복 없음):
+```bash
+./gradlew bootRun --args='--ingest.source=cooling_shelter --ingest.file=/path/무더위쉼터.csv --ingest.charset=MS949'
+```
