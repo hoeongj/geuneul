@@ -1,0 +1,5 @@
+# 복사해서 `terraform.tfvars` 로 만들고 값 채우기. terraform.tfvars 는 gitignore됨(커밋 금지).
+# 또는 환경변수로: export TF_VAR_db_password='...'
+
+db_password = "CHANGE-ME-강한-비밀번호"
+# github_repo = "hoeongj/geuneul"   # 기본값과 같으면 생략 가능

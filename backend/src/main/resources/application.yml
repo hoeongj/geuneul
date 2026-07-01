@@ -1,3 +1,6 @@
+server:
+  port: ${PORT:8080}          # Railway 등 PaaS는 $PORT를 주입한다. 로컬 기본 8080.
+
 spring:
   application:
     name: geuneul
@@ -20,6 +23,9 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}     # 로컬은 빈값, PaaS Redis는 주입
+      ssl:
+        enabled: ${REDIS_SSL:false}    # Upstash 등 TLS Redis면 true
 
 springdoc:
   swagger-ui:
@@ -34,3 +40,6 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    redis:
+      enabled: false     # Redis 미프로비저닝 단계 — ALB 헬스체크(/actuator/health) 방해 방지. P3 캐시 도입 시 재활성화.
