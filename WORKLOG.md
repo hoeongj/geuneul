@@ -81,3 +81,17 @@
 - 트렌드 근거(웹검색): AWS 프리티어 2026($200 크레딧, RDS 프리티어, ECS 무료/EKS $73), 국내 JD의 EKS/ECS/Terraform 우대.
 - 관련: `infra/terraform/*`, `.github/workflows/deploy.yml`, `DEPLOY.md`, `CLAUDE.md`(§7), 닫힌 PR #1
 - 다음 할 일: (검증) 사용자가 `terraform init/validate/plan`로 syntax 확인(로컬 terraform 미설치라 미검증) → AWS 계정 연결 → apply → skeleton 라이브. 이후 P1 백엔드 본론.
+
+### 2026-07-02 — 🚀 AWS 라이브 배포 완료: push→자동배포 파이프라인 end-to-end 검증
+- 한 일: AWS 계정 셋업(IAM 유저·CLI·예산알림 2중) → `terraform apply`(31 리소스, 중간에 TS-001 발생·해결) → GitHub 시크릿 `AWS_ROLE_ARN` 등록 → PR #2 머지 → **첫 자동배포 성공** → 라이브 검증.
+- 검증된 것 (전부 실측):
+  - **파이프라인**: `main` push → GitHub Actions(OIDC, 액세스키 없음) → Docker 빌드 → ECR push → ECS 태스크 리비전 → Fargate 롤링 배포 → 서비스 안정화. ✅
+  - **앱**: ALB `/actuator/health` **HTTP 200 UP**, Swagger UI 200. ✅
+  - **DB**: 앱 로그로 확인 — RDS 연결, **Flyway 2개 마이그레이션 적용(V1 PostGIS 확장 + V2 코어 테이블·GiST 인덱스)**, `Hibernate Spatial integration enabled: true`. ✅ → **RDS 위에 PostGIS 공간 스택이 실제로 살아있음.**
+- 결정 & 이유(why):
+  - **예산 알림을 콘솔 대신 CLI(`aws budgets create-budget`)로**: 실지출 $0.01 초과 + 월 $1 초과 예상 시 이메일. 콘솔 네비게이션 비용 절약 + 스크립트화.
+  - **tfplan 파일 즉시 삭제 + gitignore 추가**: plan 바이너리에 변수값(DB 비번)이 포함됨을 인지 → 보안 처리. tfstate도 같은 이유로 gitignore(장기적으로 S3 백엔드 전환 예정).
+  - **공개 문서에는 ALB URL만**(어차피 공개 엔드포인트), 계정 ID 포함 ARN·RDS 엔드포인트는 `.local/`에만 기록.
+- 트러블슈팅: **TS-001**(SG description ASCII 제약 — `validate` 통과했지만 `apply` 런타임에서 발견, 부분 실패 후 멱등 재적용으로 복구) → `TROUBLESHOOTING.md` 참조.
+- 관련: PR #2(머지), 커밋 `fbf86e9`, Deploy run 28548789100(success), **Live: http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com**
+- 다음 할 일: **P1 지리 코어** — place 엔티티(JTS Point 매핑) → 공공데이터 idempotent 인제스천+지오코딩 → 반경/kNN/bounds API+Swagger → Testcontainers 공간쿼리 테스트. (P1 API DTO 확정 시 claude design 착수 신호.)
