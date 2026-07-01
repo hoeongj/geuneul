@@ -30,6 +30,15 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-error.log*
 
+# === Terraform ===
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+# .terraform.lock.hcl 은 재현성 위해 커밋한다(무시하지 않음).
+
 # === OS / 기타 ===
 .DS_Store
 *.log
