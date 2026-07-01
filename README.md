@@ -13,4 +13,8 @@
 ## 시작하기
 전체 목표·범위·ERD·API·로드맵은 **[`CLAUDE.md`](./CLAUDE.md)** 참고 (새 세션이 자동으로 읽음).
 
-상태: **스펙 확정**(2026-07-02, 맛핀 흡수·지리공간 심화 단일 플래그십), 구현 전. 다음 할 일 = W0 레포/DB/지도 SDK 세팅.
+## 상태
+🟢 **Live** — [http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com](http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com/actuator/health) (AWS ECS Fargate + RDS PostGIS, `main` push 시 자동배포)
+
+- W0 완료(2026-07-02): Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + **AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인**
+- 다음: P1 지리 코어 — 공공데이터 idempotent 인제스천 + 반경/kNN 검색 API
