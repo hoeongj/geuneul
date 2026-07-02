@@ -95,3 +95,15 @@
 - 트러블슈팅: **TS-001**(SG description ASCII 제약 — `validate` 통과했지만 `apply` 런타임에서 발견, 부분 실패 후 멱등 재적용으로 복구) → `TROUBLESHOOTING.md` 참조.
 - 관련: PR #2(머지), 커밋 `fbf86e9`, Deploy run 28548789100(success), **Live: http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com**
 - 다음 할 일: **P1 지리 코어** — place 엔티티(JTS Point 매핑) → 공공데이터 idempotent 인제스천+지오코딩 → 반경/kNN/bounds API+Swagger → Testcontainers 공간쿼리 테스트. (P1 API DTO 확정 시 claude design 착수 신호.)
+
+### 2026-07-02 — P1 지리 코어: 반경/kNN/bounds API + 무더위쉼터 idempotent 인제스천 (간판 착수)
+- 한 일: Place 엔티티(JTS Point)·PlaceRepository(네이티브 공간쿼리 3종)·검색 서비스/컨트롤러/DTO·Swagger, **V3 geography 함수 인덱스**, 무더위쉼터 CSV 파서+JDBC 배치 upsert 인제스천, R__seed(숭실대 주변 10곳), **ADR 2건**(docs/adr/), 단위 3 + 통합 8 테스트.
+- 결정 & 이유(why): — 상세는 ADR로 분리, 여기엔 요지만.
+  - **[ADR-0001] geometry(4326) 저장 + `GIST(geography(geom))` 함수 인덱스** — "반경 N미터"를 도(degree) 근사 없이 정확하게 + 인덱스 완전 활용. 대안(geography 컬럼 저장/도 단위 근사/앱 레벨 필터/컬럼 이중화) 비교 기각. 근거: Paul Ramsey(PostGIS core) 함수 인덱스 패턴 (2026-07 웹검증).
+    - 구현 디테일: `geom::geography` 표기는 Spring Data 네이티브 쿼리 파서가 `:geography`를 파라미터로 오인 → 동일 의미의 함수형 `geography(geom)` 사용. null enum 파라미터는 `CAST(:category AS text)`로 PG 타입추론 실패 방지.
+  - **[ADR-0002] (source, source_external_id) 자연키 + ON CONFLICT 배치 upsert** — 재실행 멱등(CLAUDE.md 원칙 3) + 52k행 스케일 대비 JDBC 배치. 쉼터시설번호가 자연키, 없으면 sha256(name|address) 결정적 대체키. 파일 단위 단일 트랜잭션. 대안(JPA saveAll/전체 재삽입/Spring Batch/MERGE) 기각.
+  - **파서 스키마 드리프트 내성** — 표준데이터 좌표 필드 존재가 문서상 미확정(2025-02 공중화장실 좌표 정책 변경 전례) → 헤더 별칭 매칭 + 좌표 결측 행 skipped 계수(지오코딩 백로그 근거 수치). 인코딩(UTF-8/CP949) 주입 가능.
+  - **테스트 전략** — 파서는 순수 단위(오프라인 상시), 공간쿼리 정확성·멱등성은 실 PostGIS IT(반경 미터 단위 검증: 1.5km→2곳/500m→1곳, kNN 순서, bounds, 2회 적재 중복 0, DO UPDATE 갱신). 컨테이너는 base class static 공유로 CI 시간 절약.
+  - **시드는 Repeatable 마이그레이션(R__)** — 체크섬 변경 시에만 재실행 + upsert 수렴. 데모용 지도 공백 방지, 실데이터가 대체.
+- 관련: `backend/src/main/java/com/geuneul/domain/{place,ingest}/`, `V3__geography_functional_index.sql`, `R__seed_sample_places.sql`, `docs/adr/0001·0002`
+- 다음 할 일: PR CI(실 PostGIS IT) → 머지·자동배포 → **라이브 반경검색 스모크 테스트** → 공중화장실(지오코딩 포함) 인제스천 + JaCoCo floor ratchet.

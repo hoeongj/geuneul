@@ -52,6 +52,9 @@ dependencies {
     // API 문서 (Swagger UI)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 
+    // 공공데이터 CSV 인제스천 (표준데이터셋 파싱)
+    implementation 'org.apache.commons:commons-csv:1.11.0'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     // 프로덕션 동등 백킹서비스(PostGIS/Redis)로 통합테스트 — H2가 놓치는 dialect/타입 drift 포착.
     // Docker 없으면 자동 skip(disabledWithoutDocker) → 로컬 오프라인 `./gradlew test`도 green.
