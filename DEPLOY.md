@@ -44,5 +44,18 @@ apply 후 output 확인:
 - 내리기: `terraform destroy` (RDS `skip_final_snapshot=true`라 즉시 삭제).
 - 심화(P4): ECS Service Auto Scaling(HPA 상당)을 k6 부하테스트와 함께 추가 → mp가 안 한 새 DevOps 신호.
 
+## 운영 인제스천 (공공데이터 → 프로덕션 RDS)
+RDS는 프라이빗 서브넷이라 로컬에서 직접 접속할 수 없다(의도된 보안 설계). 적재는 **같은 VPC 안의 ECS one-off task**로 실행한다 — 서비스와 동일한 태스크 정의(이미지·SSM 비밀·SG)를 재사용:
+
+```bash
+# 1) 데이터 스냅샷을 URL로 접근 가능하게 (GitHub Release 자산 권장 — 레포 비대화 방지 + 버저닝)
+gh release create data-v1 shelters.csv toilets.csv --title "공공데이터 스냅샷 v1" --notes "무더위쉼터/공중화장실 표준데이터"
+
+# 2) one-off task 실행 (다운로드→파싱→멱등 upsert→종료)
+./infra/scripts/prod-ingest.sh cooling_shelter <shelters.csv 릴리즈 URL> UTF-8
+./infra/scripts/prod-ingest.sh public_toilet  <toilets.csv 릴리즈 URL> MS949
+```
+멱등(ON CONFLICT upsert)이므로 재실행·데이터 갱신 모두 같은 명령이다.
+
 ## HTTPS/도메인(선택, 나중)
 ACM 인증서 + Route53(또는 외부 도메인) + ALB 443 리스너로 확장. 지금은 HTTP로 파이프라인부터 검증.

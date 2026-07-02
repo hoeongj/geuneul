@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# 프로덕션 RDS 공공데이터 인제스천 — ECS one-off task (RunTask 커맨드 오버라이드).
+#
+# RDS는 프라이빗 서브넷이라 로컬에서 직접 접속 불가 → 같은 VPC의 Fargate 태스크로 실행한다.
+# 서비스와 동일한 태스크 정의(이미지·SSM 비밀·SG)를 재사용하므로 별도 인프라가 필요 없다.
+#
+# 사용법:
+#   ./prod-ingest.sh <source> <csv-url> [charset]
+#   ./prod-ingest.sh public_toilet  https://github.com/ghdtjdwn/geuneul/releases/download/data-v1/toilets.csv MS949
+#   ./prod-ingest.sh cooling_shelter https://.../shelters.csv UTF-8
+set -euo pipefail
+
+SOURCE="${1:?source 필요 (cooling_shelter | public_toilet)}"
+URL="${2:?csv url 필요}"
+CHARSET="${3:-UTF-8}"
+
+REGION=ap-northeast-2
+CLUSTER=geuneul
+
+echo "==> 네트워크 파라미터 조회 (terraform 태그 기준)"
+SUBNET=$(aws ec2 describe-subnets --region $REGION \
+  --filters "Name=tag:Name,Values=geuneul-public-0" \
+  --query 'Subnets[0].SubnetId' --output text)
+SG=$(aws ec2 describe-security-groups --region $REGION \
+  --filters "Name=group-name,Values=geuneul-ecs-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text)
+echo "    subnet=$SUBNET sg=$SG"
+
+echo "==> RunTask 실행 (source=$SOURCE charset=$CHARSET)"
+TASK_ARN=$(aws ecs run-task --region $REGION \
+  --cluster $CLUSTER \
+  --task-definition geuneul \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SG],assignPublicIp=ENABLED}" \
+  --overrides "{\"containerOverrides\":[{\"name\":\"geuneul\",\"command\":[\"--ingest.source=$SOURCE\",\"--ingest.url=$URL\",\"--ingest.charset=$CHARSET\",\"--ingest.exit-after=true\",\"--server.port=8081\"]}]}" \
+  --query 'tasks[0].taskArn' --output text)
+echo "    task=$TASK_ARN"
+
+echo "==> 완료 대기..."
+aws ecs wait tasks-stopped --region $REGION --cluster $CLUSTER --tasks "$TASK_ARN"
+
+EXIT_CODE=$(aws ecs describe-tasks --region $REGION --cluster $CLUSTER --tasks "$TASK_ARN" \
+  --query 'tasks[0].containers[0].exitCode' --output text)
+echo "==> 종료 코드: $EXIT_CODE"
+
+echo "==> 인제스천 로그:"
+TASK_ID="${TASK_ARN##*/}"
+aws logs tail /ecs/geuneul --region $REGION --since 30m --format short \
+  --log-stream-names "app/geuneul/$TASK_ID" 2>/dev/null | grep -E '\[ingest\]' || true
+
+[ "$EXIT_CODE" = "0" ] && echo "✅ 성공" || { echo "❌ 실패 — 위 로그 확인"; exit 1; }
