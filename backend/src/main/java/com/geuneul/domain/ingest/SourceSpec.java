@@ -16,11 +16,12 @@ public enum SourceSpec {
             "cooling_shelter",                 // CLI 이름 (--ingest.source=)
             "cooling_shelter_std",             // places.source 값
             PlaceCategory.COOLING_SHELTER,
-            List.of("쉼터시설번호", "관리번호", "시설번호"),
-            List.of("쉼터명칭", "쉼터명", "시설명칭", "시설명"),
-            List.of("소재지도로명주소", "도로명주소", "상세주소", "소재지지번주소", "지번주소", "주소"),
-            List.of("위도", "위도(도)", "lat", "latitude"),
-            List.of("경도", "경도(도)", "lng", "lon", "longitude")),
+            // 한글 별칭 = data.go.kr 표준 포맷 / 영문 코드 = 행정안전부 재난안전데이터(safetydata) 포맷
+            List.of("쉼터시설번호", "관리번호", "시설번호", "RSTR_FCLTY_NO"),
+            List.of("쉼터명칭", "쉼터명", "시설명칭", "시설명", "RSTR_NM"),
+            List.of("소재지도로명주소", "도로명주소", "도로명상세주소", "상세주소", "소재지지번주소", "지번주소", "주소", "RN_DTL_ADRES", "DTL_ADRES"),
+            List.of("위도", "위도(도)", "lat", "latitude", "LA"),
+            List.of("경도", "경도(도)", "lng", "lon", "longitude", "LO")),
 
     PUBLIC_TOILET(
             "public_toilet",
