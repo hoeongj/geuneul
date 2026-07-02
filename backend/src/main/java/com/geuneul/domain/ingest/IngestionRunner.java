@@ -4,18 +4,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 
 /**
- * CLI 인제스천 트리거 — 앱 인자로 실행한다:
+ * CLI 인제스천 트리거.
  *
- *   ./gradlew bootRun --args='--ingest.source=cooling_shelter --ingest.file=/path/무더위쉼터.csv [--ingest.charset=MS949]'
- *
- * 별도 배치 앱 대신 ApplicationRunner를 쓴 이유: 소스 하나(P1)에 배치 프레임워크는 과설계.
- * 소스가 늘어나 스케줄/재시도가 필요해지는 시점(P3+)에 Spring Batch 등을 재검토한다.
+ * 로컬:  ./gradlew bootRun --args='--ingest.source=public_toilet --ingest.file=/path/toilets.csv --ingest.charset=MS949'
+ * 운영:  ECS one-off task(RunTask 커맨드 오버라이드)로 실행 — RDS가 프라이빗 서브넷이라
+ *        로컬에서 직접 붙을 수 없고, 같은 VPC 안에서 돌리는 것이 정석 (DEPLOY.md §운영 인제스천).
+ *        파일은 --ingest.url(GitHub Release 자산 등)로 받는다.
+ * 옵션:  --ingest.exit-after=true → 인제스천 후 프로세스 종료(one-off task용, 기본 false=서버 유지).
  */
 @Component
 public class IngestionRunner implements ApplicationRunner {
@@ -23,30 +36,79 @@ public class IngestionRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(IngestionRunner.class);
 
     private final IngestionService ingestionService;
+    private final ConfigurableApplicationContext context;
 
-    public IngestionRunner(IngestionService ingestionService) {
+    public IngestionRunner(IngestionService ingestionService, ConfigurableApplicationContext context) {
         this.ingestionService = ingestionService;
+        this.context = context;
     }
 
     @Override
-    public void run(ApplicationArguments args) {
+    public void run(ApplicationArguments args) throws IOException {
         if (!args.containsOption("ingest.source")) {
             return;
         }
-        String source = first(args, "ingest.source");
-        String file = first(args, "ingest.file");
-        if (file == null) {
-            throw new IllegalArgumentException("--ingest.file=<csv 경로>가 필요합니다");
-        }
-        Charset charset = Charset.forName(args.containsOption("ingest.charset")
-                ? first(args, "ingest.charset") : "UTF-8");
+        int exitCode = 0;
+        try {
+            SourceSpec spec = SourceSpec.fromCliName(first(args, "ingest.source"));
+            Charset charset = Charset.forName(args.containsOption("ingest.charset")
+                    ? first(args, "ingest.charset") : "UTF-8");
+            Path file = resolveFile(args);
 
-        switch (source) {
-            case "cooling_shelter" -> ingestionService.ingestCoolingShelters(Path.of(file), charset);
-            default -> throw new IllegalArgumentException("지원하지 않는 ingest.source: " + source
-                    + " (지원: cooling_shelter)");
+            ingestionService.ingest(spec, file, charset);
+        } catch (RuntimeException e) {
+            log.error("[ingest] 실패", e);
+            exitCode = 1;
+            if (!exitRequested(args)) {
+                throw e;
+            }
         }
-        log.info("[ingest] 완료 — 앱은 계속 기동 상태를 유지합니다 (서버 모드 겸용)");
+        if (exitRequested(args)) {
+            log.info("[ingest] exit-after=true → 종료(code={})", exitCode);
+            int code = exitCode;
+            System.exit(SpringApplication.exit(context, () -> code));
+        }
+    }
+
+    private Path resolveFile(ApplicationArguments args) throws IOException {
+        if (args.containsOption("ingest.file")) {
+            return Path.of(first(args, "ingest.file"));
+        }
+        if (args.containsOption("ingest.url")) {
+            return download(first(args, "ingest.url"));
+        }
+        throw new IllegalArgumentException("--ingest.file=<경로> 또는 --ingest.url=<주소>가 필요합니다");
+    }
+
+    /** 데이터 스냅샷 URL(GitHub Release 자산 등)을 임시파일로 내려받는다. */
+    private static Path download(String url) throws IOException {
+        log.info("[ingest] 다운로드: {}", url);
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(20))
+                .build();
+        try {
+            HttpResponse<InputStream> response = client.send(
+                    HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(5)).build(),
+                    HttpResponse.BodyHandlers.ofInputStream());
+            if (response.statusCode() != 200) {
+                throw new IOException("다운로드 실패 HTTP " + response.statusCode() + ": " + url);
+            }
+            Path tmp = Files.createTempFile("ingest-", ".csv");
+            try (InputStream in = response.body()) {
+                Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+            }
+            log.info("[ingest] 다운로드 완료: {} ({} bytes)", tmp, Files.size(tmp));
+            return tmp;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new UncheckedIOException(new IOException("다운로드 중단", e));
+        }
+    }
+
+    private static boolean exitRequested(ApplicationArguments args) {
+        return args.containsOption("ingest.exit-after")
+                && "true".equalsIgnoreCase(first(args, "ingest.exit-after"));
     }
 
     private static String first(ApplicationArguments args, String name) {
