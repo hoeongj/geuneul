@@ -107,3 +107,16 @@
   - **시드는 Repeatable 마이그레이션(R__)** — 체크섬 변경 시에만 재실행 + upsert 수렴. 데모용 지도 공백 방지, 실데이터가 대체.
 - 관련: `backend/src/main/java/com/geuneul/domain/{place,ingest}/`, `V3__geography_functional_index.sql`, `R__seed_sample_places.sql`, `docs/adr/0001·0002`
 - 다음 할 일: PR CI(실 PostGIS IT) → 머지·자동배포 → **라이브 반경검색 스모크 테스트** → 공중화장실(지오코딩 포함) 인제스천 + JaCoCo floor ratchet.
+
+### 2026-07-02 — P1 완결: CI 트러블슈팅(TS-002) → 머지·자동배포 → 🔴 라이브 공간검색 실측 + 테스트 보강
+- 한 일: PR #3 CI 실패 원인 규명·해결(**TS-002**: @Container(static)×Spring 컨텍스트 캐시 수명주기 충돌 → 싱글턴 컨테이너 패턴 전환) → CI green(실 PostGIS IT 11개) → 머지·자동배포 → **라이브 스모크 3종 실측** → 후속 품질 PR #4(컨트롤러 MockMvc 8케이스 + JaCoCo ratchet + 커버리지 아티팩트) 머지.
+- 라이브 실측 결과 (ALB, 프로덕션 RDS PostGIS):
+  - `GET /places?lat=37.4963&lng=126.9575&radius=1000` → **4곳, 거리순(20.9m→464.8m), 상도역(1.1km)은 정확히 제외** = geography 미터 반경이 프로덕션에서 실증.
+  - `GET /places/nearest?category=TOILET&limit=1` → 사육신공원 공중화장실(2,765.9m) = kNN+카테고리 필터 동작.
+  - `GET /places?bounds=126.91,37.48,126.97,37.52` → seed 10곳 전부 = 뷰포트 쿼리 동작.
+- 결정 & 이유(why):
+  - **[TS-002] 싱글턴 컨테이너 패턴** — @Container는 클래스 종료 시 컨테이너를 중지하지만 Spring TestContext는 컨텍스트를 JVM 캐싱 → 2번째 IT 클래스부터 죽은 포트 ConnectException. 수동 start() 싱글턴(공식 권장)으로 전환, 컨테이너 1세트 공유로 CI도 단축. 상세 TROUBLESHOOTING.md.
+  - **컨트롤러 MockMvc 보강** — 공간쿼리 정확성은 IT가 커버하지만 컨트롤러 검증(400 계열·bounds 파싱·limit 클램프)은 사각지대였음 → @WebMvcTest 8케이스(DB 불필요, 로컬 상시 실행).
+  - **JaCoCo floor 0.00→0.35 ratchet** — 로컬(단위만) 실측 38.1% 바로 아래. 로컬이 하한선이므로 IT까지 도는 CI는 항상 그 이상 = 어디서든 green 보장하면서 회귀만 차단(mp 철학). CI에 커버리지 아티팩트 업로드 추가(다음 ratchet 근거).
+- 관련: PR #3(0526d00)·PR #4(3d11351), TROUBLESHOOTING TS-002, Live: `/places` 3종 엔드포인트
+- 다음 할 일: **API 응답 DTO 확정됨 → claude design 착수 적기.** 백엔드는 공중화장실 표준데이터(52k, 지오코딩 보완 포함) 인제스천 → P2 UGC+인증(카카오/구글 OAuth, 제보/후기 2단).
