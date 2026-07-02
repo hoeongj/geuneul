@@ -167,3 +167,13 @@
 - 해결: 정적 `RestClient.builder()`로 전환(의존성 추측 없이 결정적). 배치 전용 클라이언트라 자동구성 이점(계측) 대비 단순화 우위.
 - **프로세스 반성:** CI 종료코드를 파이프(tail) 뒤에서 읽어 **빨간 CI를 green으로 오판, 머지까지 진행**함. 롤링 배포가 기존 태스크를 유지해 서비스 영향은 없었으나, 이후 자동화 스크립트는 `PIPESTATUS[0]`로 판정하도록 교정. main이 붉은 시간 최소화를 위해 즉시 fix-forward.
 - 관련: `KakaoGeocodingClient.java`
+
+### 2026-07-02 — 🇰🇷 전국 데이터 라이브 개통: 첫 프로덕션 인제스천 + 배포 서킷브레이커
+- 한 일: ①배포 사고 분석(TS-003: 빨간 CI 머지→크래시루프→ECS 런치 백오프로 5시간 수렴 지연 + 워크플로우 false-negative) → **ECS deployment circuit breaker + 자동 롤백** 적용(terraform, 무중단). ②공공데이터 스냅샷을 GitHub Release(data-v1)로 버저닝. ③**첫 프로덕션 인제스천 성공** — ECS one-off task가 Release에서 다운로드→이중헤더 라벨행 1건 스킵→**전국 무더위쉼터 100건 upsert(902ms)**→클린 종료. ④라이브 전국 검증: 부산 덕천 반경검색(4.3m 정확도)·대전역 kNN 3곳 — 서울 밖 어디서나 동작.
+- 결정 & 이유(why):
+  - **서킷브레이커+롤백** — 재발 시(부팅 불가 이미지) 수 시간 백오프 대신 즉시 롤백. lifecycle ignore_changes 밖의 속성이라 terraform in-place로 안전 적용.
+  - **데이터 스냅샷 = GitHub Release 자산** — 레포 비대화 없이 버저닝(data-v1), 인제스천은 URL만 바꾸면 재실행. 출처·행수·인코딩을 릴리즈 노트에 명시.
+  - 무더위쉼터 파일이 **전국 샘플 100행**임을 확인(지역코드 10개 분포) — 전체분은 행안부 safetydata 확보 필요(P3 주기 동기화에서 오픈API로 무인화 예정).
+- 실측: RunTask 전체 3분(프로비저닝 포함), 인제스천 자체 902ms. 화장실 59,768행은 카카오 키 대기(지오코딩 필수 — ADR-0003).
+- 관련: `infra/terraform/ecs.tf`, Release data-v1, TROUBLESHOOTING TS-003, 태스크정의 :7
+- 다음 할 일: 카카오 REST 키 수령 → 화장실 60k 지오코딩 적재(~수십 분) → P2(UGC+인증) 착수. 디자인은 브리프(docs/design-brief.md)로 병행 가능.
