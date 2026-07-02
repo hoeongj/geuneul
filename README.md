@@ -6,7 +6,7 @@
 지도에 위치만 찍지 않고 **"지금 상태"(시원함/자리/콘센트/벌레/침수)**를 최근 제보 기준으로 보여준다.
 핵심 = `survival_score`(지금 갈만함 점수) + 최근성 기반 실시간 체감 정보.
 
-- 첫 출시: 숭실대·상도·노량진·서울
+- 커버리지: 전국 공공데이터 그대로 적재(지도가 필터링) · UGC 필드테스트: 서울 동작구
 - 스택: Next.js(PWA) · Spring Boot 4/Java 21 · PostgreSQL+PostGIS(Hibernate Spatial) · Redis · 카카오/구글 OAuth · Kakao Maps · Claude API
 - 데이터: 무더위쉼터/공중화장실 표준데이터/서울시 공원음수대/기상청 + 유저 제보
 
