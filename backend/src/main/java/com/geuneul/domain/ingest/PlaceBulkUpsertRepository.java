@@ -10,7 +10,7 @@ import java.util.List;
  * 공공데이터 대량 upsert — JPA save() 대신 JDBC 배치를 쓴다 (ADR-0002).
  *
  * - 멱등성: ON CONFLICT (source, source_external_id) DO UPDATE → 같은 파일을 몇 번 넣어도 중복 0.
- * - 성능: 수만 행(공중화장실 52k)을 dirty-checking 없이 배치 INSERT. JPA 영속성 컨텍스트 비용 회피.
+ * - 성능: 수만 행(공중화장실 52k+)을 dirty-checking 없이 배치 INSERT. JPA 영속성 컨텍스트 비용 회피.
  * - geom은 DB에서 ST_SetSRID(ST_MakePoint(lng,lat),4326)로 생성 — 애플리케이션 WKB 직렬화 불필요.
  */
 @Repository
@@ -36,7 +36,7 @@ public class PlaceBulkUpsertRepository {
     }
 
     /** @return upsert된 행 수. batchUpdate가 BATCH_SIZE 단위로 내부 청킹한다. */
-    public int upsertShelters(List<ShelterRow> rows, String source, PlaceCategory category) {
+    public int upsertPlaces(List<PlaceRow> rows, String source, PlaceCategory category) {
         int[][] results = jdbcTemplate.batchUpdate(UPSERT_SQL, rows, BATCH_SIZE, (ps, row) -> {
             ps.setString(1, row.name());
             ps.setString(2, category.name());

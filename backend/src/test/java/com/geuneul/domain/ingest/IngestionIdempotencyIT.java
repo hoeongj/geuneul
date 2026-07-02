@@ -46,11 +46,11 @@ class IngestionIdempotencyIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("같은 CSV를 2회 인제스트해도 행 수가 늘지 않는다 (idempotent upsert)")
     void reIngestDoesNotDuplicate() {
-        var first = ingestionService.ingestCoolingShelters(csv, StandardCharsets.UTF_8);
-        long afterFirst = placeRepository.countBySource(IngestionService.SOURCE_COOLING_SHELTER);
+        var first = ingestionService.ingest(SourceSpec.COOLING_SHELTER, csv, StandardCharsets.UTF_8);
+        long afterFirst = placeRepository.countBySource(SourceSpec.COOLING_SHELTER.sourceKey());
 
-        var second = ingestionService.ingestCoolingShelters(csv, StandardCharsets.UTF_8);
-        long afterSecond = placeRepository.countBySource(IngestionService.SOURCE_COOLING_SHELTER);
+        var second = ingestionService.ingest(SourceSpec.COOLING_SHELTER, csv, StandardCharsets.UTF_8);
+        long afterSecond = placeRepository.countBySource(SourceSpec.COOLING_SHELTER.sourceKey());
 
         assertThat(afterFirst).isEqualTo(4);   // 유효 좌표 행만
         assertThat(afterSecond).isEqualTo(4);  // 재실행해도 그대로
@@ -61,7 +61,7 @@ class IngestionIdempotencyIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("재적재 시 변경된 필드는 갱신된다 (DO UPDATE 경로)")
     void reIngestUpdatesChangedFields() throws IOException {
-        ingestionService.ingestCoolingShelters(csv, StandardCharsets.UTF_8);
+        ingestionService.ingest(SourceSpec.COOLING_SHELTER, csv, StandardCharsets.UTF_8);
 
         // 같은 쉼터시설번호(SD-001), 이름만 개정된 2차 파일
         String updated = Files.readString(csv, StandardCharsets.UTF_8)
@@ -69,12 +69,27 @@ class IngestionIdempotencyIT extends AbstractIntegrationTest {
         Path csvV2 = tempDir.resolve("cooling_shelter_v2.csv");
         Files.writeString(csvV2, updated, StandardCharsets.UTF_8);
 
-        ingestionService.ingestCoolingShelters(csvV2, StandardCharsets.UTF_8);
+        ingestionService.ingest(SourceSpec.COOLING_SHELTER, csvV2, StandardCharsets.UTF_8);
 
-        assertThat(placeRepository.countBySource(IngestionService.SOURCE_COOLING_SHELTER)).isEqualTo(4);
+        assertThat(placeRepository.countBySource(SourceSpec.COOLING_SHELTER.sourceKey())).isEqualTo(4);
         assertThat(placeRepository.findAll())
                 .extracting(p -> p.getName())
                 .contains("상도1동 주민센터(리모델링)")
                 .doesNotContain("상도1동 주민센터");
+    }
+
+    @Test
+    @DisplayName("서로 다른 소스(쉼터/화장실)는 자연키가 분리되어 충돌하지 않는다")
+    void sourcesDoNotCollide() throws IOException {
+        Path toiletCsv = tempDir.resolve("toilet.csv");
+        try (InputStream in = getClass().getResourceAsStream("/fixtures/public_toilet_sample.csv")) {
+            Files.copy(in, toiletCsv, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        ingestionService.ingest(SourceSpec.COOLING_SHELTER, csv, StandardCharsets.UTF_8);
+        ingestionService.ingest(SourceSpec.PUBLIC_TOILET, toiletCsv, StandardCharsets.UTF_8);
+
+        assertThat(placeRepository.countBySource(SourceSpec.COOLING_SHELTER.sourceKey())).isEqualTo(4);
+        assertThat(placeRepository.countBySource(SourceSpec.PUBLIC_TOILET.sourceKey())).isEqualTo(3);
     }
 }
