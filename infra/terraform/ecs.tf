@@ -61,6 +61,13 @@ resource "aws_ecs_service" "app" {
   # Spring Boot 부팅+Flyway 마이그레이션 동안 ALB 헬스체크 실패로 태스크가 죽지 않도록 유예.
   health_check_grace_period_seconds = 120
 
+  # 배포 서킷브레이커 + 자동 롤백 (TS-003): 부팅 불가 이미지가 배포되면
+  # 크래시루프→ECS 런치 백오프로 수 시간 지연되는 대신, 실패 감지 즉시 직전 버전으로 롤백한다.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   network_configuration {
     subnets          = aws_subnet.public[*].id
     security_groups  = [aws_security_group.ecs.id]
