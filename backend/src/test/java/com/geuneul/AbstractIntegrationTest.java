@@ -22,6 +22,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
+@org.springframework.context.annotation.Import(com.geuneul.domain.ingest.geocode.FakeGeocodingConfig.class)
 public abstract class AbstractIntegrationTest {
 
     @ServiceConnection
