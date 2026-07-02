@@ -26,13 +26,21 @@ SG=$(aws ec2 describe-security-groups --region $REGION \
   --query 'SecurityGroups[0].GroupId' --output text)
 echo "    subnet=$SUBNET sg=$SG"
 
+# 지오코딩 필요한 소스(좌표 미제공 포맷)는 KAKAO_REST_API_KEY 환경변수를 가져간다.
+# 키는 이 셸의 환경변수로만 전달 — 스크립트/레포에 하드코딩 금지(규칙 D).
+ENV_OVERRIDE=""
+if [ -n "${KAKAO_REST_API_KEY:-}" ]; then
+  ENV_OVERRIDE=",\"environment\":[{\"name\":\"KAKAO_REST_API_KEY\",\"value\":\"$KAKAO_REST_API_KEY\"}]"
+  echo "==> KAKAO_REST_API_KEY 주입됨 (지오코딩 활성)"
+fi
+
 echo "==> RunTask 실행 (source=$SOURCE charset=$CHARSET)"
 TASK_ARN=$(aws ecs run-task --region $REGION \
   --cluster $CLUSTER \
   --task-definition geuneul \
   --launch-type FARGATE \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SG],assignPublicIp=ENABLED}" \
-  --overrides "{\"containerOverrides\":[{\"name\":\"geuneul\",\"command\":[\"--ingest.source=$SOURCE\",\"--ingest.url=$URL\",\"--ingest.charset=$CHARSET\",\"--ingest.exit-after=true\",\"--server.port=8081\"]}]}" \
+  --overrides "{\"containerOverrides\":[{\"name\":\"geuneul\",\"command\":[\"--ingest.source=$SOURCE\",\"--ingest.url=$URL\",\"--ingest.charset=$CHARSET\",\"--ingest.exit-after=true\",\"--server.port=8081\"]$ENV_OVERRIDE}]}" \
   --query 'tasks[0].taskArn' --output text)
 echo "    task=$TASK_ARN"
 

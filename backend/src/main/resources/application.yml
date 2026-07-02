@@ -27,6 +27,9 @@ spring:
       ssl:
         enabled: ${REDIS_SSL:false}    # Upstash 등 TLS Redis면 true
 
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표). 규칙 D: 값은 .env/SSM으로만.
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
