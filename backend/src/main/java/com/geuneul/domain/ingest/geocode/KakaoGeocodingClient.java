@@ -27,10 +27,12 @@ public class KakaoGeocodingClient implements GeocodingClient {
     private final RestClient restClient;
     private final boolean keyPresent;
 
-    public KakaoGeocodingClient(@Value("${kakao.rest-api-key:}") String restApiKey,
-                                RestClient.Builder builder) {
+    public KakaoGeocodingClient(@Value("${kakao.rest-api-key:}") String restApiKey) {
         this.keyPresent = restApiKey != null && !restApiKey.isBlank();
-        this.restClient = builder
+        // RestClient.Builder 빈 주입 대신 정적 빌더 — Boot 4는 RestClient 자동구성이 별도 모듈로
+        // 분리되어 기본 클래스패스에 Builder 빈이 없다(전 IT 컨텍스트 생성 실패의 원인, WORKLOG).
+        // 배치 전용 클라이언트라 자동구성(관측성 계측 등) 이점보다 의존 단순화가 낫다.
+        this.restClient = RestClient.builder()
                 .baseUrl("https://dapi.kakao.com")
                 .defaultHeader("Authorization", "KakaoAK " + restApiKey)
                 .build();

@@ -160,3 +160,10 @@
 - 실측 데이터 품질(적재 전 검사): 화장실 59,768행 — 관리번호 유니크·주소 100%·좌표 0%. 무더위쉼터 파일은 **전국 샘플 100행**(전체분은 safetydata 별도 확보 필요, 지역코드 10개 분포 확인).
 - 관련: `geocode/`, `StandardCsvParser`(BOM/이중헤더), `SourceSpec`(영문 별칭), ADR-0003, 테스트 22→28개
 - 다음 할 일: PR→배포 → 데이터 Release 업로드 → 쉼터(키 불필요) 적재 → **카카오 REST 키 수령 후** 화장실 60k 지오코딩 적재 → 라이브 전국 검증.
+
+### 2026-07-02 — 핫픽스: Boot 4에서 RestClient.Builder 빈 부재 → 전 IT 컨텍스트 실패 (+프로세스 반성)
+- 증상: PR #6 CI에서 모든 IT가 `NoSuchBeanDefinitionException`(컨텍스트 생성 실패). 로컬은 Docker 없어 IT skip이라 미검출.
+- 원인: Boot 4 모듈화로 RestClient 자동구성이 별도 모듈로 분리 → `RestClient.Builder` 빈이 기본 클래스패스에 없음. KakaoGeocodingClient가 이를 생성자 주입 → 컴포넌트 스캔 시점에 전 컨텍스트 폭발(테스트는 @Primary 페이크가 있어도 실제 컴포넌트 생성은 시도됨).
+- 해결: 정적 `RestClient.builder()`로 전환(의존성 추측 없이 결정적). 배치 전용 클라이언트라 자동구성 이점(계측) 대비 단순화 우위.
+- **프로세스 반성:** CI 종료코드를 파이프(tail) 뒤에서 읽어 **빨간 CI를 green으로 오판, 머지까지 진행**함. 롤링 배포가 기존 태스크를 유지해 서비스 영향은 없었으나, 이후 자동화 스크립트는 `PIPESTATUS[0]`로 판정하도록 교정. main이 붉은 시간 최소화를 위해 즉시 fix-forward.
+- 관련: `KakaoGeocodingClient.java`
