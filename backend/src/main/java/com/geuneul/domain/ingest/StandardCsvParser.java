@@ -19,35 +19,27 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 전국무더위쉼터표준데이터 CSV 파서.
+ * 공공데이터 표준데이터셋 범용 CSV 파서 — 소스별 차이는 전부 {@link SourceSpec}이 흡수한다.
  *
- * 설계 포인트 (WORKLOG 2026-07-02):
- * - 헤더 유연 매칭: 표준데이터 컬럼명이 개정될 수 있고(2025-02 좌표 정책 변경 사례),
- *   문서상 위도/경도 필드 존재가 확정이 아니어서 별칭 리스트로 컬럼을 찾는다.
- * - 좌표 결측/파싱불가 행은 버리지 않고 skipped 로 계수 → 지오코딩 보완 백로그의 근거 데이터.
- * - 인코딩 주입: 공공데이터 CSV는 UTF-8/CP949(EUC-KR)가 혼재한다. 기본 UTF-8, 옵션으로 MS949.
- * - 고유 식별자(쉼터시설번호)가 없으면 sha256(name|address)을 대체 자연키로 사용해
- *   멱등 upsert 대상 (source, source_external_id)를 항상 채운다 (ADR-0002).
+ * 설계 포인트 (WORKLOG 2026-07-02, ADR-0002):
+ * - 헤더 유연 매칭(별칭 리스트) → 표준데이터 컬럼 개정에 내성.
+ * - 좌표 결측/파싱불가/국내범위 밖 행은 버리지 않고 skipped 계수 → 지오코딩 보완(P2) 백로그 근거.
+ * - 인코딩 주입: 공공데이터 CSV는 UTF-8/CP949(EUC-KR) 혼재. 기본 UTF-8.
+ * - 고유번호 없으면 sha256(name|address) 결정적 대체키 → (source, source_external_id) 멱등 upsert 항상 성립.
  */
 @Component
-public class CoolingShelterCsvParser {
+public class StandardCsvParser {
 
-    private static final List<String> ID_HEADERS = List.of("쉼터시설번호", "관리번호", "시설번호");
-    private static final List<String> NAME_HEADERS = List.of("쉼터명칭", "쉼터명", "시설명칭", "시설명");
-    private static final List<String> ADDR_HEADERS = List.of("소재지도로명주소", "도로명주소", "상세주소", "소재지지번주소", "지번주소", "주소");
-    private static final List<String> LAT_HEADERS = List.of("위도", "위도(도)", "lat", "latitude");
-    private static final List<String> LNG_HEADERS = List.of("경도", "경도(도)", "lng", "lon", "longitude");
-
-    public record Result(List<ShelterRow> rows, int totalRecords, int skippedNoCoords) {
+    public record Result(List<PlaceRow> rows, int totalRecords, int skippedNoCoords) {
     }
 
-    public Result parse(Path file, Charset charset) throws IOException {
+    public Result parse(Path file, Charset charset, SourceSpec spec) throws IOException {
         try (Reader reader = Files.newBufferedReader(file, charset)) {
-            return parse(reader);
+            return parse(reader, spec);
         }
     }
 
-    public Result parse(Reader reader) throws IOException {
+    public Result parse(Reader reader, SourceSpec spec) throws IOException {
         CSVFormat format = CSVFormat.DEFAULT.builder()
                 .setHeader()
                 .setSkipHeaderRecord(true)
@@ -55,17 +47,17 @@ public class CoolingShelterCsvParser {
                 .setTrim(true)
                 .build();
 
-        List<ShelterRow> rows = new ArrayList<>();
+        List<PlaceRow> rows = new ArrayList<>();
         int total = 0;
         int skipped = 0;
 
         try (CSVParser parser = format.parse(reader)) {
             Map<String, Integer> headers = parser.getHeaderMap();
-            String idCol = findColumn(headers, ID_HEADERS);
-            String nameCol = requireColumn(headers, NAME_HEADERS, "이름");
-            String addrCol = findColumn(headers, ADDR_HEADERS);
-            String latCol = requireColumn(headers, LAT_HEADERS, "위도");
-            String lngCol = requireColumn(headers, LNG_HEADERS, "경도");
+            String idCol = findColumn(headers, spec.idAliases());
+            String nameCol = requireColumn(headers, spec.nameAliases(), "이름");
+            String addrCol = findColumn(headers, spec.addressAliases());
+            String latCol = requireColumn(headers, spec.latAliases(), "위도");
+            String lngCol = requireColumn(headers, spec.lngAliases(), "경도");
 
             for (CSVRecord record : parser) {
                 total++;
@@ -85,7 +77,7 @@ public class CoolingShelterCsvParser {
                 if (externalId == null || externalId.isBlank()) {
                     externalId = fallbackId(name, address);
                 }
-                rows.add(new ShelterRow(externalId, name, address, lat, lng));
+                rows.add(new PlaceRow(externalId, name, address, lat, lng));
             }
         }
         return new Result(rows, total, skipped);
