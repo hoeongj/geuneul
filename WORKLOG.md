@@ -236,3 +236,12 @@
 - 트러블: Kakao 도메인이 계속 거부 → SDK 응답(`AccessDeniedError: domain mismatched`)으로 **브라우저 없이 등록 여부를 직접 검증**. 원인은 도메인을 **"제품 링크 관리 > 웹 도메인"(카카오톡 공유용)** 에 넣은 것 — 지도는 **"JavaScript 키 > JavaScript SDK 도메인"** 에 등록해야 함. 올바른 칸 등록 후 SDK 정상 로드 확인.
 - 관련: `frontend/vercel.json`, Vercel project `geuneul`(prod alias geuneul.vercel.app), PR #12
 - 다음 할 일: PR #12 머지 → main. P2(UGC+인증)는 **백엔드 API(POST /reports·/reviews·/auth) 먼저** 필요 — 별도 착수.
+
+### 2026-07-03 — 상세 미니맵 실지도화 + Vercel git 자동배포 파이프라인 완성
+- 한 일: ① 장소 상세 미니맵을 placeholder → **선택 장소 중심 Kakao 실지도**(비대화형, 키 없으면 폴백)로 교체(PR #14). ② Vercel 프로젝트에 **rootDirectory=frontend 설정 + GitHub 레포 연결** → `main` push 시 프론트 자동배포. ③ 그 전환이 유발한 git 배포 ENOENT(TS-007)를 `process.env.VERCEL` 가드로 수정하고 자동배포 Ready 검증.
+- 결정 & 이유(why):
+  - **미니맵 비대화형(드래그·줌 off)**: 상세 화면 미니맵의 역할은 "위치 한눈에"지 탐색이 아님 — 스크롤 제스처와의 충돌(지도 팬이 페이지 스크롤을 삼키는 모바일 고질병)을 원천 차단.
+  - **자동배포 = Vercel git 연결**(GitHub Actions로 프론트 배포 워크플로 추가하지 않음): Vercel 네이티브 경로가 preview 배포·롤백을 공짜로 제공, 워크플로 이중화 불필요. 백엔드(deploy.yml)와 트리거 경로도 자연 분리(frontend/** vs backend/**).
+  - **Kakao 도메인 검증을 curl Referer로**: 브라우저 없이 `dapi.kakao.com/v2/maps/sdk.js`에 Referer만 바꿔 질의하면 등록 여부가 즉시 판별됨(성공=SDK JS, 실패=AccessDeniedError). 콘솔 등록 삽질(제품링크관리 vs JavaScript SDK 도메인 칸 혼동)을 이 방법으로 역추적해 해결.
+- 관련: `frontend/components/place/DetailMiniMap*.tsx`, `frontend/next.config.ts`, `frontend/vercel.json`, TROUBLESHOOTING TS-007, PR #14, 커밋 a0bc0f1
+- 다음 할 일: P2 착수 — 제보(reports) API 백엔드부터(익명 허용이라 외부 자격증명 불필요). OAuth/후기는 카카오·구글 콘솔 설정(사용자 액션) 선행.
