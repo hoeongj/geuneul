@@ -245,3 +245,12 @@
   - **Kakao 도메인 검증을 curl Referer로**: 브라우저 없이 `dapi.kakao.com/v2/maps/sdk.js`에 Referer만 바꿔 질의하면 등록 여부가 즉시 판별됨(성공=SDK JS, 실패=AccessDeniedError). 콘솔 등록 삽질(제품링크관리 vs JavaScript SDK 도메인 칸 혼동)을 이 방법으로 역추적해 해결.
 - 관련: `frontend/components/place/DetailMiniMap*.tsx`, `frontend/next.config.ts`, `frontend/vercel.json`, TROUBLESHOOTING TS-007, PR #14, 커밋 a0bc0f1
 - 다음 할 일: P2 착수 — 제보(reports) API 백엔드부터(익명 허용이라 외부 자격증명 불필요). OAuth/후기는 카카오·구글 콘솔 설정(사용자 액션) 선행.
+
+### 2026-07-03 — P2 제보 기능 적대적 리뷰 + 보안 하드닝(XFF 신뢰경계·OOM)
+- 한 일: 제보 API(백엔드 PR #15 배포됨)와 프론트 연동(PR #16)을 **다중 에이전트 적대적 코드리뷰**(19 에이전트·5차원, 각 발견 반증 검증)로 감사. 확정 결함 2대(레이트리밋 XFF 위조 우회 + eviction no-op OOM)를 백엔드에서 수정. 상세는 TROUBLESHOOTING TS-008.
+- 결정 & 이유(why):
+  - **BFF-공유시크릿 신뢰경계(ProxyClientResolver)**: ALB가 실 IP를 XFF 최우측에 append하는 구조에서 "최좌측=클라이언트"는 위조 가능 → 리밋 우회. 프록시(BFF)를 신뢰경계로 승격해 시크릿 증명 시에만 BFF가 준 클라 IP를 신뢰. **회귀 없는 점진 활성화**(시크릿 미설정=기존 최좌측 동작)로 프로덕션 무중단 — 활성화는 config 한 번.
+  - **인메모리 리밋 유지(Redis/Bucket4j 도입 안 함)**: 단일 Fargate 태스크라 인메모리로 충분(2026 관례: 단일 인스턴스 in-memory→수평확장 시 Redis). eviction만 하드 상한으로 고쳐 OOM 차단.
+  - **적대적 검증으로 거짓양성 배제**: 14 발견 중 9건(TOCTOU soft-limit, place 삭제 레이스 등)은 반증에서 "무해/acceptable tradeoff"로 판정해 수용 안 함 — 신호 대 잡음 관리.
+- 관련: `ProxyClientResolver`(+Test 7), `ReportRateLimiter`(evict 하드상한·OOM 회귀 테스트), `ReportController`, `application.yml`(geuneul.proxy-secret), 리뷰 워크플로 wf_bac51fa8-52d
+- 다음 할 일: 백엔드 PR→CI→배포. 프론트 PR #16에 BFF 시크릿 헤더 + nearest 에러상태 추가 후 머지. proxy-secret 활성화는 아침 체크리스트(Vercel env + 백엔드 SSM/env).
