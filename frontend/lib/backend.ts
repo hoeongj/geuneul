@@ -29,13 +29,20 @@ export async function proxyPost(path: string, request: Request): Promise<NextRes
   }
   try {
     const body = await request.text();
-    const clientIp = request.headers.get("x-forwarded-for") ?? "";
+    // 원 클라이언트 IP: Vercel이 세팅한 x-real-ip 우선, 없으면 XFF 최좌측.
+    const xff = request.headers.get("x-forwarded-for") ?? "";
+    const clientIp = request.headers.get("x-real-ip") ?? xff.split(",")[0].trim();
+    // BFF↔백엔드 공유 시크릿(서버 전용). 설정 시 백엔드가 x-client-ip를 신뢰해 XFF 위조 우회를 차단(ProxyClientResolver).
+    // 미설정이면 빈 헤더 → 백엔드는 기존 최좌측 XFF 동작(회귀 없음).
+    const proxySecret = process.env.GEUNEUL_PROXY_SECRET ?? "";
     const res = await fetch(`${BASE}${path}`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         accept: "application/json",
-        ...(clientIp ? { "x-forwarded-for": clientIp } : {}),
+        ...(xff ? { "x-forwarded-for": xff } : {}),
+        ...(clientIp ? { "x-client-ip": clientIp } : {}),
+        ...(proxySecret ? { "x-proxy-auth": proxySecret } : {}),
       },
       body,
       signal: AbortSignal.timeout(TIMEOUT_MS),

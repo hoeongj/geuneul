@@ -134,7 +134,13 @@ export default function ReportPage() {
         <div className="min-w-0 flex-1">
           <div className="text-[11px] text-muted">제보할 장소{geo.isFallback ? " · 위치 권한을 켜면 더 정확해요" : ""}</div>
           <div className="truncate text-[15px] font-bold text-ink">
-            {target ? target.name : nearest.isLoading ? "주변 장소 찾는 중…" : "주변에 장소가 없어요"}
+            {target
+              ? target.name
+              : nearest.isLoading
+                ? "주변 장소 찾는 중…"
+                : nearest.isError
+                  ? "장소를 못 불러왔어요 · ‘변경’으로 선택"
+                  : "주변에 장소가 없어요 · ‘변경’으로 선택"}
           </div>
         </div>
         <button
