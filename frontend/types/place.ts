@@ -45,3 +45,33 @@ export interface MapBounds {
 }
 
 export type Scenario = "restroom" | "rest30" | "rain";
+
+// ── 휘발성 제보 (백엔드 /reports 계약, 라이브 실측) ────────────────────────────
+export type ReportTypeKey =
+  | "COOL"
+  | "HOT"
+  | "BUG"
+  | "ODOR"
+  | "SMOKE"
+  | "FLOOD"
+  | "SLIPPERY"
+  | "WATER_OK"
+  | "RESTROOM_CLEAN";
+
+export interface Report {
+  id: number;
+  placeId: number;
+  reportType: ReportTypeKey;
+  reportTypeLabel: string;
+  comment: string | null;
+  anonymous: boolean;
+  createdAt: string; // ISO-8601 — 상대 시간은 클라이언트가 계산
+  expiresAt: string;
+}
+
+export interface ReportCreatePayload {
+  placeId: number;
+  reportType: ReportTypeKey;
+  comment?: string;
+  anonymous?: boolean;
+}
