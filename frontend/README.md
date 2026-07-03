@@ -1,7 +1,10 @@
 # 그늘 프론트엔드 (MVP 4화면)
 
+🟢 **Live: https://geuneul.vercel.app**
+
 여름 생존 지도의 모바일 웹(PWA). **홈 지도 · 장소 상세 · 지금 급해요 · 제보하기** 4화면을
 라이브 백엔드(PostGIS 공간검색 API)에 연결한다. 디자인은 하이파이 핸드오프를 대상 스택으로 픽셀에 가깝게 재현.
+장소 상세의 미니맵도 실지도(비대화형 Kakao 미니뷰)다.
 
 ## 스택 (2026 기준)
 
@@ -58,6 +61,16 @@ pnpm typecheck    # tsc --noEmit
 pnpm lint         # eslint
 pnpm build        # 프로덕션 빌드(Serwist SW 번들)
 ```
+
+## 배포 (Vercel — 자동)
+
+- **`main` push → Vercel 자동배포.** 프로젝트 `geuneul`(rootDirectory=`frontend`)이 GitHub 레포에 git-connected.
+  PR을 열면 Preview 배포도 자동으로 붙는다.
+- 빌드 설정은 `vercel.json`이 고정: `installCommand`(--ignore-scripts)·`buildCommand`(webpack) — 이유는 TS-006/TS-007.
+- env는 Vercel Production에 저장: `GEUNEUL_API_BASE`(서버 전용)·`NEXT_PUBLIC_KAKAO_MAP_JS_KEY`.
+- **Kakao 지도 도메인**: 콘솔 **[앱 키 > JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록됨.
+  ("제품 링크 관리 > 웹 도메인"은 카카오톡 공유용 — 지도와 무관하니 혼동 주의.)
+  등록 상태는 브라우저 없이 검증 가능: `curl -H "Referer: https://geuneul.vercel.app/" "https://dapi.kakao.com/v2/maps/sdk.js?appkey=<JS키>&autoload=false"` → SDK JS가 오면 정상, `AccessDeniedError`면 미등록.
 
 ## 구조
 
