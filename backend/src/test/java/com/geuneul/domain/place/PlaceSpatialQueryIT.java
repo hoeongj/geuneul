@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 공간쿼리 정확성 IT — 실 PostGIS에서 반경/kNN/bounds를 실좌표로 검증한다.
- * 기준점: 숭실대 정문 (37.4963, 126.9575). 테스트 데이터 거리(하버사인 근사):
+ * 기준점: 숭실대 정문 (37.4963, 126.9575). 테스트 데이터 거리(대략):
  *   - 숭실대입구역 ≈ 330m / 상도역 ≈ 1.1km / 강남역 ≈ 6.2km
  */
 class PlaceSpatialQueryIT extends AbstractIntegrationTest {
@@ -39,44 +39,56 @@ class PlaceSpatialQueryIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("반경 검색(ST_DWithin geography): 1.5km 안에는 2곳, 가까운 순으로 정렬된다")
     void radiusSearchFiltersAndOrdersByDistance() {
-        List<Place> result = placeRepository.findWithinRadius(SSU_LAT, SSU_LNG, 1_500, null, 100);
+        List<PlaceDistanceView> result = placeRepository.findWithinRadius(SSU_LAT, SSU_LNG, 1_500, null, 100);
 
-        assertThat(result).extracting(Place::getName)
+        assertThat(result).extracting(PlaceDistanceView::getName)
                 .containsExactly("숭실대입구역", "상도역 화장실"); // 강남역(6.2km) 제외 + 거리순
+    }
+
+    @Test
+    @DisplayName("반경 검색: 거리(m)를 DB가 함께 반환하고, 그 값이 정렬 순서와 일치한다(오름차순)")
+    void radiusReturnsDistanceConsistentWithOrder() {
+        List<PlaceDistanceView> result = placeRepository.findWithinRadius(SSU_LAT, SSU_LNG, 2_000, null, 100);
+
+        // 표시 거리 = 정렬 기준(둘 다 타원체) → distanceM이 단조 증가해야 한다.
+        assertThat(result).extracting(PlaceDistanceView::getDistanceM).isSorted();
+        // 첫 결과(숭실대입구역)는 실제로 약 330m 근처.
+        assertThat(result.get(0).getDistanceM()).isBetween(250.0, 450.0);
     }
 
     @Test
     @DisplayName("반경 검색: 500m로 좁히면 숭실대입구역만 남는다 (미터 단위 반경이 실제로 동작)")
     void radiusIsInMeters() {
-        List<Place> result = placeRepository.findWithinRadius(SSU_LAT, SSU_LNG, 500, null, 100);
+        List<PlaceDistanceView> result = placeRepository.findWithinRadius(SSU_LAT, SSU_LNG, 500, null, 100);
 
-        assertThat(result).extracting(Place::getName).containsExactly("숭실대입구역");
+        assertThat(result).extracting(PlaceDistanceView::getName).containsExactly("숭실대입구역");
     }
 
     @Test
     @DisplayName("카테고리 필터: TOILET만 요청하면 반경 내 화장실만 반환한다")
     void radiusSearchWithCategoryFilter() {
-        List<Place> result = placeRepository.findWithinRadius(
+        List<PlaceDistanceView> result = placeRepository.findWithinRadius(
                 SSU_LAT, SSU_LNG, 1_500, PlaceCategory.TOILET.name(), 100);
 
-        assertThat(result).extracting(Place::getName).containsExactly("상도역 화장실");
+        assertThat(result).extracting(PlaceDistanceView::getName).containsExactly("상도역 화장실");
     }
 
     @Test
     @DisplayName("kNN(<->): 반경 제한 없이 가까운 순 — 강남역도 3순위로 포함된다")
     void knnOrdersAllByDistance() {
-        List<Place> result = placeRepository.findNearest(SSU_LAT, SSU_LNG, null, 3);
+        List<PlaceDistanceView> result = placeRepository.findNearest(SSU_LAT, SSU_LNG, null, 3);
 
-        assertThat(result).extracting(Place::getName)
+        assertThat(result).extracting(PlaceDistanceView::getName)
                 .containsExactly("숭실대입구역", "상도역 화장실", "강남역");
+        assertThat(result).extracting(PlaceDistanceView::getDistanceM).isSorted();
     }
 
     @Test
     @DisplayName("kNN + 카테고리: 가장 가까운 화장실 1곳 — '화장실 급할 때' 시나리오")
     void knnNearestToilet() {
-        List<Place> result = placeRepository.findNearest(SSU_LAT, SSU_LNG, PlaceCategory.TOILET.name(), 1);
+        List<PlaceDistanceView> result = placeRepository.findNearest(SSU_LAT, SSU_LNG, PlaceCategory.TOILET.name(), 1);
 
-        assertThat(result).extracting(Place::getName).containsExactly("상도역 화장실");
+        assertThat(result).extracting(PlaceDistanceView::getName).containsExactly("상도역 화장실");
     }
 
     @Test
