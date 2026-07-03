@@ -60,7 +60,7 @@ GET /places/{id}
 }]
 ```
 - `distanceM`은 반경/최근접 검색에서만 존재(bounds/단건엔 null) — 리스트 카드에 "21m" 형태로 표기.
-- 에러는 RFC7807 ProblemDetail(400 등).
+- 에러(400 등)는 Spring 기본 오류 JSON: `{"timestamp":"...","status":400,"error":"Bad Request","path":"/places"}` — 바디의 `status`/`error`로 표시. (RFC7807 ProblemDetail 전환은 백엔드 후속 옵션.)
 
 ## 4. 카테고리 8종 (마커 아이콘 대상)
 

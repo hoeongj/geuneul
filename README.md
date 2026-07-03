@@ -17,18 +17,18 @@
 🟢 **Live** — [http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com](http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com/actuator/health) (AWS ECS Fargate + RDS PostGIS, `main` push 시 자동배포)
 
 - W0 완료(2026-07-02): Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + **AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인**
-- P1 진행 중: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API + 무더위쉼터 idempotent 인제스천** — 의사결정은 [`docs/adr/`](./docs/adr) 참고
+- P1: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API 라이브** + **공공데이터 idempotent 인제스천**(무더위쉼터 전국 프로덕션 적재 완료 · 공중화장실 표준데이터 59,768행 파서 + **카카오 지오코딩 파이프라인**으로 좌표 결측 보완) — 의사결정은 [`docs/adr/`](./docs/adr) 참고
 
 ## API 맛보기 (P1)
 ```bash
 # 숭실대 정문 반경 1km — 가까운 순 + 거리(m)
 GET /places?lat=37.4963&lng=126.9575&radius=1000
 
-# 지도 뷰포트(bounds) 마커
-GET /places?bounds=126.93,37.49,126.97,37.52&category=TOILET
+# 지도 뷰포트(bounds) 마커 — 무더위쉼터 (전국 적재분)
+GET /places?bounds=126.93,37.49,126.97,37.52&category=COOLING_SHELTER
 
-# 가장 가까운 화장실 3곳 (kNN)
-GET /places/nearest?lat=37.4963&lng=126.9575&category=TOILET&limit=3
+# 가장 가까운 무더위쉼터 3곳 (kNN) — 서울 밖 어디서나 동작 (예: 부산)
+GET /places/nearest?lat=35.2133&lng=129.0157&category=COOLING_SHELTER&limit=3
 ```
 공공데이터 적재(멱등 — 재실행해도 중복 없음):
 ```bash
