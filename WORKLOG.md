@@ -209,3 +209,30 @@
   - 데이터 스냅샷은 GitHub Release(data-v1) 재사용 — 재적재는 URL만 동일하게.
 - 관련: `infra/terraform/ecs.tf`(grace 240), TROUBLESHOOTING TS-005, ECS task 2ea175e5(재적재), Release data-v1
 - 다음 할 일: 재배포 안정화 확인 → P2(UGC+인증) 또는 프론트(새 세션). 프론트는 이제 TOILET 카테고리도 전국 데이터로 동작.
+
+### 2026-07-03 — 프론트엔드 MVP 4화면(Next 16 App Router + PWA) 라이브 API 연동
+- 한 일: 하이파이 디자인 핸드오프를 대상 스택으로 재현 — **홈 지도 / 장소 상세 / 지금 급해요 / 제보(프리뷰)** 4화면 + 하단 3탭 + 상세 오버레이. 라이브 백엔드(bounds/radius/nearest/단건)에 **서버 프록시**로 연결. `pnpm typecheck`·`lint`·`build` 통과, `next start` 로 프록시 4종 + 페이지 런타임 스모크 검증(전국 화장실 데이터까지 조회 확인).
+- 결정 & 이유(why) — 라이브러리(2026 트렌드 확인):
+  - **Serwist(@serwist/next)**: next-pwa 는 유지보수 정체 → 후계인 Serwist 가 Next 공식 문서 권장. 매니페스트·SW·오프라인 셸·설치가능.
+  - **TanStack Query v5**: 시장 표준(주간 12.3M vs SWR 7.7M). `queryKey=bounds` + `keepPreviousData` 로 뷰포트 패닝 중 과호출·깜빡임 억제(백엔드 Redis 캐시와 이중 방어), P2 mutation(제보/후기 optimistic) 대비.
+  - **react-kakao-maps-sdk**: `useKakaoLoader`+`MarkerClusterer`. 커스텀 마커는 **SVG data-URI**(카테고리 아이콘+회색 링+꼬리)로 생성해 클러스터링과 디자인 픽셀을 동시에.
+  - **Tailwind v4 `@theme`**: 핸드오프 디자인 토큰(색/반경/그림자)을 테마 변수로 1:1 매핑 → 픽셀 재현+유지보수.
+  - **자체 `<Icon>`**(프로토타입 `svgIcon` 재현): UI 아이콘과 마커 data-URI 가 **같은 path 소스**를 공유(일관성). `WATER` 는 원본 svgIcon 의 water 키가 비어 있던 갭이라 표준 droplet path 로 보강.
+- 핵심 설계:
+  - **서버 프록시(app/api/**)**: ALB 가 http(TLS 없음)+CORS 미설정이라 브라우저 직접 호출은 mixed-content/CORS 로 차단됨. 브라우저는 동일 오리진 `/api/*` 만, Next Route Handler 가 서버 전용 env `GEUNEUL_API_BASE`(NEXT_PUBLIC 아님)로 ALB 프록시 → 두 제약 동시 회피 + ALB 호스트 미노출.
+  - **급해요 = 서버 팬아웃**: nearest 는 category 단일 파라미터라, 다중 카테고리 시나리오(잠깐 쉬어갈 곳=COOLING_SHELTER/LIBRARY/UNDERGROUND/CIVIC 등)를 `/api/urgent` 에서 카테고리별 병렬 호출→id 중복 제거→거리순→top5 로 병합.
+  - **장소 상세 = 라우트가 아닌 오버레이**: 스펙이 "콘텐츠만 덮고 탭바 유지+슬라이드업"이라 클라이언트 상태 오버레이가 정확히 부합(공유 딥링크 URL 은 Reserved).
+  - **키 없이도 동작**: Kakao JS 키가 없으면 지도만 placeholder, 리스트/급해요/상세 데이터는 프록시로 정상 동작 → 키 주입 즉시 실지도 점등.
+  - **범위 준수**: P2/P3(후기·제보 POST·로그인·freshness·AI 요약·survival_score 3색)은 레이아웃 자리만.
+- 관련: `frontend/`(전체), `frontend/README.md`, `.github/workflows/frontend-ci.yml`(paths:frontend/**, typecheck·lint·build), TROUBLESHOOTING TS-006
+- 다음 할 일: PR→프론트 CI green→머지. Kakao JS 키 수령 시 `.env.local` 주입해 실지도 확인. 이후 P2(UGC+인증) 또는 상세 미니맵 실지도화.
+
+### 2026-07-03 — 프론트엔드 Vercel 프로덕션 배포 (App Live)
+- 한 일: 프론트 MVP 를 **Vercel 프로덕션 배포** → **https://geuneul.vercel.app** 라이브. Kakao 실지도 + 라이브 데이터(전국 화장실 등) 동작 확인.
+- 결정 & 이유(why):
+  - **로컬 대신 배포 우선**: Kakao JS SDK 는 등록된 도메인에서만 로드되는데, 콘솔이 **localhost 등록을 계속 거부**(알려진 이슈). 실도메인은 정상 등록되므로 Vercel 배포로 우회 — 어차피 브리프상 배포 타깃이 Vercel 이라 정공법.
+  - **`vercel.json` 로 빌드 고정**: `buildCommand=pnpm build`(=`next build --webpack`) — Vercel 기본 `next build`(Turbopack)는 Serwist(webpack)와 충돌하므로 webpack 강제. `installCommand=... --ignore-scripts` — pnpm 11 이 CI 에서 미빌드 네이티브 스크립트를 하드에러 처리하므로 무시(sharp 미사용·oxide prebuilt·unrs JS 폴백).
+  - **env 분리**: `GEUNEUL_API_BASE`(서버 전용) + `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` 를 Vercel Production 에 암호화 저장. 키는 레포 미포함(.env.local·Vercel env 만).
+- 트러블: Kakao 도메인이 계속 거부 → SDK 응답(`AccessDeniedError: domain mismatched`)으로 **브라우저 없이 등록 여부를 직접 검증**. 원인은 도메인을 **"제품 링크 관리 > 웹 도메인"(카카오톡 공유용)** 에 넣은 것 — 지도는 **"JavaScript 키 > JavaScript SDK 도메인"** 에 등록해야 함. 올바른 칸 등록 후 SDK 정상 로드 확인.
+- 관련: `frontend/vercel.json`, Vercel project `geuneul`(prod alias geuneul.vercel.app), PR #12
+- 다음 할 일: PR #12 머지 → main. P2(UGC+인증)는 **백엔드 API(POST /reports·/reviews·/auth) 먼저** 필요 — 별도 착수.

@@ -1,0 +1,49 @@
+// 서버 전용. 브라우저는 동일 오리진 /api/* 만 호출하고, 이 프록시가 ALB 로 대신 요청한다.
+// → ALB 가 http(TLS 없음)이고 CORS 미설정이어도 mixed-content/CORS 를 동시에 회피.
+// GEUNEUL_API_BASE 는 서버 전용 env(NEXT_PUBLIC 아님)라 ALB 호스트가 클라이언트 번들에 노출되지 않는다.
+import { NextResponse } from "next/server";
+
+const RAW_BASE = process.env.GEUNEUL_API_BASE ?? "";
+const BASE = RAW_BASE.replace(/\/$/, "");
+
+const TIMEOUT_MS = 10_000;
+
+async function backendFetch(path: string, search: string): Promise<Response> {
+  const url = `${BASE}${path}${search ? `?${search}` : ""}`;
+  return fetch(url, {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    // 백엔드 Redis 가 캐시를 담당하므로 프록시는 항상 신선하게 통과(체감 상태의 freshness 우선).
+    cache: "no-store",
+  });
+}
+
+// path 예: "/places", "/places/nearest", "/places/12"
+export async function proxy(path: string, search: string): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  try {
+    const res = await backendFetch(path, search);
+    const body = await res.text();
+    return new NextResponse(body, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
+// 급해요: 시나리오의 카테고리별 nearest 를 서버에서 팬아웃 → 병합 → 거리순 → topN.
+// (nearest 는 category 단일 파라미터라 다중 카테고리 시나리오는 서버 병합이 필요.)
+export async function backendJson<T>(path: string, search: string): Promise<T> {
+  if (!BASE) throw new Error("GEUNEUL_API_BASE not configured");
+  const res = await backendFetch(path, search);
+  if (!res.ok) throw new Error(`upstream ${res.status}`);
+  return (await res.json()) as T;
+}
