@@ -254,3 +254,12 @@
   - **적대적 검증으로 거짓양성 배제**: 14 발견 중 9건(TOCTOU soft-limit, place 삭제 레이스 등)은 반증에서 "무해/acceptable tradeoff"로 판정해 수용 안 함 — 신호 대 잡음 관리.
 - 관련: `ProxyClientResolver`(+Test 7), `ReportRateLimiter`(evict 하드상한·OOM 회귀 테스트), `ReportController`, `application.yml`(geuneul.proxy-secret), 리뷰 워크플로 wf_bac51fa8-52d
 - 다음 할 일: 백엔드 PR→CI→배포. 프론트 PR #16에 BFF 시크릿 헤더 + nearest 에러상태 추가 후 머지. proxy-secret 활성화는 아침 체크리스트(Vercel env + 백엔드 SSM/env).
+
+### 2026-07-04(새벽) — P2 제보 기능 완결·라이브 (백엔드+프론트+하드닝)
+- 한 일: P2 제보 3-PR을 완결 라이브. **PR #15**(백엔드 API), **PR #16**(프론트 실전송+상세 최근제보+BFF 시크릿 헤더+nearest 에러상태), **PR #17**(적대적 리뷰 하드닝 TS-008). 라이브 E2E 통과: geuneul.vercel.app 프록시 경유 `POST /reports` 201(TTL 정확)→`GET /places/{id}/reports` 반영, 동일 XFF 4연속 4번째 429.
+- 결정 & 이유(why):
+  - **익명 제보 우선(로그인 후행)**: 제보는 "한 탭 낮은 부담"이 핵심 가치라 익명 허용이 제품상 옳고, OAuth 콘솔 설정(사용자 액션) 없이도 풀스택 완결·검증 가능 → 밤사이 자율 진행에 적합. 로그인 신뢰도 가중은 엔티티에 경로만 열어둠(`user_id` nullable).
+  - **적대적 리뷰를 배포 후 자기검증에 사용**: 다중 에이전트 리뷰로 XFF 신뢰경계·OOM을 스스로 발견, 반증 검증으로 거짓양성 9건 배제 후 실결함 2건만 하드닝. "리뷰 = 발견+반증"으로 신호 관리.
+- 산출물: `domain/report/*`(엔티티·TTL·리포·서비스·컨트롤러·리미터·리졸버 + dto), 프론트 `api/reports`·`api/places/[id]/reports`·`lib/reports`·제보 화면 실전송·상세 최근제보. 테스트 백엔드 23건(리졸버7·리미터7·컨트롤러7·IT4→CI) + 프론트 E2E.
+- 관련 문서: TS-008, ADR-0004, HANDOFF 아침 체크리스트(proxy-secret 활성화·OAuth 준비).
+- 다음: 아침 체크리스트대로 ① proxy-secret 활성화(선택) ② OAuth 콘솔 준비 → 로그인/후기 → survival_score(P3, 제보 데이터 축적됨).
