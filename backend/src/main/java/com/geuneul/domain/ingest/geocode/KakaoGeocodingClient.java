@@ -2,6 +2,7 @@ package com.geuneul.domain.ingest.geocode;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,9 @@ public class KakaoGeocodingClient implements GeocodingClient {
     private final RestClient restClient;
     private final boolean keyPresent;
 
+    // 생성자가 2개(운영/테스트)라 Spring이 어느 것으로 빈을 만들지 명시해야 한다(@Autowired 없으면
+    // NoSuchMethodException으로 컨텍스트 생성 실패 — 이 케이스도 Docker 있는 CI에서만 드러남).
+    @Autowired
     public KakaoGeocodingClient(@Value("${kakao.rest-api-key:}") String restApiKey) {
         this(restApiKey, RestClient.builder());
     }

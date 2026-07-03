@@ -74,7 +74,7 @@
   ```
   → **Spring Boot 4는 Jackson 3(`tools.jackson`)로 이전**됐는데, `KakaoGeocodingClient`가 응답을 **Jackson 2의 `com.fasterxml.jackson.databind.JsonNode`** 로 역직렬화하려 함. RestClient의 Jackson 3 변환기가 이 낯선 타입을 일반 빈으로 introspect하다 실패 → 모든 호출이 파싱 예외 → `catch`에서 empty. curl(순수 HTTP)이 성공한 건 Java 역직렬화 계층을 안 거쳤기 때문.
   - **진짜 근본 원인 = 테스트 사각지대:** IngestionIdempotencyIT가 `@Primary` **페이크 지오코더**를 주입해서 **실제 KakaoGeocodingClient의 HTTP 역직렬화 경로가 단 한 번도 테스트되지 않았다.** CI가 전부 green이었는데 프로덕션에서 100% 실패한 이유.
-- **해결 과정:** ① `JsonNode` → **타입 있는 record(`KakaoAddressResponse`)** 로 역직렬화(Jackson 버전 무관하게 이름 매핑). ② 사각지대 제거 — **MockRestServiceServer로 실제 카카오 JSON을 파싱하는 단위 테스트 5건** 추가(도로명 우선/지번 폴백/0건/4xx/키없음). 이 테스트는 **로컬에서 실행**되어 JsonNode 버그를 재현·차단한다(Docker 불필요). ③ 멱등 파이프라인이라 실패분은 캐시 안 됨 → 수정 배포 후 재실행하면 전량 재시도되어 수렴.
+- **해결 과정:** ① `JsonNode` → **타입 있는 record(`KakaoAddressResponse`)** 로 역직렬화(Jackson 버전 무관하게 이름 매핑). ② 사각지대 제거 — **MockRestServiceServer로 실제 카카오 JSON을 파싱하는 단위 테스트 5건** 추가(도로명 우선/지번 폴백/0건/4xx/키없음). 이 테스트는 **로컬에서 실행**되어 JsonNode 버그를 재현·차단한다(Docker 불필요). ③ 멱등 파이프라인이라 실패분은 캐시 안 됨 → 수정 배포 후 재실행하면 전량 재시도되어 수렴. ④ 후속: 테스트용 2번째 생성자를 추가하자 Spring이 빈 생성 시 생성자를 못 골라 `contextLoads` 실패(NoSuchMethodException) → public 생성자에 `@Autowired` 명시. **이것도 컨텍스트 로드라 Docker 있는 CI에서만 드러남**(로컬 build는 IT skip) — "Docker 전용 테스트가 늦게 잡는 문제"의 반복이라, 이후엔 이런 변경은 CI green을 반드시 확인 후 진행.
 - **결과:** 로컬 테스트로 파싱 검증(이전엔 페이크가 가려 불가능) → 재배포 후 재적재.
 - **면접 어필 포인트:** ① "exitCode 0인데 결과 0"이라는 조용한 실패를 로그 패턴으로 근본까지 추적. ② **메이저 프레임워크 이전(Jackson 2→3)의 은닉된 파괴**를 실제 사고로 경험·이해. ③ **모킹의 함정** — 외부 의존을 페이크로 대체하면 "그 의존과의 실제 계약(역직렬화)"이 미검증으로 남는다는 교훈, 그리고 그걸 MockRestServiceServer(실 변환기 경유)로 메운 것.
 - **관련:** `KakaoGeocodingClient.java`, `KakaoGeocodingClientTest.java`, ECS task 29da1b2f 로그
