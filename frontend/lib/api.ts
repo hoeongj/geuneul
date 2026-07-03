@@ -1,5 +1,5 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
-import type { MapBounds, Place, Scenario } from "@/types/place";
+import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import { boundsParam } from "./geo";
 
 export class ApiError extends Error {
@@ -58,4 +58,39 @@ export function fetchUrgent(params: { scenario: Scenario; lat: number; lng: numb
     lng: String(params.lng),
   });
   return getJson<Place[]>(`/api/urgent?${qs}`);
+}
+
+// 제보 기본 장소 = 현재 위치 최근접(카테고리 무관).
+export function fetchNearestAny(params: { lat: number; lng: number; limit?: number }): Promise<Place[]> {
+  const qs = new URLSearchParams({
+    lat: String(params.lat),
+    lng: String(params.lng),
+    limit: String(params.limit ?? 1),
+  });
+  return getJson<Place[]>(`/api/places/nearest?${qs}`);
+}
+
+// 장소의 최근 유효 제보(미만료, 최신순 top20).
+export function fetchPlaceReports(placeId: number): Promise<Report[]> {
+  return getJson<Report[]>(`/api/places/${placeId}/reports`);
+}
+
+// 휘발성 제보 생성(익명 허용). 429 = 레이트리밋 — 메시지로 안내.
+export async function createReport(payload: ReportCreatePayload): Promise<Report> {
+  const res = await fetch(`/api/reports`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let msg = res.statusText;
+    try {
+      const body = await res.json();
+      msg = body?.message ?? body?.error ?? msg;
+    } catch {
+      /* noop */
+    }
+    throw new ApiError(res.status, msg);
+  }
+  return res.json() as Promise<Report>;
 }

@@ -8,7 +8,8 @@ import { useSelectedPlace } from "@/lib/context/selected";
 import { useToast } from "@/lib/context/toast";
 import { formatDistance, haversineMeters, walkMinutes } from "@/lib/geo";
 import { kakaoDirectionsUrl, kakaoMapUrl } from "@/lib/kakao";
-import { usePlace } from "@/lib/queries";
+import { usePlace, usePlaceReports } from "@/lib/queries";
+import { formatRelativeTime, REPORT_META } from "@/lib/reports";
 import type { Place } from "@/types/place";
 import { DetailMiniMap } from "./DetailMiniMap";
 import { FeaturePills } from "./FeaturePills";
@@ -26,8 +27,38 @@ function ReservedBlock({ title, badge, children }: { title: string; badge: strin
   );
 }
 
-function SkeletonBar({ w = "100%" }: { w?: string }) {
-  return <div className="h-3 rounded-full bg-line-cream" style={{ width: w }} />;
+// 최근 제보(라이브) — 유효(미만료) 제보 최신순. 점수 3색·freshness 가중은 P3 예약.
+function RecentReports({ placeId }: { placeId: number }) {
+  const { data, isLoading } = usePlaceReports(placeId);
+  return (
+    <section className="rounded-[14px] border border-line-cream bg-white p-3.5">
+      <div className="mb-2 flex items-center gap-2">
+        <h3 className="text-[14px] font-extrabold text-ink-2">최근 제보</h3>
+        <span className="rounded-full bg-mint-3 px-2 py-0.5 text-[10px] font-bold text-teal-deep">실시간</span>
+      </div>
+      {isLoading ? (
+        <p className="py-1 text-[12.5px] text-muted">최근 제보를 불러오는 중…</p>
+      ) : !data || data.length === 0 ? (
+        <p className="py-1 text-[12.5px] text-muted">아직 제보가 없어요 · 제보 탭에서 첫 제보를 남겨보세요</p>
+      ) : (
+        <ul className="flex flex-col gap-2.5">
+          {data.map((r) => (
+            <li key={r.id} className="flex items-start gap-2.5">
+              <span className="text-[18px] leading-none">{REPORT_META[r.reportType]?.emoji ?? "📍"}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[13px] font-bold text-ink">{r.reportTypeLabel}</span>
+                  <span className="text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
+                  {r.anonymous && <span className="text-[10px] text-muted-3">익명</span>}
+                </div>
+                {r.comment && <p className="truncate text-[12.5px] text-ink-3">{r.comment}</p>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 export function PlaceDetailOverlay() {
@@ -154,12 +185,7 @@ export function PlaceDetailOverlay() {
           <ReservedBlock title="AI 한 줄 요약" badge="P3">
             <p className="text-[13px] italic text-muted">“최근 제보가 쌓이면 이곳의 지금 상태를 한 줄로 요약해 드려요.”</p>
           </ReservedBlock>
-          <ReservedBlock title="최근 제보" badge="P2">
-            <div className="flex flex-col gap-2">
-              <SkeletonBar w="70%" />
-              <SkeletonBar w="55%" />
-            </div>
-          </ReservedBlock>
+          {id != null && <RecentReports placeId={id} />}
           <ReservedBlock title="후기" badge="P2">
             <div className="mb-3 flex items-center gap-1 text-line-dashed">
               {[0, 1, 2, 3, 4].map((i) => (
