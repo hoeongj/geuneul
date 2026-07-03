@@ -20,6 +20,7 @@
 - W0 완료(2026-07-02): Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + **AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인**
 - P1: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API 라이브** + **공공데이터 idempotent 인제스천**(무더위쉼터 전국 프로덕션 적재 완료 · 공중화장실 표준데이터 59,768행 파서 + **카카오 지오코딩 파이프라인**으로 좌표 결측 보완) — 의사결정은 [`docs/adr/`](./docs/adr) 참고
 - 프론트엔드: **MVP 4화면(홈 지도·장소 상세·급해요·제보) Next.js 16(App Router)+TypeScript PWA** — 라이브 API에 서버 프록시로 연결. 설치·구조는 [`frontend/README.md`](./frontend/README.md)
+- P2 착수: **휘발성 제보(reports) 풀스택 라이브** — 익명 `POST /reports`(타입별 TTL) + 프론트 실전송·상세 최근제보. 레이트리밋 XFF 신뢰경계·OOM 하드닝(적대적 리뷰, TS-008)
 
 ## 프론트엔드
 🟢 **Live: [https://geuneul.vercel.app](https://geuneul.vercel.app)** — `frontend/` — Next.js 16 App Router · TypeScript · Tailwind v4 · TanStack Query · Kakao Maps · Serwist(PWA). 백엔드(`backend/`)와 독립 배포(Vercel). 브라우저는 동일 오리진 `/api/*` 서버 프록시만 호출해 ALB(http)·CORS 제약을 회피한다. 자세한 내용·환경변수는 [`frontend/README.md`](./frontend/README.md).
@@ -34,6 +35,13 @@ GET /places?bounds=126.93,37.49,126.97,37.52&category=COOLING_SHELTER
 
 # 가장 가까운 무더위쉼터 3곳 (kNN) — 서울 밖 어디서나 동작 (예: 부산)
 GET /places/nearest?lat=35.2133&lng=129.0157&category=COOLING_SHELTER&limit=3
+```
+휘발성 제보 (P2 · 익명, 타입별 TTL로 자동 만료):
+```bash
+# 지금 상태 제보 (익명) — 분당 3·시간당 10 레이트리밋
+POST /reports   {"placeId":1,"reportType":"COOL","comment":"에어컨 빵빵"}
+# 장소의 유효(미만료) 제보 최신순
+GET  /places/1/reports
 ```
 공공데이터 적재(멱등 — 재실행해도 중복 없음):
 ```bash
