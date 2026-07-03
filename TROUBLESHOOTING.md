@@ -108,3 +108,14 @@
 - **결과:** `git push main → Vercel 프로덕션 자동배포` 파이프라인 정상화. 이후 배포는 무개입.
 - **면접 어필 포인트:** ① "로컬 편의를 위한 설정이 **호스팅 플랫폼의 빌드 가정**(rootDirectory 기반 출력 수집)을 깨뜨릴 수 있다"는 사례 — 환경변수 가드(`process.env.VERCEL`)로 환경별 분기. ② 성공 로그 뒤에 숨은 배포 실패를 `redeploy` 재현으로 표면화시켜 진단한 과정. ③ CLI 배포와 git 배포의 **빌드 컨텍스트 차이**(업로드 루트 vs clone 루트)를 이해.
 - **관련:** `frontend/next.config.ts`, Vercel project geuneul(rootDirectory=frontend, git connected), 커밋 a0bc0f1
+
+### TS-008 · 2026-07-03 — 적대적 코드리뷰가 잡은 제보 API 2대 결함: 레이트리밋 우회(XFF 위조) + 맵 무한증가(OOM)
+- **상황:** P2 제보 API 머지·배포 후, 다중 에이전트 적대적 코드리뷰(19 에이전트, 5개 차원 → 각 발견 반증 검증)를 돌렸다. 14건 발견 중 **확정 5건**(9건은 검증에서 반증/무해: check-then-increment TOCTOU는 soft-limit 관점 허용, place 하드삭제 레이스는 FK로 안전 등). 확정분은 실질 2대 결함:
+  - **(A) XFF 최좌측 신뢰 → 레이트리밋 우회.** `ReportController.clientKey`가 `X-Forwarded-For.split(",")[0]`(최좌측)을 리밋 키로 썼다. **AWS ALB는 실 접속 IP를 XFF 최우측에 append**하므로 최좌측은 클라이언트가 위조 가능 → 공격자가 XFF를 회전시키면 매 요청이 새 키 → 분당3·시간당10 리밋이 무력화. ALB가 퍼블릭 http라 BFF 우회 직접 타격도 가능. 익명 제보는 유일 방어선이 이 리밋인데다 제보가 survival_score freshness를 굴리므로 스팸 오염 위험.
+  - **(B) evictIfOversized no-op → 맵 무한증가(OOM).** `removeIf(w -> w.bucket != currentBucket)`가 **같은 버킷 폭주 시 아무것도 못 지운다**(모든 항목이 currentBucket). 위조 XFF로 고유키를 무한 생성하면 minute/hourWindows가 시간 창 동안 무한 증가 → 단일 Fargate 태스크 OOM. "맵 폭주 방지" 가드가 정작 폭주에서 실패.
+- **원인:** 프록시 뒤 클라이언트 IP 신원의 **신뢰경계**를 잘못 잡음. "프록시 최좌측=원 클라이언트"는 프록시가 append가 아니라 prepend할 때만 참인데, ALB는 append다. 또 eviction 전략이 "시간 경과(다른 버킷) 항목"만 회수하고 "동일 버킷 카디널리티"는 회수 못 함.
+- **해결:**
+  - **(A) ProxyClientResolver** 도입(신뢰경계 명시): ① BFF가 공유 시크릿 `X-Proxy-Auth`로 증명하면 BFF가 판정한 실 클라이언트 IP `X-Client-Ip` 신뢰(`c:` 키) → BFF 경로 유저별 리밋. ② 시크릿 설정+미증명(직접 타격)이면 ALB append 최우측 XFF(위조 불가) → 실 IP당 하드 리밋. ③ 시크릿 미설정(현재)이면 기존 호환 최좌측 → **회귀 없음**, 활성화는 배포 후 Vercel·백엔드 env 동일 시크릿 주입 한 번. 순수 오버로드로 단위 테스트 7건(회전 공격 무력화 포함).
+  - **(B) evict 하드 상한**: 만료 창 정리 후에도 상한 초과면 맵 전체 `clear()`(카운트 리셋 감수, OOM 우선). 유닛 테스트로 5만 고유키 폭주 시 유계 단정.
+- **면접 어필 포인트:** ① **프록시 체인 신뢰경계**(ALB append vs prepend, 최좌측/최우측 위조 가능성)를 정확히 이해하고 BFF-공유시크릿 패턴으로 해결 — "leftmost XFF 신뢰"라는 교과서적 취약점을 실제로 잡음. ② 적대적 다중 에이전트 리뷰로 자기 코드의 보안 결함을 배포 후 스스로 발견·검증(반증 통과분만 수용 → 거짓양성 9건 배제)하고 회귀 테스트로 고정. ③ 회귀 없는 점진 활성화(시크릿 미설정=기존 동작) 설계로 프로덕션 무중단.
+- **관련:** `ProxyClientResolver`(+Test), `ReportRateLimiter`(evict·`trackedWindows`), `ReportController`, `application.yml`(geuneul.proxy-secret), 리뷰 워크플로 wf_bac51fa8. 활성화 절차는 HANDOFF "아침 체크리스트".

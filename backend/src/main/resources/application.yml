@@ -30,6 +30,12 @@ spring:
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표). 규칙 D: 값은 .env/SSM으로만.
 
+geuneul:
+  # BFF(Vercel 서버 프록시) ↔ 백엔드 공유 시크릿. 설정되면 익명 제보 레이트리밋이 BFF가 준
+  # 실 클라이언트 IP(X-Client-Ip, X-Proxy-Auth로 증명)를 신뢰 → XFF 위조 우회 차단(ProxyClientResolver).
+  # 미설정(현재)이면 기존 호환(최좌측 XFF). 활성화는 Vercel env + 백엔드 env 동일값 주입. 값은 SSM으로만.
+  proxy-secret: ${GEUNEUL_PROXY_SECRET:}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
