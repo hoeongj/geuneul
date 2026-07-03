@@ -119,3 +119,4 @@
   - **(B) evict 하드 상한**: 만료 창 정리 후에도 상한 초과면 맵 전체 `clear()`(카운트 리셋 감수, OOM 우선). 유닛 테스트로 5만 고유키 폭주 시 유계 단정.
 - **면접 어필 포인트:** ① **프록시 체인 신뢰경계**(ALB append vs prepend, 최좌측/최우측 위조 가능성)를 정확히 이해하고 BFF-공유시크릿 패턴으로 해결 — "leftmost XFF 신뢰"라는 교과서적 취약점을 실제로 잡음. ② 적대적 다중 에이전트 리뷰로 자기 코드의 보안 결함을 배포 후 스스로 발견·검증(반증 통과분만 수용 → 거짓양성 9건 배제)하고 회귀 테스트로 고정. ③ 회귀 없는 점진 활성화(시크릿 미설정=기존 동작) 설계로 프로덕션 무중단.
 - **관련:** `ProxyClientResolver`(+Test), `ReportRateLimiter`(evict·`trackedWindows`), `ReportController`, `application.yml`(geuneul.proxy-secret), 리뷰 워크플로 wf_bac51fa8. 활성화 절차는 HANDOFF "아침 체크리스트".
+- **활성화(2026-07-04):** SSM `/geuneul/proxy_secret` + 태스크데프 rev13 재배포 + Vercel env → **라이브**. 헤더 고정 검증으로 우회 차단 확인(유효시크릿→c:키 유저별 리밋 / 위조→최우측 키잉). 샌드박스 egress 가변성 때문에 "XFF 회전" 직접 테스트는 무결론이었고 헤더 고정 테스트로 확정.
