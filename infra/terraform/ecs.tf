@@ -58,8 +58,10 @@ resource "aws_ecs_service" "app" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-  # Spring Boot 부팅+Flyway 마이그레이션 동안 ALB 헬스체크 실패로 태스크가 죽지 않도록 유예.
-  health_check_grace_period_seconds = 120
+  # Spring Boot 부팅 동안 ALB 헬스체크 실패로 태스크가 죽지 않도록 유예 (TS-005).
+  # 0.25 vCPU에서 부팅이 ~93초라 120초는 아슬아슬 → 서킷브레이커 오롤백 발생. 240초로 여유 확보.
+  # (트래픽이 붙으면 task_cpu를 512로 올려 부팅을 단축하는 게 정석 — 지금은 비용 우선.)
+  health_check_grace_period_seconds = 240
 
   # 배포 서킷브레이커 + 자동 롤백 (TS-003): 부팅 불가 이미지가 배포되면
   # 크래시루프→ECS 런치 백오프로 수 시간 지연되는 대신, 실패 감지 즉시 직전 버전으로 롤백한다.
