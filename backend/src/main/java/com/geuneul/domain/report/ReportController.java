@@ -29,10 +29,13 @@ public class ReportController {
 
     private final ReportService reportService;
     private final ReportRateLimiter rateLimiter;
+    private final ProxyClientResolver clientResolver;
 
-    public ReportController(ReportService reportService, ReportRateLimiter rateLimiter) {
+    public ReportController(ReportService reportService, ReportRateLimiter rateLimiter,
+                            ProxyClientResolver clientResolver) {
         this.reportService = reportService;
         this.rateLimiter = rateLimiter;
+        this.clientResolver = clientResolver;
     }
 
     @Operation(summary = "제보 생성 (익명 허용)",
@@ -41,7 +44,7 @@ public class ReportController {
     @PostMapping("/reports")
     @ResponseStatus(HttpStatus.CREATED)
     public ReportResponse create(@Valid @RequestBody ReportCreateRequest request, HttpServletRequest http) {
-        if (!rateLimiter.tryAcquire(clientKey(http))) {
+        if (!rateLimiter.tryAcquire(clientResolver.resolve(http))) {
             throw new ResponseStatusException(TOO_MANY_REQUESTS, "제보가 너무 잦아요. 잠시 후 다시 시도해 주세요.");
         }
         return reportService.create(request);
@@ -51,17 +54,5 @@ public class ReportController {
     @GetMapping("/places/{placeId}/reports")
     public List<ReportResponse> recent(@PathVariable long placeId) {
         return reportService.recentByPlace(placeId);
-    }
-
-    /**
-     * 레이트리밋 키 = 클라이언트 IP. ALB·프론트 프록시(BFF)를 거치므로 X-Forwarded-For의
-     * 최좌측(원 클라이언트)을 쓴다 — 프록시 뒤에서 remoteAddr만 보면 전 유저가 한 키로 뭉친다.
-     */
-    private static String clientKey(HttpServletRequest http) {
-        String xff = http.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].strip();
-        }
-        return http.getRemoteAddr();
     }
 }

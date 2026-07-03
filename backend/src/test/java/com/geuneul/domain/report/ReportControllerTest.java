@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 저장·만료 필터링의 실제 동작은 ReportFlowIT에서 실 PostGIS로 검증한다.
  */
 @WebMvcTest(ReportController.class)
+@org.springframework.context.annotation.Import(ProxyClientResolver.class) // 실 리졸버로 XFF→키 유도까지 검증(시크릿 미설정)
 class ReportControllerTest {
 
     @Autowired
@@ -101,7 +102,7 @@ class ReportControllerTest {
     }
 
     @Test
-    @DisplayName("프록시 경유 요청은 X-Forwarded-For 최좌측 IP가 리밋 키가 된다")
+    @DisplayName("시크릿 미설정 시 X-Forwarded-For 최좌측이 리밋 키(x: 네임스페이스)로 전달된다")
     void xffLeftmostIsClientKey() throws Exception {
         given(reportService.create(any())).willReturn(sample());
 
@@ -112,7 +113,7 @@ class ReportControllerTest {
 
         ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
         then(rateLimiter).should().tryAcquire(key.capture());
-        assertThat(key.getValue()).isEqualTo("203.0.113.7");
+        assertThat(key.getValue()).isEqualTo("x:203.0.113.7");
     }
 
     @Test
