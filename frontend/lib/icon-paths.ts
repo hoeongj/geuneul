@@ -42,4 +42,8 @@ export const ICONS: Record<string, IconPrim[]> = {
   locate: [{ circle: [12, 12, 3] }, { circle: [12, 12, 7.5] }, { path: "M12 2.5V5" }, { path: "M12 19v2.5" }, { path: "M2.5 12H5" }, { path: "M19 12h2.5" }],
   nav: [{ path: "M12 2.5 5 20l7-3.2L19 20z" }],
   share: [{ circle: [18, 5, 2.5] }, { circle: [6, 12, 2.5] }, { circle: [18, 19, 2.5] }, { path: "M8.2 13.3l7.6 4.4" }, { path: "M15.8 6.3 8.2 10.7" }],
+  camera: [
+    { path: "M4 8.5h3l1.6-2.3a1.5 1.5 0 0 1 1.2-.7h4.4a1.5 1.5 0 0 1 1.2 .7L17 8.5h3a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18v-8A1.5 1.5 0 0 1 4 8.5z" },
+    { circle: [12, 13.5, 3.4] },
+  ],
 };

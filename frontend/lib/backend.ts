@@ -18,6 +18,47 @@ async function backendFetch(path: string, search: string): Promise<Response> {
   });
 }
 
+// 쓰기 프록시: JSON body를 그대로 중계하고, 원 클라이언트 IP(X-Forwarded-For)를 보존해
+// 백엔드 레이트리밋(클라이언트별)이 프록시 IP로 뭉치지 않게 한다.
+export async function proxyPost(path: string, request: Request): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  try {
+    const body = await request.text();
+    // 원 클라이언트 IP: Vercel이 세팅한 x-real-ip 우선, 없으면 XFF 최좌측.
+    const xff = request.headers.get("x-forwarded-for") ?? "";
+    const clientIp = request.headers.get("x-real-ip") ?? xff.split(",")[0].trim();
+    // BFF↔백엔드 공유 시크릿(서버 전용). 설정 시 백엔드가 x-client-ip를 신뢰해 XFF 위조 우회를 차단(ProxyClientResolver).
+    // 미설정이면 빈 헤더 → 백엔드는 기존 최좌측 XFF 동작(회귀 없음).
+    const proxySecret = process.env.GEUNEUL_PROXY_SECRET ?? "";
+    const res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        ...(xff ? { "x-forwarded-for": xff } : {}),
+        ...(clientIp ? { "x-client-ip": clientIp } : {}),
+        ...(proxySecret ? { "x-proxy-auth": proxySecret } : {}),
+      },
+      body,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    const resBody = await res.text();
+    return new NextResponse(resBody, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
 // path 예: "/places", "/places/nearest", "/places/12"
 export async function proxy(path: string, search: string): Promise<NextResponse> {
   if (!BASE) {
