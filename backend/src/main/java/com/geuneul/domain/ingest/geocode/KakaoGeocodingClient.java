@@ -15,7 +15,7 @@ import java.util.Optional;
  * GET /v2/local/search/address.json?query=... , 헤더 Authorization: KakaoAK {REST 키}.
  *
  * - 도로명(road_address) 우선, 없으면 지번(address) 좌표. 카카오 응답의 x=경도, y=위도.
- * - 429(쿼터/속도 초과)는 백오프 재시도 3회. 그 외 오류는 empty 처리(호출부에서 실패 계수).
+ * - 429(쿼터/속도 초과)는 백오프 후 총 3회까지 시도(MAX_RETRY=3, 최대 재시도 2회). 그 외 오류는 empty 처리(호출부에서 실패 계수).
  * - 키는 환경변수 KAKAO_REST_API_KEY (규칙 D: 코드/레포에 하드코딩 금지).
  */
 @Component

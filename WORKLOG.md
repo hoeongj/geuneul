@@ -177,3 +177,17 @@
 - 실측: RunTask 전체 3분(프로비저닝 포함), 인제스천 자체 902ms. 화장실 59,768행은 카카오 키 대기(지오코딩 필수 — ADR-0003).
 - 관련: `infra/terraform/ecs.tf`, Release data-v1, TROUBLESHOOTING TS-003, 태스크정의 :7
 - 다음 할 일: 카카오 REST 키 수령 → 화장실 60k 지오코딩 적재(~수십 분) → P2(UGC+인증) 착수. 디자인은 브리프(docs/design-brief.md)로 병행 가능.
+
+### 2026-07-02 — 문서 전수 감사(멀티에이전트) → 15개 결함 수정
+- 한 일: 공개 문서 전체를 다각도 감사(에이전트 워크플로우: 문서별 8 + 횡단/비밀 2, 발견 후 적대적 검증). 세션 한도로 검증 단계 일부가 죽어 원발견 15건을 journal에서 회수해 **직접 사실 대조 후 전량 수정**.
+- 수정한 결함(면접관이 코드와 대조하면 잡힐 것들):
+  - **k3s 잔재**: docker-compose.yml 헤더가 "프로덕션=k3s+ArgoCD"로 남아있던 것(실제 AWS) → 교정. (high)
+  - **수치 불일치**: 화장실 건수 CLAUDE.md "약 52,255건" → 실측 59,768행. ADR-0002 "52k"→60k. "일부 좌표 미제공"→전량 미제공. (medium)
+  - **ADR-0002 노후화**: 관련 클래스명 `CoolingShelterCsvParser`(삭제됨)→`StandardCsvParser`; 결정3 "파일 단위 트랜잭션"→ADR-0003 개정 반영; 결정4 skipped 의미가 지오코딩 후보 도입으로 바뀐 것 반영. (high/medium)
+  - **코드 인용 불일치**: TS-002의 `DockerClientFactory.isDockerAvailable()`→`.instance().isDockerAvailable()`; 재시도 횟수 "3회"→"총 3회 시도(최대 재시도 2회)"(ADR-0003 + javadoc 동기화). (low)
+  - **라이브 현실 반영**: README API 예시 category=TOILET(미적재)→COOLING_SHELTER(전국 적재분)+부산 예시; design-brief 에러포맷 "RFC7807 ProblemDetail"(미설정)→Spring 기본 오류 JSON(라이브 실측); DEPLOY.md에 KAKAO 키 전달법·paths 필터·Fargate 비용($12/월) 추가. (medium)
+  - TS-001 커밋 참조 placeholder→8488eb6.
+- 비밀 스캔: git 추적 68파일 전수 — AKIA키·비번·학번·서버IP·Gemini키 0건, tfstate/tfvars/jar 실수 커밋 0. ✅
+- 결정 & 이유(why): 검증 에이전트가 죽었어도 원발견을 버리지 않고 **직접 코드 대조로 재검증**(빠뜨리면 오히려 문서 신뢰도 훼손). 과거 WORKLOG 항목의 당시 수치(52k 추정)는 역사 기록이라 보존하되, 살아있는 스펙/ADR/README만 실측치로 교정.
+- 관련: CLAUDE.md·README·DEPLOY·TROUBLESHOOTING·docker-compose·docs/adr/0002·0003·design-brief, KakaoGeocodingClient(주석)
+- 다음 할 일: 카카오 REST 키 수령 후 화장실 60k 지오코딩 적재 → P2(UGC+인증).

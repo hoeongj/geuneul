@@ -1,4 +1,4 @@
-# 그늘 로컬 개발 인프라 (PostGIS + Redis). 프로덕션은 기존 k3s+ArgoCD 재사용.
+# 그늘 로컬 개발 인프라 (PostGIS + Redis). 프로덕션은 AWS ECS Fargate + RDS(PostGIS) — infra/(Terraform)·DEPLOY.md 참고.
 # 사용: `docker compose up -d` → 백엔드는 backend/에서 `./gradlew bootRun`.
 services:
   postgres:
