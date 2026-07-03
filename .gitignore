@@ -31,6 +31,7 @@ pnpm-debug.log*
 yarn-error.log*
 next-env.d.ts
 *.tsbuildinfo
+.vercel/
 # Serwist가 빌드 시 생성하는 서비스워커 산출물(커밋 안 함).
 frontend/public/sw.js
 frontend/public/sw.js.map
