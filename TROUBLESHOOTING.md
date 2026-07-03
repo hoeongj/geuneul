@@ -100,3 +100,11 @@
 - **결과:** `typecheck`·`lint`·`build` 3종 그린 + `next start` 스모크(프록시 4종·페이지 렌더) 통과.
 - **면접 어필 포인트:** ① **빌드 툴체인 전환기의 통합 함정**(Next 16 Turbopack 기본화 vs webpack 기반 플러그인)을 이해하고 "안정 경로=webpack 고정 + Turbopack 은 실험이라 배제"라는 근거 있는 선택. ② **신규 메이저(ESLint 10) 러그**를 진단하고 생태계 호환선(9.x)으로 내려 안정화 — 무작정 최신이 아니라 "동작하는 최신"을 고름. ③ 두 문제 모두 "왜 실패했나"를 프레임워크 릴리스 맥락까지 짚어 근본 파악.
 - **관련:** `frontend/next.config.ts`(webpack 고정·tracing root), `frontend/package.json`(scripts·eslint@^9), `frontend/lib/hooks.ts`, `frontend/eslint.config.mjs`
+
+### TS-007 · 2026-07-03 — Vercel git 자동배포만 실패(ENOENT .next): 로컬 경고 억제 설정이 배포 파이프라인을 깨뜨림
+- **상황/증상:** CLI 배포(`vercel deploy --prod`)는 성공하는데, **rootDirectory=frontend + GitHub 연결로 전환한 뒤의 git 자동배포만 Error.** 빌드 로그는 `✓ Compiled successfully`·전 라우트 생성까지 정상 — 실패는 빌드 뒤 단계였고 로그에 사유가 안 남음. `vercel redeploy`로 재현하자 실제 에러가 표면화: `ENOENT: no such file or directory, lstat '/vercel/path0/.next/package.json'`.
+- **원인 분석:** 로컬에서 홈 디렉터리의 stray `~/package-lock.json` 때문에 Next가 워크스페이스 루트를 오탐하는 **경고를 억제하려고** 넣은 `outputFileTracingRoot: process.cwd()`가 원인. Vercel git 빌드는 **repo 루트를 clone(`/vercel/path0`) 후 rootDirectory(frontend) 기준으로 빌드·출력 수집**을 하는데, tracing root를 코드가 임의로 고정하면 출력(.next) 위치 계산이 어긋나 repo 루트에서 `.next`를 찾다 ENOENT. CLI 배포가 됐던 건 frontend/ 를 프로젝트 루트로 직접 업로드해 두 경로가 우연히 일치했기 때문.
+- **해결 과정:** `...(process.env.VERCEL ? {} : { outputFileTracingRoot: process.cwd() })` — Vercel 환경에선 플랫폼 네이티브 처리에 맡기고, 로컬만 stray-lockfile 회피 유지. push → git 자동배포 Ready(50s) 확인, 라이브 alias가 새 빌드로 전환된 것까지 검증.
+- **결과:** `git push main → Vercel 프로덕션 자동배포` 파이프라인 정상화. 이후 배포는 무개입.
+- **면접 어필 포인트:** ① "로컬 편의를 위한 설정이 **호스팅 플랫폼의 빌드 가정**(rootDirectory 기반 출력 수집)을 깨뜨릴 수 있다"는 사례 — 환경변수 가드(`process.env.VERCEL`)로 환경별 분기. ② 성공 로그 뒤에 숨은 배포 실패를 `redeploy` 재현으로 표면화시켜 진단한 과정. ③ CLI 배포와 git 배포의 **빌드 컨텍스트 차이**(업로드 루트 vs clone 루트)를 이해.
+- **관련:** `frontend/next.config.ts`, Vercel project geuneul(rootDirectory=frontend, git connected), 커밋 a0bc0f1

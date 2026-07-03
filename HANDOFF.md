@@ -3,23 +3,24 @@
 > 새 세션이 여기서부터 이어간다. 전체 스펙·워크플로우 규칙은 [`CLAUDE.md`](./CLAUDE.md)(자동 로드), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
 > 최종 갱신: 2026-07-03.
 
-## 지금 상태 — P1(지리 코어) 완결, 라이브
+## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브
 
-🟢 **Live:** http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com (`/actuator/health`, `/swagger-ui.html`)
+🟢 **API Live:** http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com (`/actuator/health`, `/swagger-ui.html`)
+🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터)
 
 - **백엔드:** Spring Boot 4.0.6 / Java 21. 반경(`ST_DWithin` geography)·최근접(kNN `<->`)·bounds 공간검색 API 라이브. `backend/`.
 - **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
-- **프론트:** 다른 세션이 `feat/frontend-mvp`에서 Next.js 16 PWA로 MVP 4화면 구현 중(`frontend/`). 서버 프록시(`/api/*`)로 ALB(http)·CORS 회피 → **백엔드 CORS 불필요**.
-- **테스트:** 파서/컨트롤러/지오코딩 단위 + 실 PostGIS IT(멱등·공간쿼리). JaCoCo floor 0.35 ratchet. CI(`ci.yml`)가 실 PostGIS로 검증.
+- **프론트(완료, PR #12·#14):** Next.js 16(App Router)+TS PWA — MVP 4화면(홈 지도·장소 상세(실지도 미니맵)·급해요·제보 프리뷰). **동일 오리진 서버 프록시(BFF)** 로 ALB(http)·CORS 회피(ADR-0004) → **백엔드 CORS 불필요**. Vercel git 연결로 `main` push 시 자동배포(rootDirectory=frontend). Kakao JS 키는 콘솔 **[JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록 완료(제품링크관리>웹도메인과 다른 칸 — 혼동 주의).
+- **테스트:** 파서/컨트롤러/지오코딩 단위 + 실 PostGIS IT(멱등·공간쿼리). JaCoCo floor 0.35 ratchet. CI(`ci.yml`)가 실 PostGIS로 검증. 프론트는 `frontend-ci.yml`(typecheck·lint·build).
 
 ## 아키텍처 한눈에
 ```
 backend/    Spring Boot 4 — domain.place(공간검색) · domain.ingest(+geocode) · global.geo/config
 infra/      terraform/(VPC·RDS·ECS·ALB·ECR·IAM OIDC) · scripts/prod-ingest.sh
-frontend/   Next.js 16 App Router (다른 세션)
-docs/       adr/0001~0003 · design-brief.md
-.github/    ci.yml(테스트) · deploy.yml(OIDC 배포, paths=backend/**)
+frontend/   Next.js 16 App Router PWA — app/(shell)(4화면) · app/api(서버 프록시 BFF) · components · lib
+docs/       adr/0001~0004 · design-brief.md
+.github/    ci.yml(백엔드 테스트) · deploy.yml(OIDC 배포, paths=backend/**) · frontend-ci.yml(paths=frontend/**)
 .local/     (gitignore) myInfo·PORTFOLIO-CONTEXT — 비밀·회사매핑
 ```
 
@@ -57,7 +58,7 @@ docs/       adr/0001~0003 · design-brief.md
 ### 인프라/프론트 백로그
 - [ ] **ALB HTTPS**(ACM 인증서 + 도메인 + 443 리스너) — 프론트가 서버 프록시를 안 쓰고 직접 붙거나, 공유 링크 신뢰도 위해.
 - [ ] 트래픽 붙으면 **Fargate task_cpu 512**로(부팅 93초 단축, TS-005 근본 해결).
-- [ ] 프론트 Vercel 배포 + Kakao **JavaScript 키**(REST 키와 다름, 콘솔 플랫폼>Web 도메인 등록) — 프론트 세션이 처리 중.
+- [x] ~~프론트 Vercel 배포 + Kakao JavaScript 키~~ — **완료(2026-07-03).** https://geuneul.vercel.app 라이브, git 자동배포 연결. 도메인은 콘솔 [JavaScript SDK 도메인] 칸(TS-007·WORKLOG 참고).
 
 ## 트러블슈팅 요약 (전부 `TROUBLESHOOTING.md`에 상세)
 - **TS-001** SG description ASCII 전용 → 영어. (`terraform validate`는 API 값제약 못 잡음)
@@ -65,6 +66,8 @@ docs/       adr/0001~0003 · design-brief.md
 - **TS-003** 빨간 CI 머지→크래시루프→ECS 런치 백오프 → 배포 서킷브레이커+롤백, 머지 게이트 exit code 판정.
 - **TS-004** Boot 4(Jackson 3) ↔ 코드 Jackson 2 `JsonNode`로 지오코딩 전량 실패(0건) + 페이크 지오코더가 실 파싱 계약을 가린 사각지대 → record + MockRestServiceServer.
 - **TS-005** 느린 부팅(93s, 0.25vCPU) > 헬스체크 유예(120s) → 서킷브레이커 오롤백 → 유예 240초.
+- **TS-006** Next 16 기본 Turbopack ↔ Serwist(webpack 플러그인) 충돌 + ESLint 10 신판 러그 → 빌드 webpack 고정·ESLint 9 핀.
+- **TS-007** 로컬 경고 억제용 `outputFileTracingRoot`가 Vercel git 빌드(rootDirectory 기반)의 출력 수집을 깨서 ENOENT → `process.env.VERCEL` 가드.
 > 공통 교훈: ① "Docker 있는 CI에서만 드러나는 실패"는 로컬 green→CI red → 반드시 CI green 확인 후 머지. ② 모킹은 "우리 로직"은 검증하되 "외부와의 실제 계약"을 가린다.
 
 ## 워크플로우 리마인더 (CLAUDE.md 필수 규칙)
@@ -74,5 +77,5 @@ docs/       adr/0001~0003 · design-brief.md
 - **비밀은 대화 OK, git 금지**(규칙 D). `.local/`·`.env`·tfvars/tfstate gitignore. 커밋 전 스캔.
 - **범위 임의 확장 금지** — 새 기능은 제안 후 확인. 간판(지리공간)이 주인공, 커뮤니티는 살.
 
-## 동시 작업 주의 (2026-07-03 현재)
-프론트 세션이 같은 레포 `feat/frontend-mvp` 브랜치에서 작업 중. 백엔드 작업은 **backend/·infra/·docs/ 위주 + 자체 기능 브랜치**로 하면 프론트와 안 겹친다. `git add -A` 대신 **특정 파일만 add**해 상대 세션의 미커밋 작업을 삼키지 말 것.
+## 동시 작업 주의
+프론트 세션 작업은 **완료·머지됨**(PR #12·#14) — 현재 브랜치 충돌 요소 없음. 다만 여러 세션이 병행될 땐 원칙 유지: **자체 기능 브랜치 + 특정 파일만 add**(`git add -A` 금지 — 상대 세션의 미커밋 작업을 삼킬 수 있음), 로컬 main 위에서 직접 작업 금지.
