@@ -33,7 +33,8 @@ resource "aws_ecs_task_definition" "app" {
       { name = "PORT", value = "8080" }
     ]
     secrets = [
-      { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn }
+      { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn },
+      { name = "GEUNEUL_PROXY_SECRET", valueFrom = aws_ssm_parameter.proxy_secret.arn }
     ]
     logConfiguration = {
       logDriver = "awslogs"
