@@ -1,0 +1,55 @@
+name: Frontend CI
+
+# 프론트 변경에만 반응(backend/** 배포와 독립). typecheck → lint → build 게이트.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  frontend:
+    name: Next.js (typecheck · lint · build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # defaults.working-directory 는 run: 스텝에만 적용되므로, 액션엔 명시적으로 경로 지정.
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install (frozen lockfile)
+        # --ignore-scripts: 네이티브 빌드(sharp=미사용 next/image, unrs-resolver=JS 폴백 있음,
+        # tailwind oxide=prebuilt 바이너리)는 typecheck/lint/build 에 불필요.
+        # pnpm 11 은 CI 에서 미빌드 스크립트를 하드 에러로 처리하므로 명시적으로 무시.
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        # Kakao 키/백엔드 URL 없이도 빌드 성공(지도는 placeholder, 데이터는 런타임 프록시).
+        run: pnpm build

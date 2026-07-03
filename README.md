@@ -18,6 +18,10 @@
 
 - W0 완료(2026-07-02): Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + **AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인**
 - P1: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API 라이브** + **공공데이터 idempotent 인제스천**(무더위쉼터 전국 프로덕션 적재 완료 · 공중화장실 표준데이터 59,768행 파서 + **카카오 지오코딩 파이프라인**으로 좌표 결측 보완) — 의사결정은 [`docs/adr/`](./docs/adr) 참고
+- 프론트엔드: **MVP 4화면(홈 지도·장소 상세·급해요·제보) Next.js 16(App Router)+TypeScript PWA** — 라이브 API에 서버 프록시로 연결. 설치·구조는 [`frontend/README.md`](./frontend/README.md)
+
+## 프론트엔드
+`frontend/` — Next.js 16 App Router · TypeScript · Tailwind v4 · TanStack Query · Kakao Maps · Serwist(PWA). 백엔드(`backend/`)와 독립 배포(Vercel 가정). 브라우저는 동일 오리진 `/api/*` 서버 프록시만 호출해 ALB(http)·CORS 제약을 회피한다. 자세한 내용·환경변수는 [`frontend/README.md`](./frontend/README.md).
 
 ## API 맛보기 (P1)
 ```bash

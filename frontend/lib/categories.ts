@@ -1,0 +1,72 @@
+import type { Category, FeatureType, Scenario } from "@/types/place";
+
+// enum → 아이콘 이름(= icon-paths 키) + 라벨. 라벨은 API의 categoryLabel 을 우선 쓰되,
+// 목록/필터처럼 응답이 없는 자리에서는 아래 fallback 라벨을 쓴다.
+export const CATEGORY_META: Record<Category, { label: string; icon: string }> = {
+  COOLING_SHELTER: { label: "무더위쉼터", icon: "snow" },
+  TOILET: { label: "공중화장실", icon: "toilet" },
+  WATER: { label: "음수대", icon: "droplet" },
+  PARK: { label: "공원", icon: "tree" },
+  LIBRARY: { label: "도서관", icon: "book" },
+  CIVIC: { label: "공공기관", icon: "civic" },
+  UNDERGROUND: { label: "지하상가", icon: "stairs" },
+  ETC: { label: "기타", icon: "dots" },
+};
+
+export function iconForCategory(cat: Category): string {
+  return CATEGORY_META[cat]?.icon ?? "dots";
+}
+
+export function categoryLabel(cat: Category, apiLabel?: string): string {
+  return apiLabel || CATEGORY_META[cat]?.label || "기타";
+}
+
+// 홈 지도 필터 칩 순서(전체 + 카테고리 7종). ETC 는 칩에 노출하지 않음(프로토타입과 동일).
+export const FILTER_CATEGORIES: Category[] = [
+  "COOLING_SHELTER",
+  "TOILET",
+  "WATER",
+  "PARK",
+  "LIBRARY",
+  "CIVIC",
+  "UNDERGROUND",
+];
+
+export const FEATURE_META: Record<FeatureType, { label: string; icon: string }> = {
+  air_conditioned: { label: "냉방", icon: "snow" },
+  outlet: { label: "콘센트", icon: "plug" },
+  wifi: { label: "와이파이", icon: "wifi" },
+  restroom: { label: "화장실", icon: "toilet" },
+  water: { label: "음수대", icon: "droplet" },
+  seating: { label: "앉을 곳", icon: "seat" },
+  no_eyes: { label: "눈치 안 보임", icon: "eyeoff" },
+};
+
+// 급해요 시나리오 → 카테고리 집합(서버 프록시가 카테고리별 nearest 를 팬아웃해 병합).
+// (place_features 기반 필터는 API 미노출이라 카테고리 신호로 근사 — README 매핑과 동일.)
+export const SCENARIO_META: Record<
+  Scenario,
+  { title: string; sub: string; icon: string; categories: Category[]; resultTitle: string }
+> = {
+  restroom: {
+    title: "화장실 급함",
+    sub: "가까운 화장실 바로",
+    icon: "toilet",
+    categories: ["TOILET"],
+    resultTitle: "화장실 급함 · 가까운 순",
+  },
+  rest30: {
+    title: "잠깐 쉬어갈 곳",
+    sub: "시원한 실내에서 30분",
+    icon: "seat",
+    categories: ["COOLING_SHELTER", "LIBRARY", "UNDERGROUND", "CIVIC"],
+    resultTitle: "잠깐 쉬어갈 곳 · 가까운 순",
+  },
+  rain: {
+    title: "비 피할 곳",
+    sub: "실내·지하로 대피",
+    icon: "umbrella",
+    categories: ["LIBRARY", "UNDERGROUND", "CIVIC", "COOLING_SHELTER"],
+    resultTitle: "비 피할 곳 · 가까운 순",
+  },
+};
