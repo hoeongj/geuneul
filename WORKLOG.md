@@ -191,3 +191,12 @@
 - 결정 & 이유(why): 검증 에이전트가 죽었어도 원발견을 버리지 않고 **직접 코드 대조로 재검증**(빠뜨리면 오히려 문서 신뢰도 훼손). 과거 WORKLOG 항목의 당시 수치(52k 추정)는 역사 기록이라 보존하되, 살아있는 스펙/ADR/README만 실측치로 교정.
 - 관련: CLAUDE.md·README·DEPLOY·TROUBLESHOOTING·docker-compose·docs/adr/0002·0003·design-brief, KakaoGeocodingClient(주석)
 - 다음 할 일: 카카오 REST 키 수령 후 화장실 60k 지오코딩 적재 → P2(UGC+인증).
+
+### 2026-07-02 — 화장실 60k 지오코딩 버그 수정(TS-004): Jackson 3 record + 실 파싱 테스트
+- 한 일: 카카오 REST 키 수령·검증(단건 200) → 화장실 59,768행 프로덕션 지오코딩 실행 → **전량 실패(geocoded=0)** 발견 → 원인규명(TS-004: Boot 4 Jackson 3가 Jackson 2 JsonNode 역직렬화 실패, 게다가 IT가 페이크 지오코더라 실 파싱 미검증) → JsonNode를 타입 record로 교체 + MockRestServiceServer 단위테스트 5건 추가.
+- 결정 & 이유(why):
+  - **JsonNode → record(`KakaoAddressResponse`)**: Jackson 3(`tools.jackson`)는 Jackson 2 `com.fasterxml...JsonNode`를 모름. record는 이름 매핑이라 버전 무관·타입 안전. (도로명 우선/지번 폴백 로직 유지.)
+  - **MockRestServiceServer 테스트**: 외부 API를 페이크로 대체한 IT는 "우리 로직"은 검증하되 "그 API와의 실제 계약(역직렬화)"은 미검증 사각지대를 남긴다 — 이번 사고의 근본. 실 RestClient 변환기를 경유하는 단위테스트로 그 계약을 고정(로컬 실행, Docker 불필요).
+  - 파이프라인이 멱등이고 실패분은 캐시 안 되므로(성공만 geocoded=true 저장) 재배포 후 재실행 시 54,090건 전량 재시도 → 수렴.
+- 관련: `KakaoGeocodingClient`(record), `KakaoGeocodingClientTest`(5건), TROUBLESHOOTING TS-004
+- 다음 할 일: PR→CI green→머지→배포 → 화장실 재적재 → 라이브 전국 검증 → P2 or 프론트.
