@@ -263,3 +263,11 @@
 - 산출물: `domain/report/*`(엔티티·TTL·리포·서비스·컨트롤러·리미터·리졸버 + dto), 프론트 `api/reports`·`api/places/[id]/reports`·`lib/reports`·제보 화면 실전송·상세 최근제보. 테스트 백엔드 23건(리졸버7·리미터7·컨트롤러7·IT4→CI) + 프론트 E2E.
 - 관련 문서: TS-008, ADR-0004, HANDOFF 아침 체크리스트(proxy-secret 활성화·OAuth 준비).
 - 다음: 아침 체크리스트대로 ① proxy-secret 활성화(선택) ② OAuth 콘솔 준비 → 로그인/후기 → survival_score(P3, 제보 데이터 축적됨).
+
+### 2026-07-04(새벽) — proxy-secret 활성화(라이브): XFF 위조 우회 완전차단
+- 한 일: TS-008 하드닝의 신뢰경계를 **라이브 활성화**. SSM `/geuneul/proxy_secret`(Terraform, IAM은 `/geuneul/*` 와일드카드라 무변경) + 태스크데프 rev13(실행 리비전 기반, 이미지 보존) 재배포 + Vercel env·재배포. 헤더 고정 테스트로 검증(유효 시크릿→X-Client-Ip 신뢰 유저별 리밋 / 위조→최우측 키잉 우회차단).
+- 결정 & 이유(why):
+  - **태스크데프 ignore_changes 우회 = CLI 리비전 등록**: ecs.tf가 `ignore_changes[container_definitions]`(CI가 이미지 관리)라 secrets 편집이 TF로 안 먹음 → 실행 중 리비전을 describe→시크릿 주입→register→update-service로 라이브 반영(deploy.yml 관례와 동일 경로). ecs.tf에도 문서화용 추가(fresh apply 대비).
+  - **egress 가변 환경의 검증법**: "XFF 회전 시 429" 직접 테스트는 샌드박스 egress IP가 요청마다 바뀌면 최우측도 바뀌어 무결론 → X-Proxy-Auth/X-Client-Ip를 고정한 헤더 시뮬레이션으로 결정적 검증(관측 IP에 의존 안 함).
+- 관련: `infra/terraform/{ssm,variables,ecs}.tf`, SSM `/geuneul/proxy_secret`, 태스크데프 geuneul:13, Vercel env, 시크릿은 `.local/proxy-secret.env`(gitignore)
+- 다음: 레포 전수 품질 감사(포트폴리오 완성도).

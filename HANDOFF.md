@@ -12,16 +12,13 @@
 
 **네가 직접 해야 하는 것(콘솔/인프라 권한·판단 필요라 자동으로 안 함):**
 
-### ① (선택·권장) 레이트리밋 proxy-secret 활성화 — XFF 위조 우회 완전차단
-현재: 코드·리졸버는 배포됐고 **시크릿 미설정이라 기존(최좌측 XFF) 동작**(무회귀, 우회는 가능). 양쪽에 동일 시크릿을 넣으면 완전 차단.
-1. 시크릿 생성: `openssl rand -hex 32` (값은 `.local/`에만 보관, 커밋 금지).
-2. **백엔드(SSM+Terraform)** — 기존 `db_password` 패턴을 그대로 미러:
-   - `infra/terraform/ssm.tf`: `resource "aws_ssm_parameter" "proxy_secret" { name="/geuneul/proxy-secret" type="SecureString" value=var.proxy_secret }` + `variables.tf`에 `proxy_secret`(sensitive) + `terraform.tfvars`(gitignore)에 값.
-   - `infra/terraform/ecs.tf` container `secrets`에 `{ name="GEUNEUL_PROXY_SECRET", valueFrom=aws_ssm_parameter.proxy_secret.arn }` 추가.
-   - `iam.tf`의 실행롤 SSM 읽기 정책이 특정 ARN 스코프면 새 param ARN 추가(와일드카드면 불필요).
-   - `terraform apply` → deploy.yml workflow_dispatch(또는 backend push)로 새 task def 반영.
-3. **프론트(Vercel)**: `vercel env add GEUNEUL_PROXY_SECRET production`(같은 값, 서버 전용) → 재배포(빈 커밋 push 또는 `vercel redeploy`).
-4. 검증: `curl -H "X-Forwarded-For: 1.1.1.<n>" ...`(회전) 시 4번째부터 429면 성공(리졸버가 최우측/신뢰IP로 키잉). 상세는 TS-008.
+### ① ~~레이트리밋 proxy-secret 활성화~~ — ✅ **완료(2026-07-04 새벽, 자동)**
+XFF 위조 우회가 **완전 차단**됐다. 한 일:
+- 시크릿 `openssl rand -hex 32` → `.local/proxy-secret.env`(gitignore).
+- **백엔드**: `ssm.tf`에 `aws_ssm_parameter.proxy_secret`(SecureString) + `variables.tf` `proxy_secret`(sensitive) + `terraform.tfvars`(gitignore) 값 → `terraform apply`(1 add, IAM은 `/geuneul/*` 와일드카드라 무변경). 태스크데프는 `ignore_changes[container_definitions]`라 TF로 안 먹어서, **실행 리비전 기반 새 rev(13) 등록 + `update-service` 강제 재배포**(이미지 보존). `ecs.tf` secrets엔 문서화용으로 추가(다음 fresh apply 대비).
+- **프론트**: `vercel env add GEUNEUL_PROXY_SECRET production` + `vercel redeploy`. proxyPost가 `X-Proxy-Auth`+`X-Client-Ip` 전송.
+- **검증(헤더 고정, egress 무관)**: 유효 시크릿+고정 X-Client-Ip → 4번째 429(유저별 리밋 ✓) / 틀린 시크릿+위조 X-Client-Ip → 무시하고 최우측 키잉 → 4번째 429(우회 차단 ✓). 상세 TS-008.
+- **재활성/회전 시**: 시크릿 값은 `.local/proxy-secret.env`·SSM `/geuneul/proxy_secret`·Vercel env 3곳 동일. 회전하려면 세 곳 갱신 후 백엔드 `update-service --force-new-deployment`.
 
 ### ② OAuth 소셜 로그인 준비(P2 다음 조각 — 후기·신뢰도의 선행)
 - **카카오**: 콘솔 앱(지도와 **같은 앱 재사용 가능**) → 카카오 로그인 **활성화 ON** + **Redirect URI** 등록(`https://geuneul.vercel.app/api/auth/kakao/callback` 및 로컬). **REST API 키 + Client Secret**(보안 강화) 발급 → `.local`.
@@ -73,7 +70,7 @@ docs/       adr/0001~0004 · design-brief.md
 - [ ] **사진 업로드**: `POST /photos/presign` — **S3 버킷 + presigned URL**(terraform에 S3 추가 필요, 태스크 롤에 s3 권한). 프론트 제보 화면 사진 슬롯이 대기.
 - [ ] **신뢰도(trust_score)** 계산 + 제보 가중(로그인 제보에). 로그인 시 `reports.user_id`·`is_anonymous=false` 경로는 엔티티에 이미 준비됨.
 - [ ] **모더레이션 큐**: `POST /flags` 신고 + `GET /admin/flags/pending`(관리자).
-- [ ] **레이트리밋 proxy-secret 활성화**(XSS-XFF 우회 완전차단) — 아래 아침 체크리스트 §1.
+- [x] ~~**레이트리밋 proxy-secret 활성화**~~ — **완료(2026-07-04).** BFF 공유시크릿 라이브, XFF 위조 우회 차단 검증(TS-008, 체크리스트 §1).
 - 프론트 예약 슬롯: 최근 제보=**완료**. 후기·로그인 배지·AI 요약은 여전히 대기.
 
 ### P3 · 스코어·추천·AI
