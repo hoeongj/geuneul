@@ -1,6 +1,8 @@
 package com.geuneul.domain.place.dto;
 
 import com.geuneul.domain.place.Place;
+import com.geuneul.domain.place.PlaceCategory;
+import com.geuneul.domain.place.PlaceDistanceView;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -32,6 +34,22 @@ public record PlaceResponse(
                 p.getGeom().getX(),
                 p.getSource(),
                 distanceM
+        );
+    }
+
+    /** 반경/최근접 투영 매핑 — 거리는 DB가 계산한 값(타원체)을 소수1자리로 표기. */
+    public static PlaceResponse of(PlaceDistanceView v) {
+        PlaceCategory category = PlaceCategory.valueOf(v.getCategory());
+        return new PlaceResponse(
+                v.getId(),
+                v.getName(),
+                category.name(),
+                category.label(),
+                v.getAddress(),
+                v.getLat(),
+                v.getLng(),
+                v.getSource(),
+                Math.round(v.getDistanceM() * 10) / 10.0
         );
     }
 }
