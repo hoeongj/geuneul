@@ -90,6 +90,20 @@ class ReportRateLimiterTest {
     }
 
     @Test
+    @DisplayName("동일 버킷 고유키 폭주에도 맵이 상한을 넘어 무한 증가하지 않는다 (OOM 회귀 방지)")
+    void mapStaysBoundedUnderUniqueKeyFlood() {
+        // 리뷰 확정 버그: 이전 evict는 같은 버킷에선 removeIf가 no-op라 맵이 무한 증가(→OOM).
+        // 같은 분 안에서 고유 키 5만 개를 밀어넣어도 창 맵이 상한 부근에서 유계여야 한다.
+        int flood = ReportRateLimiter.MAX_TRACKED_CLIENTS * 5;
+        for (int i = 0; i < flood; i++) {
+            limiter.tryAcquire("flood-" + i);
+        }
+        // 창 맵 2개 합계 — clear 후 다시 채워질 수 있으므로 넉넉한 상한(맵당 상한×2)으로 유계임을 단정.
+        assertThat(limiter.trackedWindows())
+                .isLessThanOrEqualTo(ReportRateLimiter.MAX_TRACKED_CLIENTS * 2 + 4);
+    }
+
+    @Test
     @DisplayName("거부된 호출은 카운트를 소모하지 않는다 (분 거부가 시간 창을 갉아먹지 않음)")
     void deniedCallsDoNotConsume() {
         for (int i = 0; i < 3; i++) limiter.tryAcquire("ip-1");

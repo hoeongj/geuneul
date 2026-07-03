@@ -20,8 +20,8 @@ public class ReportRateLimiter {
 
     static final int PER_MINUTE = 3;
     static final int PER_HOUR = 10;
-    /** 맵 폭주 방지 상한 — 초과 시 만료 창부터 정리한다(정상 트래픽에선 도달하지 않음). */
-    private static final int MAX_TRACKED_CLIENTS = 10_000;
+    /** 맵 폭주 방지 상한(창 맵별). 초과 시 만료 창 정리 → 그래도 넘으면 전체 비움(OOM 방지). */
+    static final int MAX_TRACKED_CLIENTS = 10_000;
 
     private final Clock clock;
     private final Map<String, Window> minuteWindows = new ConcurrentHashMap<>();
@@ -60,9 +60,22 @@ public class ReportRateLimiter {
     }
 
     private static void evictIfOversized(Map<String, Window> windows, long currentBucket) {
-        if (windows.size() > MAX_TRACKED_CLIENTS) {
-            windows.values().removeIf(w -> w.bucket != currentBucket);
+        if (windows.size() <= MAX_TRACKED_CLIENTS) {
+            return;
         }
+        // 1차: 만료된(다른 버킷) 창 정리.
+        windows.values().removeIf(w -> w.bucket != currentBucket);
+        // 2차: 여전히 상한 초과면(= 동일 버킷 고유키 폭주 — 위조 XFF 회전 공격) 전체 비운다.
+        // 카운트 리셋을 감수하더라도 힙 상한을 우선한다(무한 증가 → OOM 방지). 남용 방어 관점에서 허용.
+        // 리뷰(TS 확정): 이전 구현은 동일 버킷 폭주 시 removeIf가 아무것도 못 지워 no-op였다.
+        if (windows.size() > MAX_TRACKED_CLIENTS) {
+            windows.clear();
+        }
+    }
+
+    /** 테스트용 — 추적 중인 클라이언트 창 수(맵 상한 검증). */
+    int trackedWindows() {
+        return minuteWindows.size() + hourWindows.size();
     }
 
     private static final class Window {
