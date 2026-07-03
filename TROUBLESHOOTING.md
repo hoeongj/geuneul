@@ -86,3 +86,17 @@
 - **결과:** 배포 안정화. "서킷브레이커=안전장치"가 잘못 튜닝되면 **가용성 저하 도구가 될 수 있음**을 실측으로 이해.
 - **면접 어필 포인트:** ① 안전장치(서킷브레이커)의 **오탐(false rollback)** 을 부팅시간 vs 유예 관점으로 규명 — 단순 "실패"가 아니라 임계값 튜닝 문제. ② ALB 헬스체크(interval·threshold)·ECS grace·서킷브레이커의 **상호작용 타이밍** 이해. ③ 근본(부팅 지연=CPU) vs 즉효(유예 확대)를 구분하고 비용 맥락에서 선택.
 - **관련:** `infra/terraform/ecs.tf`(grace 240), Deploy run 28638813213(rollback)→재배포, TS-003(서킷브레이커 도입)
+
+### TS-006 · 2026-07-03 — 프론트 프로덕션 빌드 2연속 실패: Next 16 Turbopack↔Serwist(webpack) 충돌 + ESLint 10↔eslint-plugin-react
+- **상황/증상:** 프론트 MVP 첫 `pnpm build` 가 두 번 연달아 실패.
+  1) `ERROR: This build is using Turbopack, with a webpack config and no turbopack config` → 빌드 자체가 중단.
+  2) (빌드 통과 후) `pnpm lint` 가 룰 로딩 단계에서 크래시: `TypeError: Error while loading rule 'react/display-name': contextOrFilename.getFilename is not a function`.
+- **원인 분석:**
+  - **(1) Turbopack↔Serwist:** Next 16 은 **Turbopack 이 기본**인데, `@serwist/next`(next-pwa 후계 PWA 플러그인)는 서비스워커를 **webpack 플러그인**으로 주입한다. 그래서 nextConfig 에 webpack 설정이 생기고, 기본 Turbopack 빌드가 "webpack config 가 있는데 turbopack config 는 없음"으로 판단해 중단. Serwist 의 Turbopack 지원은 2026 기준 아직 실험(`@serwist/turbopack`)이라 안정 경로가 아님. 부수적으로 홈 디렉터리의 stray `~/package-lock.json` 때문에 Next 가 워크스페이스 루트를 오탐하는 경고도 겹침.
+  - **(2) ESLint 10↔react 플러그인:** `eslint@latest` 로 10.6 이 깔렸는데, `eslint-config-next` 가 물고 오는 `eslint-plugin-react@7.37` 이 **ESLint 10 에서 제거된 `context.getFilename()`** 을 호출 → 룰 로딩부터 크래시. ESLint 10 이 갓 릴리스돼 플러그인 생태계가 아직 못 따라온 전형적 신버전 러그.
+- **해결 과정:**
+  - **(1)** 빌드/개발을 **webpack 으로 고정**: `next build --webpack` / `next dev --webpack`. Serwist 는 webpack 에서 정상 동작(빌드 로그 `✓ (serwist) Bundling the service worker...`). dev 는 SW 캐시가 HMR 을 방해하므로 `disable: NODE_ENV==='development'` 로 SW 자체는 끔. 루트 오탐은 `outputFileTracingRoot: process.cwd()` 로 frontend/ 고정.
+  - **(2)** ESLint 를 **9.x(현 안정)로 다운핀**(`eslint@^9`). eslint-config-next 16 은 9 를 지원하고 react 플러그인도 9 호환. 남은 lint 지적 2건도 수정: 디바운스 훅의 "렌더 중 ref 대입"(신규 `react-hooks/refs` 룰) → `useEffect` 로 최신 ref 갱신, flat config 익명 default export → const 로 분리.
+- **결과:** `typecheck`·`lint`·`build` 3종 그린 + `next start` 스모크(프록시 4종·페이지 렌더) 통과.
+- **면접 어필 포인트:** ① **빌드 툴체인 전환기의 통합 함정**(Next 16 Turbopack 기본화 vs webpack 기반 플러그인)을 이해하고 "안정 경로=webpack 고정 + Turbopack 은 실험이라 배제"라는 근거 있는 선택. ② **신규 메이저(ESLint 10) 러그**를 진단하고 생태계 호환선(9.x)으로 내려 안정화 — 무작정 최신이 아니라 "동작하는 최신"을 고름. ③ 두 문제 모두 "왜 실패했나"를 프레임워크 릴리스 맥락까지 짚어 근본 파악.
+- **관련:** `frontend/next.config.ts`(webpack 고정·tracing root), `frontend/package.json`(scripts·eslint@^9), `frontend/lib/hooks.ts`, `frontend/eslint.config.mjs`

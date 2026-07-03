@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* ── 디자인 토큰(핸드오프 README) → Tailwind v4 테마 ────────────────────────── */
+@theme {
+  --font-sans: var(--font-pretendard), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* 텍스트 */
+  --color-ink: #16241d;
+  --color-ink-2: #3c4b43;
+  --color-ink-3: #5c6b62;
+  --color-muted: #98a69b;
+  --color-muted-2: #9aa199;
+  --color-muted-3: #a7b0a9;
+
+  /* 브랜드 */
+  --color-forest: #163c2f;
+  --color-teal: #17957e;
+  --color-teal-deep: #0e6f5e;
+  --color-teal-fill: #2fa090;
+
+  /* 민트 틴트 */
+  --color-mint: #e4f0ec;
+  --color-mint-2: #eaf1ee;
+  --color-mint-3: #eaf5f1;
+
+  /* 배경/보더 */
+  --color-cream: #f5f3ec;
+  --color-line-cream: #ece9de;
+  --color-line-white: #eef1ec;
+  --color-line-white-2: #f0eee4;
+  --color-line-chip: #e4e1d6;
+  --color-line-dashed: #cfd6cd;
+
+  /* 상태 회색(정보 부족 = survival_score 예약) / 현재위치 파랑 */
+  --color-status: #9aa6a0;
+  --color-locate: #2b6ff6;
+
+  /* 지도 placeholder */
+  --color-map-base: #e7ece3;
+  --color-map-park: #d6e7c9;
+  --color-map-water: #cbddea;
+  --color-map-road: #fbfcfa;
+  --color-map-block: #eef1ea;
+
+  --radius-iconchip: 13px;
+  --radius-card: 14px;
+  --radius-sheet: 22px;
+  --radius-pill: 999px;
+
+  --shadow-search: 0 3px 12px rgba(20, 40, 30, 0.12);
+  --shadow-fab: 0 4px 14px rgba(20, 40, 30, 0.18);
+  --shadow-sheet: 0 -10px 34px rgba(0, 0, 0, 0.13);
+  --shadow-hero: 0 10px 24px rgba(22, 60, 47, 0.28);
+}
+
+/* ── 베이스 ──────────────────────────────────────────────────────────────── */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+/* 야외 시인성 = 라이트 모드 우선. 다크 강제 없음. */
+
+/* ── 애니메이션(핸드오프 모션 스펙) ───────────────────────────────────────── */
+@keyframes gn-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.7);
+    opacity: 0;
+  }
+}
+
+@keyframes gn-toast-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes gn-overlay-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gn-pulse-ring {
+  animation: gn-pulse-ring 2.2s ease-out infinite;
+}
+.gn-toast {
+  animation: gn-toast-up 0.22s ease-out;
+}
+.gn-overlay {
+  animation: gn-overlay-up 0.3s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* 바텀시트 height 트랜지션 */
+.gn-sheet {
+  transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gn-pulse-ring,
+  .gn-toast,
+  .gn-overlay,
+  .gn-sheet {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* 가로 스크롤 필터칩: 스크롤바 숨김 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
