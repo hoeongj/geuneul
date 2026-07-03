@@ -2,57 +2,145 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { IconChip } from "@/components/ui/IconChip";
+import { ApiError } from "@/lib/api";
+import { categoryLabel, iconForCategory } from "@/lib/categories";
+import { useGeo } from "@/lib/context/geo";
 import { useToast } from "@/lib/context/toast";
+import { formatDistance } from "@/lib/geo";
+import { useCreateReport, useNearestPlace, useRadiusPlaces } from "@/lib/queries";
+import { REPORT_GRID, REPORT_META } from "@/lib/reports";
+import type { Place, ReportTypeKey } from "@/types/place";
 
-// report_type(휘발성 제보) 6종. 실제 POST /reports·사진 업로드·로그인은 P2 — 여기선 레이아웃/선택 preview.
-const STATUSES = [
-  { k: "COOL", emoji: "🧊", label: "시원해요" },
-  { k: "HOT", emoji: "🥵", label: "더워요" },
-  { k: "BUG", emoji: "🐛", label: "벌레 많아요" },
-  { k: "RESTROOM_CLEAN", emoji: "🚻", label: "화장실 깨끗" },
-  { k: "WATER_OK", emoji: "💧", label: "물 있어요" },
-  { k: "FLOOD", emoji: "🌊", label: "침수됐어요" },
-] as const;
+// 제보 대상 장소 선택 시트 — 현재 위치 반경 800m 리스트에서 고른다.
+function PlacePicker({
+  coords,
+  onPick,
+  onClose,
+}: {
+  coords: { lat: number; lng: number };
+  onPick: (p: Place) => void;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useRadiusPlaces(coords, 800);
+  return (
+    <div className="absolute inset-0 z-40 flex flex-col justify-end" role="dialog" aria-label="제보할 장소 선택">
+      <button type="button" className="flex-1 bg-black/25" onClick={onClose} aria-label="닫기" />
+      <div className="gn-overlay max-h-[70%] rounded-t-[22px] bg-white shadow-sheet">
+        <div className="flex w-full justify-center pt-2.5 pb-1">
+          <span className="h-[5px] w-[38px] rounded-full" style={{ background: "#DBD8CC" }} />
+        </div>
+        <div className="px-4 pb-2 text-[15px] font-extrabold text-ink">어디에 대한 제보인가요?</div>
+        <div className="overflow-y-auto px-4 pb-5" style={{ maxHeight: "50dvh" }}>
+          {isLoading ? (
+            <div className="py-8 text-center text-[13px] text-muted">주변 장소를 불러오는 중…</div>
+          ) : (data ?? []).length === 0 ? (
+            <div className="py-8 text-center text-[13px] text-muted">반경 800m에 장소가 없어요.</div>
+          ) : (
+            (data ?? []).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPick(p)}
+                className="flex min-h-[44px] w-full items-center gap-3 border-b border-line-white-2 py-2.5 text-left last:border-b-0"
+              >
+                <IconChip icon={iconForCategory(p.category)} size={36} iconSize={17} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14px] font-bold text-ink">{p.name}</div>
+                  <div className="truncate text-[11.5px] text-ink-3">
+                    {categoryLabel(p.category, p.categoryLabel)} · {p.address}
+                  </div>
+                </div>
+                {p.distanceM != null && (
+                  <span className="shrink-0 text-[12.5px] font-extrabold text-teal">{formatDistance(p.distanceM)}</span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ReportPage() {
+  const geo = useGeo();
   const { show } = useToast();
-  const [status, setStatus] = useState<string | null>(null);
+  const coords = { lat: geo.lat, lng: geo.lng };
+
+  // 기본 제보 장소 = 현재 위치 최근접. "변경"으로 반경 내 다른 장소 선택.
+  const nearest = useNearestPlace(coords);
+  const [picked, setPicked] = useState<Place | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const target = picked ?? nearest.data ?? null;
+
+  const [status, setStatus] = useState<ReportTypeKey | null>(null);
   const [comment, setComment] = useState("");
   const [anon, setAnon] = useState(true);
   const [done, setDone] = useState(false);
 
-  const submitLabel = done ? "고마워요! 제보 완료 (미리보기)" : status ? "제보 보내기" : "지금 상태를 골라주세요";
+  const mutation = useCreateReport();
+
+  const submitLabel = done
+    ? "고마워요! 제보 완료"
+    : mutation.isPending
+      ? "보내는 중…"
+      : status
+        ? "제보 보내기"
+        : "지금 상태를 골라주세요";
 
   const onSubmit = () => {
-    if (!status || done) return;
-    // 실제 전송은 P2. 미리보기에서는 완료 상태만 표시.
-    setDone(true);
-    show("고마워요! 제보 완료 (미리보기)");
+    if (!status || !target || done || mutation.isPending) return;
+    mutation.mutate(
+      {
+        placeId: target.id,
+        reportType: status,
+        comment: comment.trim() || undefined,
+        anonymous: anon,
+      },
+      {
+        onSuccess: () => {
+          setDone(true);
+          show("고마워요! 지금 상태가 반영됐어요");
+        },
+        onError: (err) => {
+          if (err instanceof ApiError && err.status === 429) {
+            show("제보가 너무 잦아요 · 잠시 후 다시 시도해 주세요");
+          } else {
+            show("제보 전송에 실패했어요 · 다시 시도해 주세요");
+          }
+        },
+      },
+    );
+  };
+
+  const resetForNext = () => {
+    setDone(false);
+    setStatus(null);
+    setComment("");
+    mutation.reset();
   };
 
   return (
-    <div className="h-full overflow-y-auto px-4 pt-5 pb-6">
+    <div className="relative h-full overflow-y-auto px-4 pt-5 pb-6">
       <header className="mb-4">
-        <div className="flex items-center gap-2">
-          <h1 className="text-[23px] font-extrabold tracking-[-0.4px] text-ink">제보하기</h1>
-          <span className="rounded-full bg-mint px-2 py-0.5 text-[10px] font-bold text-teal-deep">P2 미리보기</span>
-        </div>
+        <h1 className="text-[23px] font-extrabold tracking-[-0.4px] text-ink">제보하기</h1>
         <p className="mt-1 text-[13px] text-ink-3">한 탭이면 끝. 지금 상태를 알려주세요.</p>
       </header>
 
       {/* 장소 컨텍스트 */}
       <div className="mb-4 flex items-center gap-3 rounded-[14px] border border-line-cream bg-white px-3.5 py-3">
-        <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px] bg-mint text-forest">
-          <Icon name="locate" size={20} />
-        </div>
+        <IconChip icon={target ? iconForCategory(target.category) : "locate"} size={42} iconSize={20} />
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] text-muted">제보할 장소</div>
-          <div className="truncate text-[15px] font-bold text-ink">현재 위치 주변</div>
+          <div className="text-[11px] text-muted">제보할 장소{geo.isFallback ? " · 위치 권한을 켜면 더 정확해요" : ""}</div>
+          <div className="truncate text-[15px] font-bold text-ink">
+            {target ? target.name : nearest.isLoading ? "주변 장소 찾는 중…" : "주변에 장소가 없어요"}
+          </div>
         </div>
         <button
           type="button"
-          onClick={() => show("장소 선택은 P2에서 제공돼요")}
-          className="shrink-0 text-[13px] font-bold text-teal"
+          onClick={() => setPickerOpen(true)}
+          className="min-h-[44px] shrink-0 px-1 text-[13px] font-bold text-teal"
         >
           변경
         </button>
@@ -60,14 +148,15 @@ export default function ReportPage() {
 
       {/* 상태 이모지 그리드 */}
       <div className="mb-4 grid grid-cols-3 gap-2.5">
-        {STATUSES.map((s) => {
-          const active = status === s.k;
+        {REPORT_GRID.map((k) => {
+          const meta = REPORT_META[k];
+          const active = status === k;
           return (
             <button
-              key={s.k}
+              key={k}
               type="button"
               onClick={() => {
-                setStatus(s.k);
+                setStatus(k);
                 setDone(false);
               }}
               aria-pressed={active}
@@ -76,28 +165,29 @@ export default function ReportPage() {
                 (active ? "border-teal bg-mint-3 text-teal-deep" : "border-line-cream bg-white text-ink-2")
               }
             >
-              <span className="text-[26px] leading-none">{s.emoji}</span>
-              <span className="text-[12px] font-bold">{s.label}</span>
+              <span className="text-[26px] leading-none">{meta.emoji}</span>
+              <span className="text-[12px] font-bold">{meta.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* 사진 + 코멘트 */}
+      {/* 사진(P2) + 코멘트 */}
       <div className="mb-4 flex gap-3">
         <button
           type="button"
-          onClick={() => show("사진 첨부는 P2에서 제공돼요")}
+          onClick={() => show("사진 첨부는 준비 중이에요 · P2")}
           className="flex h-[76px] w-[76px] shrink-0 flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed border-line-dashed bg-white text-muted"
-          aria-label="사진 추가"
+          aria-label="사진 추가 (준비 중)"
         >
-          <Icon name="locate" size={20} />
-          <span className="text-[10px] font-semibold">사진</span>
+          <Icon name="camera" size={20} />
+          <span className="text-[10px] font-semibold">사진 · P2</span>
         </button>
         <input
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={(e) => setComment(e.target.value.slice(0, 120))}
           placeholder="한 줄 코멘트 (선택)"
+          maxLength={120}
           className="h-[76px] flex-1 rounded-[14px] border border-line-cream bg-white px-3.5 text-[14px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
         />
       </div>
@@ -126,14 +216,29 @@ export default function ReportPage() {
       {/* 제출 */}
       <button
         type="button"
-        onClick={onSubmit}
-        disabled={!status || done}
+        onClick={done ? resetForNext : onSubmit}
+        disabled={(!status || !target || mutation.isPending) && !done}
         className="h-[52px] w-full rounded-[14px] text-[15px] font-bold text-cream disabled:text-ink-3"
-        style={{ background: status && !done ? "var(--color-forest)" : done ? "var(--color-teal)" : "#DED9CC" }}
+        style={{
+          background:
+            done ? "var(--color-teal)" : status && target && !mutation.isPending ? "var(--color-forest)" : "#DED9CC",
+        }}
       >
-        {submitLabel}
+        {done ? "고마워요! 제보 완료 · 한 번 더" : submitLabel}
       </button>
       <p className="mt-2.5 text-center text-[11px] text-muted">휘발성 제보예요 · 시간이 지나면 자동으로 사라져요</p>
+
+      {pickerOpen && (
+        <PlacePicker
+          coords={coords}
+          onClose={() => setPickerOpen(false)}
+          onPick={(p) => {
+            setPicked(p);
+            setPickerOpen(false);
+            setDone(false);
+          }}
+        />
+      )}
     </div>
   );
 }

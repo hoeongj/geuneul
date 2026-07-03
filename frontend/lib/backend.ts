@@ -18,6 +18,40 @@ async function backendFetch(path: string, search: string): Promise<Response> {
   });
 }
 
+// 쓰기 프록시: JSON body를 그대로 중계하고, 원 클라이언트 IP(X-Forwarded-For)를 보존해
+// 백엔드 레이트리밋(클라이언트별)이 프록시 IP로 뭉치지 않게 한다.
+export async function proxyPost(path: string, request: Request): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  try {
+    const body = await request.text();
+    const clientIp = request.headers.get("x-forwarded-for") ?? "";
+    const res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        ...(clientIp ? { "x-forwarded-for": clientIp } : {}),
+      },
+      body,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    const resBody = await res.text();
+    return new NextResponse(resBody, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
 // path 예: "/places", "/places/nearest", "/places/12"
 export async function proxy(path: string, search: string): Promise<NextResponse> {
   if (!BASE) {
