@@ -10,6 +10,7 @@ import { formatDistance, haversineMeters, walkMinutes } from "@/lib/geo";
 import { kakaoDirectionsUrl, kakaoMapUrl } from "@/lib/kakao";
 import { usePlace } from "@/lib/queries";
 import type { Place } from "@/types/place";
+import { DetailMiniMap } from "./DetailMiniMap";
 import { FeaturePills } from "./FeaturePills";
 
 // 예약 섹션(P2/P3): 흐리게 자리만.
@@ -74,19 +75,12 @@ export function PlaceDetailOverlay() {
         </button>
       </header>
 
-      {/* 미니맵(placeholder — 선택 장소 중심) */}
-      <div className="relative h-[150px] w-full overflow-hidden" style={{ background: "var(--color-map-base)" }}>
-        <div className="absolute left-[10%] top-[18%] h-16 w-24 rounded-2xl" style={{ background: "var(--color-map-park)" }} />
-        <div className="absolute right-[12%] bottom-[16%] h-14 w-20 rounded-2xl" style={{ background: "var(--color-map-block)" }} />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full text-forest">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border-[2.5px] border-forest bg-white shadow">
-            <Icon name={place ? iconForCategory(place.category) : "dots"} size={16} />
-          </div>
-        </div>
-        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold text-ink-3 backdrop-blur">
-          <Icon name="mapicon" size={12} /> Kakao Maps 연동 예정
-        </div>
-      </div>
+      {/* 미니맵: 선택 장소 중심(키 있으면 실지도, 없으면 placeholder) */}
+      {place ? (
+        <DetailMiniMap lat={place.lat} lng={place.lng} icon={iconForCategory(place.category)} />
+      ) : (
+        <div className="h-[150px] w-full" style={{ background: "var(--color-map-base)" }} />
+      )}
 
       <div className="flex flex-col gap-4 px-4 py-4">
         {/* 타이틀 */}
