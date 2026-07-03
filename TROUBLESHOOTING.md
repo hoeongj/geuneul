@@ -65,3 +65,16 @@
 - **결과:** 서비스는 전 과정에서 무중단(롤링이 기존 태스크 유지). 이후 배포부터 "깨진 이미지 = 즉시 롤백 + 정직한 실패 신호" 보장.
 - **면접 어필 포인트:** ① 배포 사고를 **프로세스/시스템 2계층으로 분해**해 각각 교정(사람 실수 방지 장치 + 인프라 안전장치). ② ECS 배포 상태 머신(크래시루프→런치 백오프→서킷브레이커) 이해. ③ CI/CD 파이프라인의 **false-negative 신호** 문제 인지(워크플로우 결과 ≠ 실제 수렴 상태).
 - **관련:** `infra/terraform/ecs.tf`(circuit_breaker), `.github/workflows/deploy.yml`, ECS 이벤트 로그 / WORKLOG 2026-07-02 핫픽스 항목
+
+### TS-004 · 2026-07-02 — 화장실 60k 지오코딩 전량 실패(0건 적재): Boot 4 Jackson 3 × Jackson 2 JsonNode + 테스트 사각지대
+- **상황/증상:** 프로덕션 지오코딩 인제스천이 exitCode=0으로 "성공" 종료했는데 결과가 `geocoded=0 geocodeFailed=54090` — **54,090건 전량 실패, 화장실 0건 적재**. 로컬 curl 단건 지오코딩은 HTTP 200으로 정상이었기에 더 혼란스러웠음.
+- **원인 분석:** exitCode 0 + geocoded 0의 조합이 "예외로 죽은 게 아니라 매 호출이 조용히 empty 반환"임을 가리킴 → CloudWatch에서 `[geocode]` warn 로그를 뽑아보니 **전 건이 동일 에러**:
+  ```
+  Type definition error: [simple type, class com.fasterxml.jackson.databind.JsonNode]
+  ```
+  → **Spring Boot 4는 Jackson 3(`tools.jackson`)로 이전**됐는데, `KakaoGeocodingClient`가 응답을 **Jackson 2의 `com.fasterxml.jackson.databind.JsonNode`** 로 역직렬화하려 함. RestClient의 Jackson 3 변환기가 이 낯선 타입을 일반 빈으로 introspect하다 실패 → 모든 호출이 파싱 예외 → `catch`에서 empty. curl(순수 HTTP)이 성공한 건 Java 역직렬화 계층을 안 거쳤기 때문.
+  - **진짜 근본 원인 = 테스트 사각지대:** IngestionIdempotencyIT가 `@Primary` **페이크 지오코더**를 주입해서 **실제 KakaoGeocodingClient의 HTTP 역직렬화 경로가 단 한 번도 테스트되지 않았다.** CI가 전부 green이었는데 프로덕션에서 100% 실패한 이유.
+- **해결 과정:** ① `JsonNode` → **타입 있는 record(`KakaoAddressResponse`)** 로 역직렬화(Jackson 버전 무관하게 이름 매핑). ② 사각지대 제거 — **MockRestServiceServer로 실제 카카오 JSON을 파싱하는 단위 테스트 5건** 추가(도로명 우선/지번 폴백/0건/4xx/키없음). 이 테스트는 **로컬에서 실행**되어 JsonNode 버그를 재현·차단한다(Docker 불필요). ③ 멱등 파이프라인이라 실패분은 캐시 안 됨 → 수정 배포 후 재실행하면 전량 재시도되어 수렴.
+- **결과:** 로컬 테스트로 파싱 검증(이전엔 페이크가 가려 불가능) → 재배포 후 재적재.
+- **면접 어필 포인트:** ① "exitCode 0인데 결과 0"이라는 조용한 실패를 로그 패턴으로 근본까지 추적. ② **메이저 프레임워크 이전(Jackson 2→3)의 은닉된 파괴**를 실제 사고로 경험·이해. ③ **모킹의 함정** — 외부 의존을 페이크로 대체하면 "그 의존과의 실제 계약(역직렬화)"이 미검증으로 남는다는 교훈, 그리고 그걸 MockRestServiceServer(실 변환기 경유)로 메운 것.
+- **관련:** `KakaoGeocodingClient.java`, `KakaoGeocodingClientTest.java`, ECS task 29da1b2f 로그
