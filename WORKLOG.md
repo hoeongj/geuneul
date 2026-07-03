@@ -226,3 +226,13 @@
   - **범위 준수**: P2/P3(후기·제보 POST·로그인·freshness·AI 요약·survival_score 3색)은 레이아웃 자리만.
 - 관련: `frontend/`(전체), `frontend/README.md`, `.github/workflows/frontend-ci.yml`(paths:frontend/**, typecheck·lint·build), TROUBLESHOOTING TS-006
 - 다음 할 일: PR→프론트 CI green→머지. Kakao JS 키 수령 시 `.env.local` 주입해 실지도 확인. 이후 P2(UGC+인증) 또는 상세 미니맵 실지도화.
+
+### 2026-07-03 — 프론트엔드 Vercel 프로덕션 배포 (App Live)
+- 한 일: 프론트 MVP 를 **Vercel 프로덕션 배포** → **https://geuneul.vercel.app** 라이브. Kakao 실지도 + 라이브 데이터(전국 화장실 등) 동작 확인.
+- 결정 & 이유(why):
+  - **로컬 대신 배포 우선**: Kakao JS SDK 는 등록된 도메인에서만 로드되는데, 콘솔이 **localhost 등록을 계속 거부**(알려진 이슈). 실도메인은 정상 등록되므로 Vercel 배포로 우회 — 어차피 브리프상 배포 타깃이 Vercel 이라 정공법.
+  - **`vercel.json` 로 빌드 고정**: `buildCommand=pnpm build`(=`next build --webpack`) — Vercel 기본 `next build`(Turbopack)는 Serwist(webpack)와 충돌하므로 webpack 강제. `installCommand=... --ignore-scripts` — pnpm 11 이 CI 에서 미빌드 네이티브 스크립트를 하드에러 처리하므로 무시(sharp 미사용·oxide prebuilt·unrs JS 폴백).
+  - **env 분리**: `GEUNEUL_API_BASE`(서버 전용) + `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` 를 Vercel Production 에 암호화 저장. 키는 레포 미포함(.env.local·Vercel env 만).
+- 트러블: Kakao 도메인이 계속 거부 → SDK 응답(`AccessDeniedError: domain mismatched`)으로 **브라우저 없이 등록 여부를 직접 검증**. 원인은 도메인을 **"제품 링크 관리 > 웹 도메인"(카카오톡 공유용)** 에 넣은 것 — 지도는 **"JavaScript 키 > JavaScript SDK 도메인"** 에 등록해야 함. 올바른 칸 등록 후 SDK 정상 로드 확인.
+- 관련: `frontend/vercel.json`, Vercel project `geuneul`(prod alias geuneul.vercel.app), PR #12
+- 다음 할 일: PR #12 머지 → main. P2(UGC+인증)는 **백엔드 API(POST /reports·/reviews·/auth) 먼저** 필요 — 별도 착수.
