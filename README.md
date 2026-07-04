@@ -18,7 +18,7 @@
 🟢 **App Live** — **[https://geuneul.vercel.app](https://geuneul.vercel.app)** (프론트엔드 PWA, Vercel · Kakao 실지도 + 라이브 데이터)
 
 - W0 완료(2026-07-02): Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + **AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인**
-- P1: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API 라이브** + **공공데이터 idempotent 인제스천**(무더위쉼터 전국 프로덕션 적재 완료 · 공중화장실 표준데이터 59,768행 파서 + **카카오 지오코딩 파이프라인**으로 좌표 결측 보완) — 의사결정은 [`docs/adr/`](./docs/adr) 참고
+- P1: **반경(ST_DWithin)/kNN(`<->`)/bounds 공간검색 API 라이브** + **공공데이터 idempotent 인제스천**(무더위쉼터 전국 샘플 100건 적재 · 공중화장실 표준데이터 59,768행 파서 + **카카오 지오코딩 파이프라인**으로 46,897건 좌표 보완 적재) — 의사결정은 [`docs/adr/`](./docs/adr) 참고
 - 프론트엔드: **MVP 4화면(홈 지도·장소 상세·급해요·제보) Next.js 16(App Router)+TypeScript PWA** — 라이브 API에 서버 프록시로 연결. 설치·구조는 [`frontend/README.md`](./frontend/README.md)
 - P2 착수: **휘발성 제보(reports) 풀스택 라이브** — 익명 `POST /reports`(타입별 TTL) + 프론트 실전송·상세 최근제보. 레이트리밋 XFF 신뢰경계·OOM 하드닝(적대적 리뷰, TS-008)
 

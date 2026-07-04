@@ -1,18 +1,19 @@
-# HANDOFF — 그늘(Geuneul) 이어서 작업하기
+# 그늘(Geuneul) — 프로젝트 현황과 다음 작업
 
-> 새 세션이 여기서부터 이어간다. 전체 스펙·워크플로우 규칙은 [`CLAUDE.md`](./CLAUDE.md)(자동 로드), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
-> 최종 갱신: 2026-07-04(새벽 자동세션).
+> 현재 상태·완료분·다음 작업을 정리한 진행 문서. 전체 스펙·규칙은 [`CLAUDE.md`](./CLAUDE.md), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
+> 최종 갱신: 2026-07-04.
 
-## 🌅 아침 체크리스트 (밤사이 한 일 + 네가 할 것)
+## 최근 완료 · 다음 작업
 
-**밤사이 자동 완료(전부 라이브·검증됨):**
+**최근 완료(전부 라이브·검증됨):**
 - ✅ **P2 제보(reports) 기능 풀스택** — 백엔드 API(`POST /reports`·`GET /places/{id}/reports`, 익명·타입별 TTL, PR #15) + 프론트 실전송/상세 최근제보(PR #16) + 상세 미니맵 실지도(PR #14). 라이브 E2E 통과.
-- ✅ **적대적 다중 에이전트 코드리뷰**(19 에이전트) → 확정 결함 2건 하드닝(PR #17, TS-008): 레이트리밋 XFF 위조 우회 + eviction OOM.
+- ✅ **다중 에이전트 적대적 코드리뷰**로 확정 결함 2건 하드닝(PR #17, TS-008): 레이트리밋 XFF 위조 우회 + eviction OOM.
+- ✅ **포트폴리오 품질 감사**로 코드·인프라·문서 32건 개선(거리 이중계산 제거·레이트리미터 원자화·배포 테스트게이트·gitleaks·SHA-pin 등, PR #18–21).
 - ✅ 문서: ADR-0004(BFF 프록시)·TS-006/007/008·WORKLOG.
 
-**네가 직접 해야 하는 것(콘솔/인프라 권한·판단 필요라 자동으로 안 함):**
+**다음 작업 (외부 콘솔·인프라 권한이 필요한 항목):**
 
-### ① ~~레이트리밋 proxy-secret 활성화~~ — ✅ **완료(2026-07-04 새벽, 자동)**
+### ① ~~레이트리밋 proxy-secret 활성화~~ — ✅ **완료(2026-07-04)**
 XFF 위조 우회가 **완전 차단**됐다. 한 일:
 - 시크릿 `openssl rand -hex 32` → `.local/proxy-secret.env`(gitignore).
 - **백엔드**: `ssm.tf`에 `aws_ssm_parameter.proxy_secret`(SecureString) + `variables.tf` `proxy_secret`(sensitive) + `terraform.tfvars`(gitignore) 값 → `terraform apply`(1 add, IAM은 `/geuneul/*` 와일드카드라 무변경). 태스크데프는 `ignore_changes[container_definitions]`라 TF로 안 먹어서, **실행 리비전 기반 새 rev(13) 등록 + `update-service` 강제 재배포**(이미지 보존). `ecs.tf` secrets엔 문서화용으로 추가(다음 fresh apply 대비).
@@ -109,5 +110,5 @@ docs/       adr/0001~0004 · design-brief.md
 - **비밀은 대화 OK, git 금지**(규칙 D). `.local/`·`.env`·tfvars/tfstate gitignore. 커밋 전 스캔.
 - **범위 임의 확장 금지** — 새 기능은 제안 후 확인. 간판(지리공간)이 주인공, 커뮤니티는 살.
 
-## 동시 작업 주의
-프론트 세션 작업은 **완료·머지됨**(PR #12·#14) — 현재 브랜치 충돌 요소 없음. 다만 여러 세션이 병행될 땐 원칙 유지: **자체 기능 브랜치 + 특정 파일만 add**(`git add -A` 금지 — 상대 세션의 미커밋 작업을 삼킬 수 있음), 로컬 main 위에서 직접 작업 금지.
+## 작업 원칙 (git)
+기능 브랜치 + PR + CI green 확인 후 머지. 병행 작업 시 `git add -A` 대신 **특정 파일만 스테이징**하고, 로컬 `main`에서 직접 작업하지 않는다(다른 작업의 미커밋 변경을 삼키거나 커밋이 섞이는 것을 방지).
