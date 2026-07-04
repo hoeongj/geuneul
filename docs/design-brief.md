@@ -1,6 +1,6 @@
-# 그늘 (Geuneul) — 디자인 브리프 (claude design 착수용)
+# 그늘 (Geuneul) — 디자인·API 계약 레퍼런스 (구현 완료·라이브)
 
-> 이 문서를 claude design에 그대로 붙여넣고 시작하면 된다. API 계약은 라이브 검증 완료된 실제 값.
+> 아래 디자인 토큰·화면·API 계약으로 프론트엔드 4화면이 구현·배포됐다(https://geuneul.vercel.app). API 계약은 라이브 검증된 실제 값이며, 이 문서는 그 참조 스냅샷으로 남긴다.
 > 백엔드: `http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com` (Swagger `/swagger-ui.html`)
 
 ## 1. 제품 한 줄
