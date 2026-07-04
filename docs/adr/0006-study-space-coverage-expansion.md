@@ -1,6 +1,6 @@
 # ADR-0006. 공부 가능 공간(공공 + 카페) 데이터 커버리지 확장 — "여름 실내 오래 버티기" survival 레이어
 
-- 상태: **제안(Proposed)** — 골격(카테고리) 착수, 대량 적재는 공공데이터 serviceKey/CSV 확보 후 (2026-07-04)
+- 상태: **제안(Proposed)** — 카테고리 골격(CAFE/STUDY_CAFE 신설)도 아직 코드 미반영(PlaceCategory 8종 유지), 대량 적재는 공공데이터 serviceKey/CSV 확보 후 (2026-07-04)
 - 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), ADR-0002(멱등)·ADR-0003(지오코딩), CLAUDE.md §3(커버리지 원칙)·§9(간판 vs 살)
 - 근거 조사: 다중 에이전트 리서치(공공 공부공간 데이터셋·노들서가류·카페 데이터·모델링) — wf_e524daf8
 
@@ -58,7 +58,7 @@
 
 ## 착수 순서(Recommended Order)
 
-0. **골격**(데이터 무관): `PlaceCategory` += CAFE/STUDY_CAFE + 프론트 categories 동기. *(이 ADR과 함께 착수)*
+0. **골격**(데이터 무관): `PlaceCategory` += CAFE/STUDY_CAFE + 프론트 categories 동기. *(아직 미착수 — serviceKey 확보 시 아래 소스 적재와 함께)*
 1. 업종코드 매핑표(15067631)로 커피점·독서실/스터디카페 소분류 코드 실측 확정.
 2. 스키마: `places` += `is_commercial`·`deleted_at` Flyway 마이그레이션. `SourceSpec` += filterColumn/acceptedValues/defaultFeatures. `IngestionService` += set-based feature 백필 + 스냅샷 diff soft-delete.
 3. 전국도서관표준데이터(LIBRARY) 적재 — 가장 쉬움, feature 백필 최초 검증.

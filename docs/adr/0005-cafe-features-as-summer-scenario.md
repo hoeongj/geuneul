@@ -46,7 +46,7 @@
 
 - 카공 수요가 **간판(PostGIS 시공간 UGC 스코어링) 강화**로 전환된다. 커버리지·최신성(idempotent ETL + soft-delete)과 실시간 UGC가 여전히 주인공.
 - 흡수는 **데이터 축(place_features)과 실시간 상태(reports)** 두 갈래로만 — 둘 다 기존 스키마/알고리즘 재사용이라 저비용.
-- 한계: 카공 UI를 원하면 결국 "카페 색채"(테이블 넓이·조도)가 스며들 수 있음 → dilution 목록을 게이트로 유지하고, 카페 카테고리 신설은 별도 ADR로 승인받는다.
+- 한계: 카공 UI를 원하면 결국 "카페 색채"(테이블 넓이·조도)가 스며들 수 있음 → dilution 목록을 게이트로 유지하고, 카페 카테고리 신설은 별도 ADR([ADR-0006](0006-study-space-coverage-expansion.md))로 승인받는다.
 
 ## 근거(References)
 
