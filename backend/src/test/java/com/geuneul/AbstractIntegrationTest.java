@@ -1,6 +1,5 @@
 package com.geuneul;
 
-import com.redis.testcontainers.RedisContainer;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.DockerClientFactory;
@@ -9,7 +8,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * 통합테스트 공통 베이스 — 실 PostGIS + Redis (H2가 놓치는 공간 dialect를 실 DB로 검증).
+ * 통합테스트 공통 베이스 — 실 PostGIS로 검증(H2가 놓치는 공간 dialect·타입 drift를 잡는다).
+ * (Redis는 메인 코드에서 아직 미사용 — P3 캐시 도입 시 여기에 컨테이너를 다시 추가한다.)
  *
  * ⚠️ 싱글턴 컨테이너 패턴 — @Container를 일부러 쓰지 않는다 (TS-002).
  * @Container(static)는 "각 테스트 클래스 종료 시 컨테이너 중지"인데, Spring TestContext는
@@ -31,14 +31,9 @@ public abstract class AbstractIntegrationTest {
                     .asCompatibleSubstituteFor("postgres"))
             .withDatabaseName("geuneul");
 
-    @ServiceConnection
-    static final RedisContainer REDIS = new RedisContainer(
-            DockerImageName.parse("redis:7-alpine"));
-
     static {
         if (DockerClientFactory.instance().isDockerAvailable()) {
             POSTGRES.start();
-            REDIS.start();
         }
     }
 }

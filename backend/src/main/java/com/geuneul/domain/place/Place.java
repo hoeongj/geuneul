@@ -47,6 +47,8 @@ public class Place {
     @Column(name = "source_external_id", length = 128)
     private String sourceExternalId;
 
+    // 아래 두 컬럼은 ERD(V2)에 선반영된 확장 슬롯 — 상세의 외부 지도 링크·운영시간(P2/P3)용.
+    // 현재 인제스천/응답 경로는 채우지 않는다(값이 붙으면 상세 API가 노출).
     @Column(name = "external_map_url", length = 512)
     private String externalMapUrl;
 

@@ -1,5 +1,6 @@
 package com.geuneul.domain.ingest.geocode;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -33,13 +34,21 @@ class KakaoGeocodingClientTest {
             }
             """;
 
+    // 4개 테스트 공통 셋업(test-key 클라이언트 + 모의 서버). throwsWhenNoKey만 자체 클라이언트 사용.
+    private RestClient.Builder builder;
+    private MockRestServiceServer server;
+    private KakaoGeocodingClient client;
+
+    @BeforeEach
+    void setUp() {
+        builder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(builder).build();
+        client = new KakaoGeocodingClient("test-key", builder);
+    }
+
     @Test
     @DisplayName("정상 응답: 도로명(road_address) 좌표를 우선 사용해 lat/lng로 매핑한다")
     void deserializesRealKakaoResponse() {
-        RestClient.Builder builder = RestClient.builder();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        KakaoGeocodingClient client = new KakaoGeocodingClient("test-key", builder);
-
         server.expect(requestTo(containsString("/v2/local/search/address.json")))
                 .andExpect(header("Authorization", "KakaoAK test-key"))
                 .andRespond(withSuccess(KAKAO_JSON, MediaType.APPLICATION_JSON));
@@ -55,10 +64,6 @@ class KakaoGeocodingClientTest {
     @Test
     @DisplayName("도로명이 없으면 지번(address) 좌표로 폴백한다")
     void fallsBackToJibunWhenNoRoadAddress() {
-        RestClient.Builder builder = RestClient.builder();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        KakaoGeocodingClient client = new KakaoGeocodingClient("test-key", builder);
-
         server.expect(requestTo(containsString("/v2/local/search/address.json")))
                 .andRespond(withSuccess("""
                         {"documents":[{"address":{"x":"127.1","y":"37.2"},"road_address":null}]}
@@ -74,10 +79,6 @@ class KakaoGeocodingClientTest {
     @Test
     @DisplayName("결과 0건이면 empty")
     void emptyWhenNoDocuments() {
-        RestClient.Builder builder = RestClient.builder();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        KakaoGeocodingClient client = new KakaoGeocodingClient("test-key", builder);
-
         server.expect(requestTo(containsString("/v2/local/search/address.json")))
                 .andRespond(withSuccess("{\"documents\":[]}", MediaType.APPLICATION_JSON));
 
@@ -87,10 +88,6 @@ class KakaoGeocodingClientTest {
     @Test
     @DisplayName("HTTP 오류(4xx)는 예외를 던지지 않고 empty로 처리한다")
     void serverErrorReturnsEmpty() {
-        RestClient.Builder builder = RestClient.builder();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        KakaoGeocodingClient client = new KakaoGeocodingClient("test-key", builder);
-
         server.expect(requestTo(containsString("/v2/local/search/address.json")))
                 .andRespond(withStatus(org.springframework.http.HttpStatus.UNAUTHORIZED));
 
