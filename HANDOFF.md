@@ -4,7 +4,7 @@
 > 최종 갱신: 2026-07-04.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(API rev17·App). **간판 완성 — survival_score(P3) 풀스택 구현 완료**(브랜치 `feat/p3-survival-score`, PR 대기/머지 중. ADR-0007). 백엔드 SQL 시공간 신호 뷰(V4)+순수 함수 조립+스코어드 API, 프론트 마커 3색·상태 배지(예약 슬롯 채움). 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
+- **상태**: 라이브 정상(App·API). **간판 완성 — survival_score(P3) 풀스택 라이브**(PR #23 머지, ADR-0007. V4 마이그레이션이 프로덕션 RDS에 적용됨, `/places`·`/places/{id}` 응답에 `survival` 실측 확인). 백엔드 SQL 시공간 신호 뷰(V4)+순수 함수 조립+스코어드 API, 프론트 마커 3색·상태 배지(예약 슬롯 채움). **git clean(main, 미커밋 0, 열린 PR 0)**. 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
 - **콘솔 없이 바로 가능한 다음 = `/recommendations`(P3, 시나리오 랭킹)** — survival_score에 시나리오별 가중을 얹는 자연스러운 다음 조각(급해요는 지금 nearest 팬아웃 근사 → 점수 기반 정식 랭킹으로 승격 가능). 또는 날씨 API로 open_now/기온 결측 성분 복원.
 - **사용자 결정 대기 2건(둘 다 사용자 콘솔·자격증명 필요)**:
   1. **§② OAuth 콘솔**(카카오 로그인 ON+Redirect URI / 구글 OAuth 클라이언트) → 로그인·후기·trust_score. **survival_score 뷰에 신뢰도 가중이 이미 심겨 있어 로그인 붙으면 코드 변경 없이 점수에 반영**된다.
