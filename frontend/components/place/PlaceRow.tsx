@@ -3,6 +3,7 @@
 import { IconChip } from "@/components/ui/IconChip";
 import { categoryLabel, iconForCategory } from "@/lib/categories";
 import { formatDistance } from "@/lib/geo";
+import { statusLabel } from "@/lib/survival";
 import type { Place } from "@/types/place";
 
 interface PlaceRowProps {
@@ -10,15 +11,16 @@ interface PlaceRowProps {
   onClick: () => void;
   /** 작은 밀도(장소 선택 피커용). */
   compact?: boolean;
-  /** "● 정보 부족" 상태 배지 노출(홈 시트=true, 피커=false). */
+  /** survival_score 상태 배지 노출(홈 시트=true, 피커=false). */
   showStatus?: boolean;
 }
 
-// 장소 리스트 로우 — 좌 아이콘칩 · 이름+라벨·주소 · 우 거리 [+ "● 정보 부족"].
-// 마커/점수 색은 회색 고정(정보 부족) — survival_score 3색은 Reserved.
+// 장소 리스트 로우 — 좌 아이콘칩 · 이름+라벨·주소 · 우 거리 [+ survival_score 상태 배지].
+// 상태 점 색 = survival_score 등급(초록 지금 좋음 / 노랑 보통 / 회색 정보 부족, ADR-0007).
 export function PlaceRow({ place, onClick, compact = false, showStatus = true }: PlaceRowProps) {
   const dist = formatDistance(place.distanceM);
   const label = categoryLabel(place.category, place.categoryLabel);
+  const status = statusLabel(place.survival);
   return (
     <button
       type="button"
@@ -39,8 +41,8 @@ export function PlaceRow({ place, onClick, compact = false, showStatus = true }:
         {dist && <div className={"font-extrabold text-teal " + (compact ? "text-[12.5px]" : "text-[14px]")}>{dist}</div>}
         {showStatus && (
           <div className="flex items-center gap-1 text-[10px] text-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-status" />
-            정보 부족
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: status.color }} />
+            {status.label}
           </div>
         )}
       </div>
