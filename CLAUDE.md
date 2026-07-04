@@ -177,7 +177,7 @@ place_features(id, place_id, feature_type, value, source, confidence)
 
 reports(id, user_id, place_id, report_type, status_value, comment,
         photo_url, confidence, is_anonymous, created_at, expires_at)
-  # report_type: COOL, HOT, BUG, ODOR, SMOKE, FLOOD, SLIPPERY, WATER_OK, RESTROOM_CLEAN
+  # report_type: SEAT_OK, CROWDED, COOL, HOT, BUG, ODOR, SMOKE, FLOOD, SLIPPERY, WATER_OK, RESTROOM_CLEAN
   # 휘발성 — expires_at 지나면 freshness/score에서 제외
 
 reviews(id, user_id, place_id, rating, comment, photos_json, created_at, updated_at)

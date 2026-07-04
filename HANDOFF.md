@@ -3,6 +3,14 @@
 > 현재 상태·완료분·다음 작업을 정리한 진행 문서. 전체 스펙·규칙은 [`CLAUDE.md`](./CLAUDE.md), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
 > 최종 갱신: 2026-07-04.
 
+## ▶ 세션 인계 — 다음 세션은 여기서 시작
+- **상태**: 라이브 정상(API rev17·App). 전 문서 정합 감사 완료(README·HANDOFF·WORKLOG·TS·ADR·design-brief·CLAUDE — 10건 수정). **git clean(main, 미커밋 0, 열린 PR 0)**. 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
+- **사용자 결정 대기 2건(둘 다 사용자 콘솔·자격증명 필요)**:
+  1. **§⑤ 공부공간 데이터 확장([ADR-0006])** — **공공데이터포털 오픈API serviceKey(무료)** 또는 CSV. 받으면 `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·상권정보 파서·실적재·테스트를 **실데이터로 한 번에** + P3 무인화까지. (지금은 계획만, 코드 미착수 — 헤더 헤더값 미확정이라 선착수 시 재작업.)
+  2. **§② OAuth 콘솔**(카카오 로그인 ON+Redirect URI / 구글 OAuth 클라이언트) → 로그인·후기·trust_score.
+- **콘솔 없이 바로 가능한 최우선 = `survival_score`(P3, §③·§④)** — 제보 freshness 데이터가 쌓였으니 SQL 시공간 랭킹 + 마커 3색(초록/노랑/회색). 간판 미구현분 완성. 스펙은 CLAUDE.md §5(가중치 확정).
+- **작업 규칙 리마인더**: 커밋 신원 `ghdtjdwn`/`seongjuice999@gmail.com`, 푸시 전 비밀 스캔, 비밀은 `.local/`·`.env`만, 결정은 WORKLOG에 why/대안 기록(CLAUDE.md §A~D).
+
 ## 최근 완료 · 다음 작업
 
 **최근 완료(전부 라이브·검증됨):**
@@ -39,7 +47,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 - [ ] **[살·즉효] place_features.value 등급화** — 콘센트=개수/접근성, wifi=속도, `noise_level` 추가(스키마 변경 없음, comfort_score 정밀화).
 - [ ] **[간판 확장·P4] 시간대별 혼잡 파생** — reports 이력 요일×시간 집계 → 자체 popular-times(외부 API 불필요).
 - [ ] **[살] 추천 시나리오 `focus`/`longstay`** 추가(파라미터만) · 정형 태그 리뷰.
-- **거부/보류(정체성 희석·비목표):** aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터·좌석단위 콘센트 지도. (CAFE 카테고리는 사용자 승인 → [ADR-0006]으로 채택, 아래 §⑤.)
+- **거부/보류(정체성 희석·비목표):** aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터·좌석단위 콘센트 지도. (CAFE 카테고리는 사용자 승인 → [ADR-0006]으로 **제안(Proposed)** — enum·스키마는 아직 미반영(serviceKey 대기), 아래 §⑤.)
 
 ### ⑤ 공부 가능 공간 데이터 확장 (제안 — 대량 적재는 serviceKey 확보 후, [ADR-0006](./docs/adr/0006-study-space-coverage-expansion.md))
 사용자 요청: "공부 가능한 카페 + 공공 공부공간(노들서가류) 전부 넣고 싶다" = **데이터 커버리지 확장**(간판 ETL 강화, §3 커버리지 원칙 정합). 카공 UGC 기능(§④)과 별개.
@@ -56,7 +64,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터 + 실시간 제보)
 
 - **백엔드:** Spring Boot 4.0.6 / Java 21. 반경(`ST_DWithin` geography)·최근접(kNN `<->`)·bounds 공간검색 API 라이브. `backend/`.
-- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. `infra/`.
+- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev17**(SEAT PR #22·감사 #18~#21 배포 반영. §①의 rev13은 proxy-secret 활성화 당시 과거값). `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
 - **P2 제보(라이브, PR #15·#16·#17):** 익명 휘발성 제보 `POST /reports`(타입별 TTL로 `expires_at`) + `GET /places/{id}/reports`. 프론트 제보하기 실전송(장소=nearest+피커)·상세 "최근 제보" 실시간. 인메모리 레이트리밋(분3·시간10) — XFF 신뢰경계(`ProxyClientResolver`)·OOM 하드닝(TS-008).
 - **프론트(완료, PR #12·#14·#16):** Next.js 16(App Router)+TS PWA — MVP 4화면(홈 지도·장소 상세(실지도 미니맵·최근제보)·급해요·제보 실전송). **동일 오리진 서버 프록시(BFF)** 로 ALB(http)·CORS 회피(ADR-0004) → **백엔드 CORS 불필요**. Vercel git 연결로 `main` push 시 자동배포(rootDirectory=frontend). Kakao JS 키는 콘솔 **[JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록 완료(제품링크관리>웹도메인과 다른 칸 — 혼동 주의).
@@ -67,7 +75,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 backend/    Spring Boot 4 — domain.place(공간검색) · domain.ingest(+geocode) · global.geo/config
 infra/      terraform/(VPC·RDS·ECS·ALB·ECR·IAM OIDC) · scripts/prod-ingest.sh
 frontend/   Next.js 16 App Router PWA — app/(shell)(4화면) · app/api(서버 프록시 BFF) · components · lib
-docs/       adr/0001~0004 · design-brief.md
+docs/       adr/0001~0006 · design-brief.md
 .github/    ci.yml(백엔드 테스트) · deploy.yml(OIDC 배포, paths=backend/**) · frontend-ci.yml(paths=frontend/**)
 .local/     (gitignore) myInfo·PORTFOLIO-CONTEXT — 비밀·회사매핑
 ```
