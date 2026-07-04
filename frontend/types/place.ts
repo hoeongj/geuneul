@@ -20,6 +20,21 @@ export type FeatureType =
   | "seating"
   | "no_eyes";
 
+// survival_score(백엔드 §5·ADR-0007). 등급으로 마커 색을 칠한다:
+// GOOD=초록(지금 좋음) / OKAY=노랑(보통) / UNKNOWN=회색(정보 부족).
+export type SurvivalGrade = "GOOD" | "OKAY" | "UNKNOWN";
+
+export interface Survival {
+  score: number; // 0~100
+  grade: SurvivalGrade;
+  /** 거리 점수 0~1. 반경 검색에서만 non-null(bounds/단건은 null). */
+  distanceScore: number | null;
+  comfortScore: number;
+  freshnessScore: number;
+  riskScore: number;
+  reportCount: number;
+}
+
 export interface Place {
   id: number;
   name: string;
@@ -31,6 +46,8 @@ export interface Place {
   source: string;
   /** radius/nearest 에서만 채워짐. bounds/단건은 null. */
   distanceM: number | null;
+  /** 스코어드 검색(반경/bounds/단건)에서만 채워짐. nearest/urgent 경로는 없음(→ UNKNOWN 취급). */
+  survival?: Survival | null;
   /** 백엔드 미노출(P2/P3). 있으면 상세 시설칩에 렌더. */
   features?: FeatureType[];
   /** 백엔드 미노출. 있으면 운영시간 렌더. */

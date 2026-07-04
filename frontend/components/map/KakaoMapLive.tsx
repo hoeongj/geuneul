@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CustomOverlayMap, Map, MapMarker, MarkerClusterer, useKakaoLoader } from "react-kakao-maps-sdk";
 import { iconForCategory } from "@/lib/categories";
 import { markerImage } from "@/lib/marker";
+import { gradeOf } from "@/lib/survival";
 import type { MapBounds, Place } from "@/types/place";
 import { MapPlaceholder } from "./MapPlaceholder";
 
@@ -64,7 +65,7 @@ export default function KakaoMapLive({
           <MapMarker
             key={p.id}
             position={{ lat: p.lat, lng: p.lng }}
-            image={markerImage(iconForCategory(p.category), p.id === selectedId)}
+            image={markerImage(iconForCategory(p.category), p.id === selectedId, gradeOf(p))}
             onClick={() => onSelect(p)}
           />
         ))}
