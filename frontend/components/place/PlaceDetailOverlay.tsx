@@ -10,6 +10,7 @@ import { formatDistance, haversineMeters, walkMinutes } from "@/lib/geo";
 import { kakaoDirectionsUrl, kakaoMapUrl } from "@/lib/kakao";
 import { usePlace, usePlaceReports } from "@/lib/queries";
 import { formatRelativeTime, REPORT_META } from "@/lib/reports";
+import { GRADE_META, gradeOf } from "@/lib/survival";
 import type { Place } from "@/types/place";
 import { DetailMiniMap } from "./DetailMiniMap";
 import { FeaturePills } from "./FeaturePills";
@@ -27,7 +28,7 @@ function ReservedBlock({ title, badge, children }: { title: string; badge: strin
   );
 }
 
-// 최근 제보(라이브) — 유효(미만료) 제보 최신순. 점수 3색·freshness 가중은 P3 예약.
+// 최근 제보(라이브) — 유효(미만료) 제보 최신순. 이 제보들이 위 "지금 상태" survival_score로 집계된다(ADR-0007).
 function RecentReports({ placeId }: { placeId: number }) {
   const { data, isLoading } = usePlaceReports(placeId);
   return (
@@ -123,14 +124,26 @@ export function PlaceDetailOverlay() {
           </div>
         </div>
 
-        {/* 지금 상태(예약 슬롯, 회색) */}
-        <div className="flex items-center justify-between rounded-[12px] border border-line-cream bg-white px-3.5 py-3">
-          <span className="flex items-center gap-2 text-[13px] font-semibold text-status">
-            <span className="h-2 w-2 rounded-full bg-status" />
-            지금 상태 · 정보 부족
-          </span>
-          <span className="text-[11px] text-muted">제보 쌓이면 표시</span>
-        </div>
+        {/* 지금 상태 — survival_score 등급(ADR-0007). 유효 제보 기준 3색. */}
+        {(() => {
+          const grade = gradeOf(place ?? {});
+          const meta = GRADE_META[grade];
+          const s = place?.survival ?? null;
+          return (
+            <div className="flex items-center justify-between rounded-[12px] border border-line-cream bg-white px-3.5 py-3">
+              <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: meta.color }}>
+                <span className="h-2 w-2 rounded-full" style={{ background: meta.color }} />
+                지금 상태 · {meta.label}
+                {grade !== "UNKNOWN" && s && <span className="font-extrabold">{s.score}</span>}
+              </span>
+              <span className="text-[11px] text-muted">
+                {grade === "UNKNOWN"
+                  ? "제보 쌓이면 표시"
+                  : `최근 제보 ${s?.reportCount ?? 0}건 반영`}
+              </span>
+            </div>
+          );
+        })()}
 
         {/* 주소 / 거리·도보 */}
         <div className="flex flex-col gap-2.5">

@@ -1,9 +1,11 @@
 import { ICON_FILLED, ICONS } from "./icon-paths";
+import { GRADE_META } from "./survival";
+import type { SurvivalGrade } from "@/types/place";
 
 // 카카오 MapMarker 용 SVG data-URI 생성. 디자인 마커 스펙:
-// 흰 원(34px, 선택 38px) + 2.5px 링(정보부족=#9AA6A0 / 선택=#163C2F) + 카테고리 아이콘(#163C2F, 18) + 아래 삼각 꼬리.
-// 마커 링은 회색 고정(정보 부족) — survival_score 3색은 아직 슬롯만(Reserved).
-const RING_DEFAULT = "#9AA6A0";
+// 흰 원(34px, 선택 38px) + 2.5px 링(survival_score 3색: 초록/노랑/회색, 선택=#163C2F)
+// + 카테고리 아이콘(#163C2F, 18) + 아래 삼각 꼬리.
+// 링 색 = survival_score 등급(ADR-0007): GOOD 초록 / OKAY 노랑 / UNKNOWN 회색.
 const RING_SELECTED = "#163C2F";
 const ICON_COLOR = "#163C2F";
 
@@ -32,12 +34,13 @@ export interface MarkerImage {
   options: { offset: { x: number; y: number } };
 }
 
-export function markerImage(iconName: string, selected = false): MarkerImage {
+export function markerImage(iconName: string, selected = false, grade: SurvivalGrade = "UNKNOWN"): MarkerImage {
   const d = selected ? 38 : 34;
   const tail = 7;
   const w = d;
   const h = d + tail;
-  const ring = selected ? RING_SELECTED : RING_DEFAULT;
+  // 선택 시 브랜드 딥그린 링으로 강조, 아니면 등급 3색.
+  const ring = selected ? RING_SELECTED : GRADE_META[grade].color;
   const shadow = selected ? 0.24 : 0.14;
   // 아이콘(24 viewBox)을 18px 로 축소해 원 중앙에 배치.
   const iconScale = 18 / 24;

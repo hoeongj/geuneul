@@ -309,3 +309,16 @@
 - 수정 요지(전부 코드/라이브 실측 대조): SEAT_OK/CROWDED(PR #22) 반영 누락 — README 제보 서술·CLAUDE ERD report_type(9→11종)·design-brief 이모지 그리드 / HANDOFF 아키맵 ADR 범위(0001~0004→0006)·CAFE '채택'→'제안' 과표현 교정·현재 rev17 명시 / ADR-0005↔0006 상호참조 링크·ADR-0006 상태 문구(카테고리 미반영 명시) / ADR-0003 지오코딩 결과 실적재량(60k→실측 46,897) / WORKLOG 테스트 카운트 산술오류(23→24, 리미터7→6, PR #19 원자화 반영).
 - 결정 & 이유(why): 문서는 면접·서류 산출물이라 **"코드가 진실원천, 문서는 그와 일치"**가 원칙. 최근 SEAT 제보·ADR-0006 추가가 여러 문서에 드리프트를 낳아, 단일 리뷰어보다 4축 병렬 감사로 누락을 촘촘히 잡음. 비밀/개인정보 유출 0건 재확인(공개 URL·SSM 경로명만).
 - 관련: 감사 wf_dc846959, HANDOFF ▶세션 인계, docs/adr/*
+
+### 2026-07-04 — survival_score(P3) 구현: 간판 "실시간 UGC 시공간 스코어링" 완성 — ADR-0007
+- 한 일: 콘솔·자격증명 없이 가능한 최우선(HANDOFF ▶세션 인계 지목)인 **survival_score를 풀스택으로 완성**. 백엔드(SQL 시공간 신호 뷰 + 순수 함수 조립 + 스코어드 반경/bounds/단건 API) + 프론트(마커 3색·리스트/상세 상태 배지 — 예약 슬롯 채움). 간판 헤드라인의 미구현분(지리검색·제보는 라이브였으나 점수 자체가 없었음)을 채웠다.
+- 결정 & 이유(why) — 상세는 [ADR-0007](docs/adr/0007-survival-score-sql-signals-java-compose.md):
+  - **하이브리드 계산(시공간 집계=SQL 뷰, 가중치 조립·등급=순수 함수)**: CLAUDE.md §5 "시공간 랭킹은 DB에서" 준수(장소별 제보 최근성/신뢰도 집계를 `place_report_signals` 뷰가 계산 → 전체스캔·N+1 회피). 최종 `0.25·distance+0.20·comfort+0.20·freshness−0.15·risk`와 등급 분기는 **DB 없이 8개 단위테스트되는** `SurvivalScore` 순수 함수로. 튜닝 잦은 "정책"은 함수, 무거운 집계는 SQL — 역할 분리.
+  - **트렌드 근거(2026-07 웹 확인)**: 시간감쇠 스코어링의 정설 트레이드오프가 "**SQL 레이어=대용량 성능 / 앱 레이어=복잡·유연 로직**". 본 설계가 그 절충의 표준형 → 면접 방어 가능. (출처: julesjacobs 지수감쇠 likes, Tacnode Data Freshness vs Latency 2025, Crunchy Data PostGIS 인덱싱.)
+  - **결측 성분은 지어내지 않고 재정규화**: open_hours(운영시간)·place_features가 실데이터에 사실상 결측 → open_now 성분 제외 후 가용 가중치 재정규화(가짜 0.5 주입 거부). 데이터 붙으면 가중치 복원만으로 additive 확장.
+  - **거리 의미 분리**: 마커(bounds)·단건은 거리 성분을 빼고 "장소 자체가 지금 좋은가", 반경/최근접만 거리 0.25 넣어 "지금 갈만함" — 뷰포트 마커에 거리 착시를 넣지 않음.
+  - **3색 등급, 빨강 없음**: 유효제보 0 → UNKNOWN(회색·정보 부족, 제보 없는 46k 화장실의 정직한 기본값). 있으면 ≥60 GOOD(초록)/그외 OKAY(노랑). 침수도 노랑"주의"로(§6 공포 조장 금지, 빨강 버킷 거부).
+  - **신뢰도·후기 제약 반영**: 뷰에 trust 가중을 미리 심어 P2 로그인 붙으면 코드 변경 없이 반영. 후기(review)는 파이프라인에서 분리(§5 휘발성 상태 ≠ 영구 평판).
+- 검증: 로컬은 Docker(colima)의 docker-java API 협상 이슈로 Testcontainers IT가 skip → **postgis 컨테이너에 실제 V1~V4 마이그레이션을 적용하고 뷰+스코어드 반경 쿼리를 시나리오별(제보없음/신선긍정/신선부정/만료제외)로 직접 실행해 시맨틱 검증**(캡 1.0·만료 WHERE·신뢰도0.7·severity·COALESCE·거리 모두 확인). 순수 함수 8건·컨트롤러 테스트는 로컬 green. 실 IT(엔드투엔드 5건, 등급 전이·만료 제외)는 표준 Docker인 CI에서 검증(머지 게이트). 프론트 typecheck·lint·build green.
+- 산출물: 백엔드 `V4__place_report_signals_view.sql`·`SurvivalScore`·`ScoredPlaceView`·`dto/SurvivalScoreResponse`·`PlaceRepository`(스코어드 3쿼리)·`PlaceSearchService`·`PlaceResponse`, 테스트 `SurvivalScoreTest`(8)·`SurvivalScoreIT`(5)·`PlaceSpatialQueryIT`(스코어드 리포인트+신호0 검증). 프론트 `lib/survival.ts`·`marker.ts`(등급 3색 링)·`KakaoMapLive`·`PlaceRow`·`PlaceDetailOverlay`·`types/place.ts`.
+- 다음: OAuth 콘솔(사용자) → 로그인/후기/trust로 점수 신뢰도 강화 · 추천 시나리오(`/recommendations`)는 survival_score에 시나리오 가중을 얹는 자연스러운 다음 조각 · 날씨(open_now/기온)로 결측 성분 복원.
