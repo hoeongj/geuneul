@@ -3,6 +3,8 @@ import type { ReportTypeKey } from "@/types/place";
 // 제보 타입 ↔ 이모지/라벨. 라벨은 API의 reportTypeLabel을 우선 쓰되(서버가 진실원천),
 // 제보 그리드처럼 응답이 없는 자리는 여기 fallback을 쓴다. 백엔드 ReportType과 동기.
 export const REPORT_META: Record<ReportTypeKey, { emoji: string; label: string }> = {
+  SEAT_OK: { emoji: "🪑", label: "자리 있어요" },
+  CROWDED: { emoji: "👥", label: "붐벼요" },
   COOL: { emoji: "🧊", label: "시원해요" },
   HOT: { emoji: "🥵", label: "더워요" },
   BUG: { emoji: "🐛", label: "벌레 많아요" },
@@ -14,8 +16,17 @@ export const REPORT_META: Record<ReportTypeKey, { emoji: string; label: string }
   RESTROOM_CLEAN: { emoji: "🚻", label: "화장실 깨끗" },
 };
 
-// 제보하기 그리드에 노출하는 6종 (디자인 스펙 — 나머지 타입은 조회 표시만)
-export const REPORT_GRID: ReportTypeKey[] = ["COOL", "HOT", "BUG", "RESTROOM_CLEAN", "WATER_OK", "FLOOD"];
+// 제보하기 그리드 노출 순서. 자리 여유/혼잡을 맨 앞(간판 신호, ADR-0005) → 체감·리스크 순.
+export const REPORT_GRID: ReportTypeKey[] = [
+  "SEAT_OK",
+  "CROWDED",
+  "COOL",
+  "HOT",
+  "BUG",
+  "RESTROOM_CLEAN",
+  "WATER_OK",
+  "FLOOD",
+];
 
 /** "방금 전 / n분 전 / n시간 전 / n일 전" — 서버 시각(ISO) 기준 상대 표기. */
 export function formatRelativeTime(iso: string): string {

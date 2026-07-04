@@ -48,6 +48,8 @@ export type Scenario = "restroom" | "rest30" | "rain";
 
 // ── 휘발성 제보 (백엔드 /reports 계약, 라이브 실측) ────────────────────────────
 export type ReportTypeKey =
+  | "SEAT_OK"
+  | "CROWDED"
   | "COOL"
   | "HOT"
   | "BUG"
