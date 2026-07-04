@@ -12,19 +12,22 @@ export class ApiError extends Error {
   }
 }
 
+// 응답 에러 → ApiError. 백엔드는 Spring 기본 JSON({timestamp,status,error,path,message}) 또는
+// 프록시 에러({error,message}) — message를 우선 살리고 없으면 error, 그래도 없으면 statusText.
+async function toApiError(res: Response): Promise<ApiError> {
+  let msg = res.statusText;
+  try {
+    const body = await res.json();
+    msg = body?.message ?? body?.error ?? msg;
+  } catch {
+    /* 바디가 JSON이 아님 */
+  }
+  return new ApiError(res.status, msg);
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
-  if (!res.ok) {
-    // 백엔드 에러는 Spring 기본 JSON {timestamp,status,error,path}. 바디의 error/message 를 최대한 살린다.
-    let msg = res.statusText;
-    try {
-      const body = await res.json();
-      msg = body?.error ?? body?.message ?? msg;
-    } catch {
-      /* noop */
-    }
-    throw new ApiError(res.status, msg);
-  }
+  if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<T>;
 }
 
@@ -82,15 +85,6 @@ export async function createReport(payload: ReportCreatePayload): Promise<Report
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const body = await res.json();
-      msg = body?.message ?? body?.error ?? msg;
-    } catch {
-      /* noop */
-    }
-    throw new ApiError(res.status, msg);
-  }
+  if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<Report>;
 }

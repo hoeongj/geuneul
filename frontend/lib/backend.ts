@@ -80,8 +80,8 @@ export async function proxy(path: string, search: string): Promise<NextResponse>
   }
 }
 
-// 급해요: 시나리오의 카테고리별 nearest 를 서버에서 팬아웃 → 병합 → 거리순 → topN.
-// (nearest 는 category 단일 파라미터라 다중 카테고리 시나리오는 서버 병합이 필요.)
+// ALB에서 JSON을 받아 파싱하는 서버측 헬퍼(BASE 미설정/4xx·5xx는 throw).
+// 급해요의 카테고리별 nearest 팬아웃·병합은 이 헬퍼를 여러 번 호출하는 app/api/urgent/route.ts에 있다.
 export async function backendJson<T>(path: string, search: string): Promise<T> {
   if (!BASE) throw new Error("GEUNEUL_API_BASE not configured");
   const res = await backendFetch(path, search);

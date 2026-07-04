@@ -3,10 +3,9 @@ import type { MapBounds } from "@/types/place";
 // geolocation 거부/실패 시 폴백 센터 = 서울 동작구(상도·노량진) — 필드테스트 거점.
 export const FALLBACK_CENTER = { lat: 37.5024, lng: 126.9438 } as const;
 
-// 기본/최대 반경(백엔드 계약: 기본 800m, 최대 5000m).
+// 반경(m). 백엔드 계약은 기본 800·최대 5000m이며, 프론트는 기본/넓히기 2단만 쓴다.
 export const DEFAULT_RADIUS = 800;
 export const WIDENED_RADIUS = 1500;
-export const MAX_RADIUS = 5000;
 
 // 거리 표기: >=1km 는 소수1자리 km, 아니면 m. (프로토타입 fmtDist 와 동일)
 export function formatDistance(m: number | null | undefined): string | null {

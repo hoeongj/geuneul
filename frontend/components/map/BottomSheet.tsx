@@ -28,7 +28,7 @@ export function BottomSheet({ snap, onToggleSnap, radius, places, loading, onSel
     >
       {/* 핸들 */}
       <button type="button" onClick={onToggleSnap} className="flex w-full justify-center pt-2.5 pb-1" aria-label={snap === "full" ? "접기" : "더보기"}>
-        <span className="h-[5px] w-[38px] rounded-full" style={{ background: "#DBD8CC" }} />
+        <span className="h-[5px] w-[38px] rounded-full" style={{ background: "var(--color-sheet-handle)" }} />
       </button>
 
       {/* 헤더 */}

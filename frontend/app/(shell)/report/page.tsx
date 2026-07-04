@@ -1,18 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { PlaceRow } from "@/components/place/PlaceRow";
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
 import { ApiError } from "@/lib/api";
-import { categoryLabel, iconForCategory } from "@/lib/categories";
+import { iconForCategory } from "@/lib/categories";
 import { useGeo } from "@/lib/context/geo";
 import { useToast } from "@/lib/context/toast";
-import { formatDistance } from "@/lib/geo";
+import { DEFAULT_RADIUS } from "@/lib/geo";
 import { useCreateReport, useNearestPlace, useRadiusPlaces } from "@/lib/queries";
 import { REPORT_GRID, REPORT_META } from "@/lib/reports";
 import type { Place, ReportTypeKey } from "@/types/place";
 
-// 제보 대상 장소 선택 시트 — 현재 위치 반경 800m 리스트에서 고른다.
+// 제보 대상 장소 선택 시트 — 현재 위치 반경(기본) 리스트에서 고른다.
 function PlacePicker({
   coords,
   onPick,
@@ -22,39 +23,23 @@ function PlacePicker({
   onPick: (p: Place) => void;
   onClose: () => void;
 }) {
-  const { data, isLoading } = useRadiusPlaces(coords, 800);
+  const { data, isLoading } = useRadiusPlaces(coords, DEFAULT_RADIUS);
   return (
     <div className="absolute inset-0 z-40 flex flex-col justify-end" role="dialog" aria-label="제보할 장소 선택">
       <button type="button" className="flex-1 bg-black/25" onClick={onClose} aria-label="닫기" />
       <div className="gn-overlay max-h-[70%] rounded-t-[22px] bg-white shadow-sheet">
         <div className="flex w-full justify-center pt-2.5 pb-1">
-          <span className="h-[5px] w-[38px] rounded-full" style={{ background: "#DBD8CC" }} />
+          <span className="h-[5px] w-[38px] rounded-full" style={{ background: "var(--color-sheet-handle)" }} />
         </div>
         <div className="px-4 pb-2 text-[15px] font-extrabold text-ink">어디에 대한 제보인가요?</div>
         <div className="overflow-y-auto px-4 pb-5" style={{ maxHeight: "50dvh" }}>
           {isLoading ? (
             <div className="py-8 text-center text-[13px] text-muted">주변 장소를 불러오는 중…</div>
           ) : (data ?? []).length === 0 ? (
-            <div className="py-8 text-center text-[13px] text-muted">반경 800m에 장소가 없어요.</div>
+            <div className="py-8 text-center text-[13px] text-muted">반경 {DEFAULT_RADIUS}m에 장소가 없어요.</div>
           ) : (
             (data ?? []).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onPick(p)}
-                className="flex min-h-[44px] w-full items-center gap-3 border-b border-line-white-2 py-2.5 text-left last:border-b-0"
-              >
-                <IconChip icon={iconForCategory(p.category)} size={36} iconSize={17} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-bold text-ink">{p.name}</div>
-                  <div className="truncate text-[11.5px] text-ink-3">
-                    {categoryLabel(p.category, p.categoryLabel)} · {p.address}
-                  </div>
-                </div>
-                {p.distanceM != null && (
-                  <span className="shrink-0 text-[12.5px] font-extrabold text-teal">{formatDistance(p.distanceM)}</span>
-                )}
-              </button>
+              <PlaceRow key={p.id} place={p} onClick={() => onPick(p)} compact showStatus={false} />
             ))
           )}
         </div>
@@ -81,13 +66,12 @@ export default function ReportPage() {
 
   const mutation = useCreateReport();
 
-  const submitLabel = done
-    ? "고마워요! 제보 완료"
-    : mutation.isPending
-      ? "보내는 중…"
-      : status
-        ? "제보 보내기"
-        : "지금 상태를 골라주세요";
+  // done 상태의 라벨은 제출 버튼 JSX에서 별도 처리 → 여기선 미제출 경로만.
+  const submitLabel = mutation.isPending
+    ? "보내는 중…"
+    : status
+      ? "제보 보내기"
+      : "지금 상태를 골라주세요";
 
   const onSubmit = () => {
     if (!status || !target || done || mutation.isPending) return;
@@ -210,7 +194,7 @@ export default function ReportPage() {
           aria-checked={anon}
           onClick={() => setAnon((v) => !v)}
           className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-          style={{ background: anon ? "var(--color-teal)" : "#D6D3C7" }}
+          style={{ background: anon ? "var(--color-teal)" : "var(--color-toggle-off)" }}
         >
           <span
             className="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
@@ -227,7 +211,7 @@ export default function ReportPage() {
         className="h-[52px] w-full rounded-[14px] text-[15px] font-bold text-cream disabled:text-ink-3"
         style={{
           background:
-            done ? "var(--color-teal)" : status && target && !mutation.isPending ? "var(--color-forest)" : "#DED9CC",
+            done ? "var(--color-teal)" : status && target && !mutation.isPending ? "var(--color-forest)" : "var(--color-btn-disabled)",
         }}
       >
         {done ? "고마워요! 제보 완료 · 한 번 더" : submitLabel}

@@ -4,7 +4,7 @@
 
 여름 생존 지도의 모바일 웹(PWA). **홈 지도 · 장소 상세 · 지금 급해요 · 제보하기** 4화면을
 라이브 백엔드(PostGIS 공간검색 API)에 연결한다. 디자인은 하이파이 핸드오프를 대상 스택으로 픽셀에 가깝게 재현.
-장소 상세의 미니맵도 실지도(비대화형 Kakao 미니뷰)다.
+장소 상세의 미니맵도 실지도(비대화형 Kakao 미니뷰)이고, **휘발성 제보는 실제 POST**로 전송돼 상세의 "최근 제보"에 실시간 반영된다(P2 착수).
 
 ## 스택 (2026 기준)
 
@@ -28,7 +28,8 @@
 | 홈 지도 마커 | 뷰포트 `bounds` 조회 | `GET /api/places?bounds=…` |
 | 바텀시트 리스트 | 현재 위치 `radius` 조회(distanceM 포함) | `GET /api/places?lat=&lng=&radius=` |
 | 지금 급해요 | 시나리오별 `nearest`(kNN) 서버 팬아웃·병합 | `GET /api/urgent?scenario=&lat=&lng=` |
-| 장소 상세 | 단건 | `GET /api/places/{id}` |
+| 장소 상세 | 단건 + 최근 제보 | `GET /api/places/{id}` · `GET /api/places/{id}/reports` |
+| 제보하기 | 휘발성 제보 쓰기(원 클라 IP를 x-client-ip로 보존 → 백엔드 per-client 레이트리밋) | `POST /api/reports` |
 
 - `distanceM` 은 radius/nearest 응답에만 존재 → 있으면 `364m`, 없으면 거리 숨김(상세는 현재 위치 기준 직선거리로 근사).
 - 도보 예상 = `max(1, round(distanceM / 67))`분.
@@ -45,6 +46,8 @@
 ```bash
 GEUNEUL_API_BASE=http://<alb-host>            # 서버 전용. 브라우저 미노출.
 NEXT_PUBLIC_KAKAO_MAP_JS_KEY=<js-key>         # Kakao "JavaScript 키"(REST 키와 다름)
+GEUNEUL_PROXY_SECRET=<shared-secret>          # 서버 전용·선택. 백엔드와 동일 값이면 제보 레이트리밋이
+                                              # x-client-ip(실 클라 IP)를 신뢰해 XFF 위조 우회 차단. 미설정=최좌측 XFF 폴백.
 ```
 
 - **Kakao JS 키**: 지오코딩용 REST 키와 다른 키. Kakao 콘솔 **앱 > 플랫폼 > Web** 에
@@ -67,7 +70,7 @@ pnpm build        # 프로덕션 빌드(Serwist SW 번들)
 - **`main` push → Vercel 자동배포.** 프로젝트 `geuneul`(rootDirectory=`frontend`)이 GitHub 레포에 git-connected.
   PR을 열면 Preview 배포도 자동으로 붙는다.
 - 빌드 설정은 `vercel.json`이 고정: `installCommand`(--ignore-scripts)·`buildCommand`(webpack) — 이유는 TS-006/TS-007.
-- env는 Vercel Production에 저장: `GEUNEUL_API_BASE`(서버 전용)·`NEXT_PUBLIC_KAKAO_MAP_JS_KEY`.
+- env는 Vercel Production에 저장: `GEUNEUL_API_BASE`(서버 전용)·`NEXT_PUBLIC_KAKAO_MAP_JS_KEY`·`GEUNEUL_PROXY_SECRET`(서버 전용).
 - **Kakao 지도 도메인**: 콘솔 **[앱 키 > JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록됨.
   ("제품 링크 관리 > 웹 도메인"은 카카오톡 공유용 — 지도와 무관하니 혼동 주의.)
   등록 상태는 브라우저 없이 검증 가능: `curl -H "Referer: https://geuneul.vercel.app/" "https://dapi.kakao.com/v2/maps/sdk.js?appkey=<JS키>&autoload=false"` → SDK JS가 오면 정상, `AccessDeniedError`면 미등록.
@@ -79,8 +82,8 @@ app/
   (shell)/          # 하단 3탭 셸 + 장소상세 오버레이 슬롯
     page.tsx        # ① 홈 지도
     urgent/         # ③ 지금 급해요
-    report/         # ④ 제보하기(P2 프리뷰)
-  api/              # 서버 프록시(places·nearest·[id]·urgent)
+    report/         # ④ 제보하기(POST 라이브, 사진 첨부만 P2)
+  api/              # 서버 프록시(places·nearest·[id]·[id]/reports·urgent·reports 쓰기)
   manifest.ts       # PWA 매니페스트
   sw.ts             # Serwist 서비스워커
   ~offline/         # 오프라인 셸
@@ -90,5 +93,5 @@ lib/         backend(서버) · api·queries(클라) · categories · geo · mar
 
 ## 범위 (핸드오프 준수)
 
-MVP = 4화면 레이아웃·인터랙션 + 라이브 조회 API 연동. **P2/P3(후기·제보 POST·로그인·freshness·AI 요약·
-survival_score 3색)은 자리만** 두고 구현하지 않는다.
+MVP = 4화면 레이아웃·인터랙션 + 라이브 조회 API 연동 + **휘발성 제보 실전송(P2 착수분)**.
+**나머지 P2/P3(후기·로그인·사진 첨부·freshness 가중·AI 요약·survival_score 3색)은 자리만** 두고 구현하지 않는다.
