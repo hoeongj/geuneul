@@ -31,6 +31,16 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 - **survival_score(P3)** — 제보 freshness 데이터가 이제 쌓이므로 SQL 랭킹 착수 가능(로그인 불필요). 마커 3색.
 - **S3 사진 업로드(presign)** — Terraform S3 + presign API. 제보/후기 사진 슬롯 대기.
 
+### ④ 카공/카페 기능 흡수 (제안 — 방향 확인 후 착수, [ADR-0005](./docs/adr/0005-cafe-features-as-summer-scenario.md))
+카공맵류 조사 결과, 카공은 그늘 "여름 실내 오래 버티기"의 부분집합 → **간판 강화 방향으로만 흡수**(리뷰앱·카페앱화 거부). 우선순위:
+- [ ] **[간판·최우선·로그인불필요] 실시간 자리 여유/혼잡 제보** — `reports.report_type`에 `SEAT_OK`/`SEAT_FULL`(또는 `CROWDED`) 추가(**스키마 변경 없이 enum만**). survival_score freshness로 "지금 앉을 수 있음" 킬러화. 여름 라벨('붐빔/자리없음'). **지금 바로 착수 가능**(P2 제보 → P3 스코어).
+- [ ] **[간판] survival_score(P3)** 우선 구현 — 카공 capacity score로 단일 종합점수 수요 재검증.
+- [ ] **[간판·차별점] GPS 방문 인증** — `ST_DWithin`(100m)+사진 EXIF로 `verified` → trust_score 가중(허위제보 억제). reports/reviews에 `verified` boolean 소폭 확장(P2→P4).
+- [ ] **[살·즉효] place_features.value 등급화** — 콘센트=개수/접근성, wifi=속도, `noise_level` 추가(스키마 변경 없음, comfort_score 정밀화).
+- [ ] **[간판 확장·P4] 시간대별 혼잡 파생** — reports 이력 요일×시간 집계 → 자체 popular-times(외부 API 불필요).
+- [ ] **[살] 추천 시나리오 `focus`/`longstay`** 추가(파라미터만) · 정형 태그 리뷰.
+- **거부/보류(정체성 희석·비목표):** 카공 브랜드/CAFE 카테고리 신설·aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터·좌석단위 콘센트 지도. (CAFE 카테고리는 별도 ADR 승인 시에만.)
+
 ---
 
 ## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브 + P2 제보 라이브
