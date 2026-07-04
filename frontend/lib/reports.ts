@@ -9,7 +9,7 @@ export const REPORT_META: Record<ReportTypeKey, { emoji: string; label: string }
   ODOR: { emoji: "🤢", label: "악취 나요" },
   SMOKE: { emoji: "🚬", label: "담배 냄새" },
   FLOOD: { emoji: "🌊", label: "침수됐어요" },
-  SLIPPERY: { emoji: "🧊", label: "미끄러워요" },
+  SLIPPERY: { emoji: "⚠️", label: "미끄러워요" }, // COOL(🧊)과 겹치지 않게(상세 최근제보 목록 공존)
   WATER_OK: { emoji: "💧", label: "물 있어요" },
   RESTROOM_CLEAN: { emoji: "🚻", label: "화장실 깨끗" },
 };
