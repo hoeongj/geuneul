@@ -98,9 +98,9 @@ class ReportRateLimiterTest {
         for (int i = 0; i < flood; i++) {
             limiter.tryAcquire("flood-" + i);
         }
-        // 창 맵 2개 합계 — clear 후 다시 채워질 수 있으므로 넉넉한 상한(맵당 상한×2)으로 유계임을 단정.
+        // 단일 맵 — 상한 초과 시 정리/비움이 걸리므로 상한 부근(+1)에서 유계여야 한다.
         assertThat(limiter.trackedWindows())
-                .isLessThanOrEqualTo(ReportRateLimiter.MAX_TRACKED_CLIENTS * 2 + 4);
+                .isLessThanOrEqualTo(ReportRateLimiter.MAX_TRACKED_CLIENTS + 1);
     }
 
     @Test
