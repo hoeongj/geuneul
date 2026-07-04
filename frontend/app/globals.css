@@ -30,6 +30,9 @@
   --color-line-white-2: #f0eee4;
   --color-line-chip: #e4e1d6;
   --color-line-dashed: #cfd6cd;
+  --color-sheet-handle: #dbd8cc;
+  --color-toggle-off: #d6d3c7;
+  --color-btn-disabled: #ded9cc;
 
   /* 상태 회색(정보 부족 = survival_score 예약) / 현재위치 파랑 */
   --color-status: #9aa6a0;
