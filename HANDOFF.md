@@ -39,7 +39,14 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 - [ ] **[살·즉효] place_features.value 등급화** — 콘센트=개수/접근성, wifi=속도, `noise_level` 추가(스키마 변경 없음, comfort_score 정밀화).
 - [ ] **[간판 확장·P4] 시간대별 혼잡 파생** — reports 이력 요일×시간 집계 → 자체 popular-times(외부 API 불필요).
 - [ ] **[살] 추천 시나리오 `focus`/`longstay`** 추가(파라미터만) · 정형 태그 리뷰.
-- **거부/보류(정체성 희석·비목표):** 카공 브랜드/CAFE 카테고리 신설·aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터·좌석단위 콘센트 지도. (CAFE 카테고리는 별도 ADR 승인 시에만.)
+- **거부/보류(정체성 희석·비목표):** aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터·좌석단위 콘센트 지도. (CAFE 카테고리는 사용자 승인 → [ADR-0006]으로 채택, 아래 §⑤.)
+
+### ⑤ 공부 가능 공간 데이터 확장 (제안 — 대량 적재는 serviceKey 확보 후, [ADR-0006](./docs/adr/0006-study-space-coverage-expansion.md))
+사용자 요청: "공부 가능한 카페 + 공공 공부공간(노들서가류) 전부 넣고 싶다" = **데이터 커버리지 확장**(간판 ETL 강화, §3 커버리지 원칙 정합). 카공 UGC 기능(§④)과 별개.
+- **설계**: category 최소 신설(`CAFE`/`STUDY_CAFE` 2개) · '공부 가능'은 `place_features(study_ok/quiet)` 속성 · 상업/커먼스 분리 `places.is_commercial` · 폐업 회전 대응 `deleted_at` soft-delete(로드맵 P3 앞당김).
+- **소스 우선순위**: 전국도서관표준(WGS84, 最易) → 상권정보 STUDY_CAFE(1만) → 상권정보 카페(9만, 지오코딩 0) → 공공시설개방(CIVIC) → 명소 시드(노들서가 등). LOCALDATA는 EPSG:5174 재투영 부담이라 폐업 검증 보조만.
+- **카페 study_ok**: 공공데이터에 없음 → 전량 적재 + UGC 태깅(카공맵도 100% 크라우드소싱).
+- 🔴 **블로커**: 대량 적재는 **공공데이터포털 오픈API serviceKey(무료)** 또는 다운로드 CSV 필요. odcloud/상권정보 API는 키 없이 401, 서울열린데이터는 sample 5행만. serviceKey면 P3 무인화(EventBridge→ECS RunTask)까지 연결. **확보 시 enum+스키마+파서+적재를 실데이터로 한 번에.**
 
 ---
 
