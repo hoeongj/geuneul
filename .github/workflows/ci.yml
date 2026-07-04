@@ -25,9 +25,9 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92  # v6
       - name: Test + coverage
-        # Testcontainers(PostGIS, Redis)는 ubuntu-latest의 Docker 데몬 위에서 실행된다.
-        # Docker 없는 로컬에서는 self-skip(disabledWithoutDocker). jacoco 검증이 커버리지
-        # floor 아래로 떨어지면 빌드 실패(현재 floor 0.00, 로직 붙으면 ratchet 상향).
+        # Testcontainers(PostGIS)는 ubuntu-latest의 Docker 데몬 위에서 실행된다.
+        # Docker 없는 로컬에서는 self-skip(disabledWithoutDocker). 커버리지 floor 값의 단일 출처는
+        # build.gradle의 jacocoTestCoverageVerification(현재 0.35) — 그 아래로 떨어지면 빌드 실패.
         run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification
       - name: Upload test report on failure
         if: failure()
@@ -43,3 +43,15 @@ jobs:
           name: jacoco-coverage-report
           path: backend/build/reports/jacoco/test/html
           retention-days: 7
+
+  # 워크플로우 규칙 D("커밋 전 비밀 유출 스캔") + CLAUDE.md §7 스택의 gitleaks를 CI로 강제.
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0   # 전체 히스토리 스캔(과거 커밋에 새어든 비밀도 탐지)
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
