@@ -1,6 +1,6 @@
 # ADR-0005. 카공/카페 기능은 "여름 실내 시나리오"로 흡수한다 (리뷰앱·카페앱화 금지)
 
-- 상태: **제안(Proposed)** — 흡수 범위 방향 확인 대기 (2026-07-04)
+- 상태: **부분 채택** — 1탄(실시간 자리 여유/혼잡 제보 `SEAT_OK`/`CROWDED`) 라이브(PR #22). 나머지 흡수 범위는 방향 확인 대기 (2026-07-04)
 - 관련: `reports.report_type`, `place_features`, `survival_score`(P3), `GET /recommendations`, CLAUDE.md §5·§9 원칙
 - 근거 조사: 다중 에이전트 리서치(카공맵·유사앱 리뷰·GitHub `awesome-cafe`/`Buzzzzing-Server`·Workfrom·누클) — wf_d23510d2
 
