@@ -48,11 +48,12 @@ public class IngestionService {
         this.geocodingClient = geocodingClient;
     }
 
-    public record Report(String source, int totalRecords, int upserted, int skipped,
-                         int geocoded, int geocodeReused, int geocodeFailed, long tookMs) {
+    /** 인제스천 실행 요약 — 도메인의 휘발성 제보 {@code report.Report}와 구분되게 IngestSummary로 명명. */
+    public record IngestSummary(String source, int totalRecords, int upserted, int skipped,
+                                int geocoded, int geocodeReused, int geocodeFailed, long tookMs) {
     }
 
-    public Report ingest(SourceSpec spec, Path csvFile, Charset charset) {
+    public IngestSummary ingest(SourceSpec spec, Path csvFile, Charset charset) {
         long start = System.currentTimeMillis();
 
         // ① 파싱
@@ -69,7 +70,7 @@ public class IngestionService {
         // ③④ 좌표 결측분 지오코딩 → upsert (geocoded=true)
         GeocodeOutcome outcome = geocodeAndUpsert(spec, parsed.needGeocode());
 
-        Report report = new Report(spec.sourceKey(), parsed.totalRecords(),
+        IngestSummary report = new IngestSummary(spec.sourceKey(), parsed.totalRecords(),
                 upserted + outcome.upserted(), parsed.skipped(),
                 outcome.geocoded(), outcome.reused(), outcome.failed(),
                 System.currentTimeMillis() - start);

@@ -21,7 +21,7 @@ repositories {
 dependencyManagement {
     imports {
         // Spring Boot 4 플랫폼은 standalone testcontainers 아티팩트 버전을 관리하지 않음
-        // → BOM으로 고정(com.redis:testcontainers-redis:2.2.2가 빌드된 1.20.x 라인). (mp와 동일)
+        // → BOM으로 postgresql/junit-jupiter 버전을 고정한다(1.20.x 라인). (mp와 동일)
         mavenBom 'org.testcontainers:testcontainers-bom:1.20.6'
     }
 }
@@ -62,7 +62,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'com.redis:testcontainers-redis:2.2.2'   // Boot BOM 미관리 -> 위 BOM으로 고정
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

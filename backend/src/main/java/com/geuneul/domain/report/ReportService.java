@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -18,17 +19,19 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final PlaceRepository placeRepository;
+    private final Clock clock;
 
-    public ReportService(ReportRepository reportRepository, PlaceRepository placeRepository) {
+    public ReportService(ReportRepository reportRepository, PlaceRepository placeRepository, Clock clock) {
         this.reportRepository = reportRepository;
         this.placeRepository = placeRepository;
+        this.clock = clock;
     }
 
     @Transactional
     public ReportResponse create(ReportCreateRequest request) {
         requirePlace(request.placeId());
         // expires_at = 타입별 TTL(ReportType 주석 참고) — 만료된 제보는 조회·스코어에서 빠진다.
-        OffsetDateTime expiresAt = OffsetDateTime.now().plus(request.reportType().ttl());
+        OffsetDateTime expiresAt = OffsetDateTime.now(clock).plus(request.reportType().ttl());
         Report saved = reportRepository.save(Report.anonymous(
                 request.placeId(), request.reportType(), normalize(request.comment()),
                 request.anonymousOrDefault(), expiresAt));
@@ -39,7 +42,7 @@ public class ReportService {
     public List<ReportResponse> recentByPlace(long placeId) {
         requirePlace(placeId);
         return reportRepository
-                .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(placeId, OffsetDateTime.now())
+                .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock))
                 .stream()
                 .map(ReportResponse::of)
                 .toList();
