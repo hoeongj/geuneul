@@ -291,3 +291,15 @@
   - **자리 여유를 1탄으로**: 조사에서 '자리없음·헛걸음'이 카공/카페 최대 불만 + '도착 전 좌석확인' 재사용의향 80%. survival_score freshness로 굴러갈 킬러 신호인데 enum만 추가라 비용 최소·정체성 유지(여름 라벨).
 - 관련: `docs/adr/0005`, `ReportType`(SEAT_OK/CROWDED), 프론트 REPORT_META/GRID, 조사 워크플로 wf_d23510d2, PR #22
 - 다음(방향 확인 후): survival_score(P3)·GPS 방문인증·place_features 등급화 등 ADR-0005 나머지. OAuth는 사용자 콘솔 선행.
+
+### 2026-07-04 — 공부 가능 공간 데이터 확장 계획(다중 에이전트 조사) — ADR-0006
+- 한 일: "공부 가능한 카페 + 공공 공부공간(노들서가류) 전부 넣고 싶다" 요청을 다중 에이전트로 조사(공공 공부공간 데이터셋·노들서가류·카페 데이터·스키마 모델링, wf_e524daf8) → ADR-0006 수립. 데이터 다운로드 가능성 타진(odcloud/상권정보 API는 serviceKey 없이 401, 서울열린데이터 sample만 5행).
+- 결정 & 이유(why):
+  - **이건 UGC 기능이 아니라 데이터 커버리지 확장** → CLAUDE.md §3 커버리지 원칙("전국 표준데이터 그대로 적재") 정합, 간판(대용량 지리검색+idempotent ETL) 직접 강화. places 15만+(화장실6만+카페9만+도서관1.5만)로 커져 k6 부하테스트(P4) 소재.
+  - **카테고리 최소 응집**: category(장소 kind)에 CAFE/STUDY_CAFE 2개만. '공부 가능'은 cross-cutting → place_features(study_ok/quiet). enum 남발은 지도 필터/색상만 복잡. 상업/커먼스 분리는 is_commercial 플래그(공개 커먼스 정체성 방어).
+  - **카페 좌표는 소상공인 상권정보(WGS84 내장)** — LOCALDATA(EPSG:5174 재투영·지오코딩 폭증) 대신. 지오코딩 0건이라 화장실 6만 적재 파이프라인 규모 내.
+  - **'공부 가능'은 공공데이터에 없음** → 전량 적재 + UGC 태깅(카공맵도 100% 크라우드소싱). STUDY_CAFE/도서관만 defaultFeatures로 study_ok 자동부여(낮은 confidence).
+  - **정체성**: 카페는 '카페 추천앱'이 아니라 '시원한 실내 오래 버티기' survival 레이어. survival feature로만 태깅, 리뷰 UI 주인공化 금지(§9, ADR-0005 경계 유지).
+- **의도적으로 지금 코드 안 넣은 이유**: 정확한 CSV 컬럼 헤더·상권 업종코드는 실제 파일로 확정해야(하드코딩 금지). 빈 enum·미검증 파서를 선심으면 재작업 + 빈 필터 UX. serviceKey/CSV 확보 시 enum+스키마+파서+적재를 실데이터로 한 번에(rule 1·2).
+- 블로커: 공공데이터포털 오픈API serviceKey(무료 5분 가입) 또는 CSV 파일. serviceKey면 P3 무인화까지 연결.
+- 관련: `docs/adr/0006`, HANDOFF §⑤, 조사 wf_e524daf8
