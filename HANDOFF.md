@@ -4,12 +4,12 @@
 > 최종 갱신: 2026-07-04.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(API rev17·App). 전 문서 정합 감사 완료(README·HANDOFF·WORKLOG·TS·ADR·design-brief·CLAUDE — 10건 수정). **git clean(main, 미커밋 0, 열린 PR 0)**. 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
+- **상태**: 라이브 정상(API rev17·App). **간판 완성 — survival_score(P3) 풀스택 구현 완료**(브랜치 `feat/p3-survival-score`, PR 대기/머지 중. ADR-0007). 백엔드 SQL 시공간 신호 뷰(V4)+순수 함수 조립+스코어드 API, 프론트 마커 3색·상태 배지(예약 슬롯 채움). 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
+- **콘솔 없이 바로 가능한 다음 = `/recommendations`(P3, 시나리오 랭킹)** — survival_score에 시나리오별 가중을 얹는 자연스러운 다음 조각(급해요는 지금 nearest 팬아웃 근사 → 점수 기반 정식 랭킹으로 승격 가능). 또는 날씨 API로 open_now/기온 결측 성분 복원.
 - **사용자 결정 대기 2건(둘 다 사용자 콘솔·자격증명 필요)**:
-  1. **§⑤ 공부공간 데이터 확장([ADR-0006])** — **공공데이터포털 오픈API serviceKey(무료)** 또는 CSV. 받으면 `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·상권정보 파서·실적재·테스트를 **실데이터로 한 번에** + P3 무인화까지. (지금은 계획만, 코드 미착수 — 헤더 헤더값 미확정이라 선착수 시 재작업.)
-  2. **§② OAuth 콘솔**(카카오 로그인 ON+Redirect URI / 구글 OAuth 클라이언트) → 로그인·후기·trust_score.
-- **콘솔 없이 바로 가능한 최우선 = `survival_score`(P3, §③·§④)** — 제보 freshness 데이터가 쌓였으니 SQL 시공간 랭킹 + 마커 3색(초록/노랑/회색). 간판 미구현분 완성. 스펙은 CLAUDE.md §5(가중치 확정).
-- **작업 규칙 리마인더**: 커밋 신원 `hoengj`/`seongjuice999@gmail.com`, 푸시 전 비밀 스캔, 비밀은 `.local/`·`.env`만, 결정은 WORKLOG에 why/대안 기록(CLAUDE.md §A~D).
+  1. **§② OAuth 콘솔**(카카오 로그인 ON+Redirect URI / 구글 OAuth 클라이언트) → 로그인·후기·trust_score. **survival_score 뷰에 신뢰도 가중이 이미 심겨 있어 로그인 붙으면 코드 변경 없이 점수에 반영**된다.
+  2. **§⑤ 공부공간 데이터 확장([ADR-0006])** — **공공데이터포털 오픈API serviceKey(무료)** 또는 CSV. 받으면 `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·상권정보 파서·실적재·테스트를 **실데이터로 한 번에** + P3 무인화까지. (지금은 계획만, 코드 미착수 — 헤더값 미확정이라 선착수 시 재작업.)
+- **작업 규칙 리마인더**: 커밋 신원 `hoengj`/`seongjuice999@gmail.com`, 푸시 전 비밀 스캔, 비밀은 `.local`·`.env`만, 결정은 WORKLOG에 why/대안 기록(CLAUDE.md §A~D).
 
 ## 최근 완료 · 다음 작업
 
@@ -36,13 +36,13 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 
 ### ③ 그 밖에 바로 이어갈 수 있는 것(로그인 불필요)
 - **후기(review)** 백엔드 — 단, 후기는 "로그인 필요"라 OAuth 다음이 자연스러움. 익명 불가.
-- **survival_score(P3)** — 제보 freshness 데이터가 이제 쌓이므로 SQL 랭킹 착수 가능(로그인 불필요). 마커 3색.
+- ~~**survival_score(P3)** — SQL 랭킹 + 마커 3색.~~ **완료(ADR-0007).** 다음은 이를 얹는 `/recommendations`.
 - **S3 사진 업로드(presign)** — Terraform S3 + presign API. 제보/후기 사진 슬롯 대기.
 
 ### ④ 카공/카페 기능 흡수 (제안 — 방향 확인 후 착수, [ADR-0005](./docs/adr/0005-cafe-features-as-summer-scenario.md))
 카공맵류 조사 결과, 카공은 그늘 "여름 실내 오래 버티기"의 부분집합 → **간판 강화 방향으로만 흡수**(리뷰앱·카페앱화 거부). 우선순위:
 - [x] ~~**[간판·최우선] 실시간 자리 여유/혼잡 제보**~~ — **완료·라이브(PR #22).** `ReportType`에 `SEAT_OK`('자리 있어요')·`CROWDED`('붐벼요') 추가(스키마 무변경, TTL 2h). 제보 그리드 맨 앞. survival_score(P3)로 굴러갈 "지금 앉을 수 있음" 신호. 여름 라벨 유지.
-- [ ] **[간판] survival_score(P3)** 우선 구현 — 카공 capacity score로 단일 종합점수 수요 재검증.
+- [x] ~~**[간판] survival_score(P3)** 우선 구현 — 카공 capacity score로 단일 종합점수 수요 재검증.~~ — **완료(ADR-0007).** SEAT_OK/CROWDED가 comfort(+)/risk(−) 신호로 survival_score에 반영돼 "지금 앉을 수 있음"이 종합점수·마커색으로 굴러간다.
 - [ ] **[간판·차별점] GPS 방문 인증** — `ST_DWithin`(100m)+사진 EXIF로 `verified` → trust_score 가중(허위제보 억제). reports/reviews에 `verified` boolean 소폭 확장(P2→P4).
 - [ ] **[살·즉효] place_features.value 등급화** — 콘센트=개수/접근성, wifi=속도, `noise_level` 추가(스키마 변경 없음, comfort_score 정밀화).
 - [ ] **[간판 확장·P4] 시간대별 혼잡 파생** — reports 이력 요일×시간 집계 → 자체 popular-times(외부 API 불필요).
@@ -58,7 +58,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 
 ---
 
-## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브 + P2 제보 라이브
+## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브 + P2 제보 라이브 + P3 survival_score 구현
 
 🟢 **API Live:** http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com (`/actuator/health`, `/swagger-ui.html`)
 🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터 + 실시간 제보)
@@ -67,6 +67,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 - **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev17**(SEAT PR #22·감사 #18~#21 배포 반영. §①의 rev13은 proxy-secret 활성화 당시 과거값). `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
 - **P2 제보(라이브, PR #15·#16·#17):** 익명 휘발성 제보 `POST /reports`(타입별 TTL로 `expires_at`) + `GET /places/{id}/reports`. 프론트 제보하기 실전송(장소=nearest+피커)·상세 "최근 제보" 실시간. 인메모리 레이트리밋(분3·시간10) — XFF 신뢰경계(`ProxyClientResolver`)·OOM 하드닝(TS-008).
+- **P3 survival_score(구현, `feat/p3-survival-score`·ADR-0007):** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk) → 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). `/places`(반경·bounds)·`/places/{id}` 응답에 `survival` 필드. 프론트 마커 3색 링·리스트/상세 상태 배지. open_now는 운영시간 결측이라 재정규화 제외(데이터 붙으면 복원), 후기는 §5대로 분리. **로컬 검증: postgis에 V1~V4 직접 적용 + 시나리오별 뷰/쿼리 실행으로 시맨틱 확증(TS-009), 엔드투엔드 IT는 CI.**
 - **프론트(완료, PR #12·#14·#16):** Next.js 16(App Router)+TS PWA — MVP 4화면(홈 지도·장소 상세(실지도 미니맵·최근제보)·급해요·제보 실전송). **동일 오리진 서버 프록시(BFF)** 로 ALB(http)·CORS 회피(ADR-0004) → **백엔드 CORS 불필요**. Vercel git 연결로 `main` push 시 자동배포(rootDirectory=frontend). Kakao JS 키는 콘솔 **[JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록 완료(제품링크관리>웹도메인과 다른 칸 — 혼동 주의).
 - **테스트:** 파서/컨트롤러/지오코딩 단위 + 실 PostGIS IT(멱등·공간쿼리). JaCoCo floor 0.35 ratchet. CI(`ci.yml`)가 실 PostGIS로 검증. 프론트는 `frontend-ci.yml`(typecheck·lint·build).
 
@@ -75,7 +76,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 backend/    Spring Boot 4 — domain.place(공간검색) · domain.ingest(+geocode) · global.geo/config
 infra/      terraform/(VPC·RDS·ECS·ALB·ECR·IAM OIDC) · scripts/prod-ingest.sh
 frontend/   Next.js 16 App Router PWA — app/(shell)(4화면) · app/api(서버 프록시 BFF) · components · lib
-docs/       adr/0001~0006 · design-brief.md
+docs/       adr/0001~0007 · design-brief.md
 .github/    ci.yml(백엔드 테스트) · deploy.yml(OIDC 배포, paths=backend/**) · frontend-ci.yml(paths=frontend/**)
 .local/     (gitignore) myInfo·PORTFOLIO-CONTEXT — 비밀·회사매핑
 ```
@@ -97,11 +98,11 @@ docs/       adr/0001~0006 · design-brief.md
 - [ ] **신뢰도(trust_score)** 계산 + 제보 가중(로그인 제보에). 로그인 시 `reports.user_id`·`is_anonymous=false` 경로는 엔티티에 이미 준비됨.
 - [ ] **모더레이션 큐**: `POST /flags` 신고 + `GET /admin/flags/pending`(관리자).
 - [x] ~~**레이트리밋 proxy-secret 활성화**~~ — **완료(2026-07-04).** BFF 공유시크릿 라이브, XFF 위조 우회 차단 검증(TS-008, 체크리스트 §1).
-- 프론트 예약 슬롯: 최근 제보=**완료**. 후기·로그인 배지·AI 요약은 여전히 대기.
+- 프론트 예약 슬롯: 최근 제보·**survival_score 마커 3색·상태 배지=완료**. 후기·로그인 배지·AI 요약은 여전히 대기.
 
 ### P3 · 스코어·추천·AI
-- [ ] **survival_score**: 거리+open_now+comfort+freshness−risk를 **SQL/PostGIS 레이어에서** 계산(CLAUDE.md §5 공식). 마커 3색(초록/노랑/회색) 구간.
-- [ ] **추천 시나리오**: `GET /recommendations?scenario=rest30|restroom|rain`.
+- [x] ~~**survival_score**: 거리+open_now+comfort+freshness−risk를 **SQL/PostGIS 레이어에서** 계산(CLAUDE.md §5). 마커 3색.~~ — **완료(ADR-0007).** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk), 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). 반경/bounds/단건 스코어드 API + 프론트 마커 3색·상태 배지. open_now는 운영시간 결측이라 재정규화로 제외(데이터 붙으면 복원). 후기는 §5대로 분리.
+- [ ] **추천 시나리오**: `GET /recommendations?scenario=rest30|restroom|rain`. **survival_score에 시나리오 가중을 얹는 다음 조각** — 콘솔 불필요, 바로 착수 가능.
 - [ ] **날씨**: 기상청 초단기예보 + **Redis TTL 캐시**(rate limit). Redis 헬스체크 다시 켜기(application.yml `management.health.redis.enabled`).
 - [ ] **AI 한줄 요약**: Claude API(곁다리).
 - [ ] **공공데이터 주기 동기화**: EventBridge Scheduler → ECS RunTask(월1회 등). 멱등 upsert 재실행 + **스냅샷에서 사라진 행 soft-delete 비활성화**(폐쇄 반영) + **오픈API serviceKey로 다운로드까지 무인화**(현재 수동 다운로드 병목 제거).
@@ -126,6 +127,7 @@ docs/       adr/0001~0006 · design-brief.md
 - **TS-006** Next 16 기본 Turbopack ↔ Serwist(webpack 플러그인) 충돌 + ESLint 10 신판 러그 → 빌드 webpack 고정·ESLint 9 핀.
 - **TS-007** 로컬 경고 억제용 `outputFileTracingRoot`가 Vercel git 빌드(rootDirectory 기반)의 출력 수집을 깨서 ENOENT → `process.env.VERCEL` 가드.
 - **TS-008** 적대적 리뷰 확정: 레이트리밋 XFF 최좌측 신뢰(ALB append라 위조 가능)→우회 + eviction no-op→OOM → ProxyClientResolver(BFF 시크릿 신뢰경계)+evict 하드상한.
+- **TS-009** 로컬 Testcontainers가 colima에서 전멸 skip(docker-java API 1.32↔엔진 1.40 + 소켓/DOCKER_HOST 미상속) → 하네스 대신 postgis에 V1~V4 직접 적용해 뷰 SQL을 시나리오별로 실증, IT는 CI에 위임. "skip을 통과로 오독 금지".
 > 공통 교훈: ① "Docker 있는 CI에서만 드러나는 실패"는 로컬 green→CI red → 반드시 CI green 확인 후 머지. ② 모킹은 "우리 로직"은 검증하되 "외부와의 실제 계약"을 가린다.
 
 ## 워크플로우 리마인더 (CLAUDE.md 필수 규칙)
