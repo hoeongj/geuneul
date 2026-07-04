@@ -1,5 +1,5 @@
 server:
-  port: ${PORT:8080}          # Railway 등 PaaS는 $PORT를 주입한다. 로컬 기본 8080.
+  port: ${PORT:8080}          # ECS 태스크 정의(ecs.tf)가 PORT=8080을 주입. 로컬 기본 8080.
 
 spring:
   application:
@@ -23,9 +23,9 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}     # 로컬은 빈값, PaaS Redis는 주입
+      password: ${REDIS_PASSWORD:}     # 로컬은 빈값. P3 캐시 도입 시 관리형 Redis 비밀을 env로 주입.
       ssl:
-        enabled: ${REDIS_SSL:false}    # Upstash 등 TLS Redis면 true
+        enabled: ${REDIS_SSL:false}    # 관리형 Redis(TLS)면 true
 
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표). 규칙 D: 값은 .env/SSM으로만.
