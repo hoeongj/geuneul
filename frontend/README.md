@@ -33,7 +33,7 @@
 
 - `distanceM` 은 radius/nearest 응답에만 존재 → 있으면 `364m`, 없으면 거리 숨김(상세는 현재 위치 기준 직선거리로 근사).
 - 도보 예상 = `max(1, round(distanceM / 67))`분.
-- 마커 링은 회색(정보 부족) 고정 — survival_score 3색은 P3 슬롯만.
+- 마커 링·상태 배지는 **survival_score 등급 3색**(초록 지금 좋음 / 노랑 보통 / 회색 정보 부족) — 응답 `survival.grade` 기준, 단일 원천 `lib/survival.ts` (P3, ADR-0007). 유효 제보 없는 장소가 회색.
 
 ## 서버 프록시 (핵심 제약)
 
@@ -93,5 +93,5 @@ lib/         backend(서버) · api·queries(클라) · categories · geo · mar
 
 ## 범위 (핸드오프 준수)
 
-MVP = 4화면 레이아웃·인터랙션 + 라이브 조회 API 연동 + **휘발성 제보 실전송(P2 착수분)**.
-**나머지 P2/P3(후기·로그인·사진 첨부·freshness 가중·AI 요약·survival_score 3색)은 자리만** 두고 구현하지 않는다.
+MVP = 4화면 레이아웃·인터랙션 + 라이브 조회 API 연동 + **휘발성 제보 실전송(P2 착수분)** + **survival_score 마커 3색·상태 배지(P3, ADR-0007)**.
+**나머지 P2/P3(후기·로그인·사진 첨부·AI 요약)은 자리만** 두고 구현하지 않는다.
