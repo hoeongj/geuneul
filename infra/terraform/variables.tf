@@ -31,10 +31,9 @@ variable "db_password" {
 }
 
 variable "proxy_secret" {
-  description = "BFF(Vercel)↔백엔드 공유 시크릿. 익명 제보 레이트리밋이 BFF가 준 실 클라이언트 IP를 신뢰해 XFF 위조 우회를 차단(ProxyClientResolver, TS-008). terraform.tfvars(gitignore)로만. 절대 커밋 금지."
+  description = "BFF(Vercel)↔백엔드 공유 시크릿. 익명 제보 레이트리밋이 BFF가 준 실 클라이언트 IP를 신뢰해 XFF 위조 우회를 차단(ProxyClientResolver, TS-008). terraform.tfvars(gitignore) 또는 TF_VAR_proxy_secret로 주입. 절대 커밋 금지. (SSM은 빈 값을 거부하므로 default 없이 필수로 둔다.)"
   type        = string
   sensitive   = true
-  default     = ""
 }
 
 variable "container_image" {

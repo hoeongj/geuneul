@@ -1,7 +1,8 @@
 name: Deploy (AWS ECS)
 
-# main에 백엔드 변경이 push되면: 이미지 빌드 → ECR push → ECS 태스크 리비전 갱신 → 서비스 롤링 배포.
+# main에 백엔드 변경이 push되면: (테스트 통과 후) 이미지 빌드 → ECR push → ECS 태스크 리비전 갱신 → 롤링 배포.
 # 인증은 GitHub OIDC로 AWS 역할을 assume(장기 액세스키 없음 = 2026 베스트프랙티스).
+# 액션은 태그 하이재킹 방어를 위해 full commit SHA로 핀(ci.yml과 동일 정책).
 on:
   push:
     branches: [main]
@@ -23,21 +24,39 @@ env:
   CONTAINER_NAME: geuneul
 
 jobs:
+  # 배포 게이트: 테스트(실 PostGIS Testcontainers)가 그린일 때만 deploy가 돈다.
+  # deploy.yml이 ci.yml과 독립 트리거라, 이 게이트가 없으면 테스트 실패 코드도 프로덕션까지 나간다.
+  test:
+    name: Test gate (Gradle, JDK 21)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287  # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92  # v6
+      - run: ./gradlew test jacocoTestCoverageVerification
+
   deploy:
     name: Build & Deploy to ECS
+    needs: test          # ← 테스트 그린일 때만 배포
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}   # Terraform output github_actions_role_arn
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64  # v2
 
       - name: Build & push image
         id: build
@@ -57,14 +76,14 @@ jobs:
 
       - name: Render new image into task definition
         id: render
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        uses: aws-actions/amazon-ecs-render-task-definition@138c24f321fdbdf7edee4a685519d253cae2cdea  # v1
         with:
           task-definition: task-def.json
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build.outputs.image }}
 
       - name: Deploy to ECS (rolling)
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        uses: aws-actions/amazon-ecs-deploy-task-definition@c465972ecbd160473f22e683363b422a5412a3de  # v2
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}

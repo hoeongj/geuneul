@@ -1,0 +1,11 @@
+# gitleaks 설정 — 기본 룰셋 사용 + 예시/문서의 placeholder는 오탐 방지로 허용.
+title = "geuneul gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "예시 env·플레이스홀더(실제 비밀 아님). 실제 비밀은 .local/·.env(gitignore)로만."
+paths = [
+  '''\.env\.example$''',
+]
