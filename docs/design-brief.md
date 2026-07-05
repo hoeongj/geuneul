@@ -28,7 +28,7 @@
 
 ### ③ "지금 급해요" 추천 탭
 - 시나리오 버튼 3개: **"화장실 급함"** / "잠깐 쉬어갈 곳(30분)" / "비 피할 곳".
-- 탭하면 kNN 최근접 결과를 거리순 카드 리스트로(1위는 크게, 도보 예상시간 = 거리m ÷ 67).
+- 탭하면 백엔드 `/recommendations`(ADR-0008)가 survival_score에 시나리오 가중을 얹어 랭킹한 카드 리스트로(matchScore 순, 1위는 크게, 각 카드에 실시간 제보 근거 reason 한 줄, 도보 예상시간 = 거리m ÷ 67).
 - 이 화면이 그늘의 정체성 — 지도 탐색이 아니라 **즉답**.
 
 ### ④ 제보하기 (P2 예약 — 레이아웃만)
@@ -42,6 +42,7 @@ GET /places?lat={위도}&lng={경도}&radius={m, 기본800, 최대5000}&category
 GET /places?bounds=west,south,east,north&category=...        # 지도 뷰포트
 GET /places/nearest?lat=&lng=&category=&limit={기본5, 최대50} # 최근접 kNN
 GET /places/{id}
+GET /recommendations?scenario=rest30|restroom|rain&lat=&lng=&limit={기본5}  # 시나리오 가중 추천(ADR-0008), 각 항목 {place, matchScore, reason}
 ```
 
 **응답 예시 (프로덕션 실측):**

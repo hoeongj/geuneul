@@ -27,7 +27,7 @@
 |---|---|---|
 | 홈 지도 마커 | 뷰포트 `bounds` 조회 | `GET /api/places?bounds=…` |
 | 바텀시트 리스트 | 현재 위치 `radius` 조회(distanceM 포함) | `GET /api/places?lat=&lng=&radius=` |
-| 지금 급해요 | 시나리오별 `nearest`(kNN) 서버 팬아웃·병합 | `GET /api/urgent?scenario=&lat=&lng=` |
+| 지금 급해요 | 백엔드 `/recommendations`(survival_score 시나리오 가중·2단 랭킹, ADR-0008) 프록시 — matchScore·reason 접합 | `GET /api/urgent?scenario=&lat=&lng=` |
 | 장소 상세 | 단건 + 최근 제보 | `GET /api/places/{id}` · `GET /api/places/{id}/reports` |
 | 제보하기 | 휘발성 제보 쓰기(원 클라 IP를 x-client-ip로 보존 → 백엔드 per-client 레이트리밋) | `POST /api/reports` |
 
