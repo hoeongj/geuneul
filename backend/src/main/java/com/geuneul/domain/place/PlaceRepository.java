@@ -52,6 +52,38 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                                                  @Param("category") String category,
                                                  @Param("limit") int limit);
 
+    /**
+     * 스코어드 반경 검색 + <b>카테고리 집합</b> 필터(추천/시나리오용, ADR-0008).
+     * findWithinRadiusScored와 동일한 인덱스 경로(ST_DWithin geography + KNN 정렬)를 타되,
+     * 시나리오가 여러 카테고리를 허용하므로 단일 필터 대신 {@code category = ANY(...)}로 IN 필터한다.
+     * categories는 enum name의 콤마 CSV(예: "LIBRARY,UNDERGROUND"); null이면 전 카테고리.
+     * 반환은 "가까운 순 상위 pool"이고, 시나리오 가중 재랭킹은 앱 레이어(RecommendationService)가 한다
+     * (2단 검색: 공간 인덱스 선필터 → 후보 풀 재랭킹).
+     */
+    @Query(value = """
+            SELECT p.id AS "id", p.name AS "name", p.category AS "category", p.address AS "address",
+                   ST_Y(p.geom) AS "lat", ST_X(p.geom) AS "lng", p.source AS "source",
+                   ST_Distance(geography(p.geom), geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))) AS "distanceM",
+                   COALESCE(s.report_count, 0)   AS "reportCount",
+                   COALESCE(s.freshness_score, 0) AS "freshnessScore",
+                   COALESCE(s.comfort_score, 0)  AS "comfortScore",
+                   COALESCE(s.risk_score, 0)     AS "riskScore"
+            FROM places p
+            LEFT JOIN place_report_signals s ON s.place_id = p.id
+            WHERE ST_DWithin(
+                    geography(p.geom),
+                    geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)),
+                    :radiusMeters)
+              AND (CAST(:categories AS text) IS NULL OR p.category = ANY(string_to_array(:categories, ',')))
+            ORDER BY geography(p.geom) <-> geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<ScoredPlaceView> findWithinRadiusScoredByCategories(@Param("lat") double lat,
+                                                             @Param("lng") double lng,
+                                                             @Param("radiusMeters") double radiusMeters,
+                                                             @Param("categories") String categories,
+                                                             @Param("limit") int limit);
+
     /** kNN 최근접: 반경 제한 없이 가까운 순 상위 N개 (<-> 연산자, index-assisted KNN) + 거리(m). */
     @Query(value = """
             SELECT p.id AS "id", p.name AS "name", p.category AS "category", p.address AS "address",
