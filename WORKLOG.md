@@ -336,3 +336,9 @@
 - 산출물: 백엔드 `domain/recommend/`(RecommendationController·Service·Scenario·Reason + dto/RecommendationResponse)·`SurvivalScore.Weights` 오버로드·`PlaceRepository.findWithinRadiusScoredByCategories`(카테고리 집합 IN 필터, 인덱스 경로 유지). 프론트 `app/api/urgent/route.ts`(→/recommendations 프록시)·`types/place.ts`(matchScore·reason)·`lib/categories.ts`(SCENARIO_META 표시만)·`components/urgent/UrgentResults.tsx`(reason 표시)·`urgent/page.tsx` 카피. `docs/adr/0008`.
 - 관련: PR #24(`4136428`), [ADR-0008](docs/adr/0008-recommendations-scenario-weighted-ranking.md), 태스크데프 rev19(라이브 배포·프로덕션 실측), `domain/recommend/*`·`RecommendationIT`.
 - 다음: OAuth 콘솔(사용자) → 로그인/후기/trust · 날씨 API(open_now/기온 결측 복원) → 추천 open_now 성분도 additive 복원 · AI 한줄 요약(Claude, 곁다리).
+
+### 2026-07-05 — 추천 라이브 반영: 전 문서 정합 감사(다중 에이전트) 8건 수정
+- 한 일: `/recommendations`(PR #24) 머지·배포 후 전 문서를 4축 병렬 읽기전용 감사 에이전트로 코드·라이브 상태와 대조 → 확증 드리프트 8건 수정(수정은 중앙에서 일괄 적용, 커밋 `50cc30d`).
+- 수정 요지(전부 코드/라이브 실측 대조): HANDOFF 삭제된 브랜치 토큰(feat/p3-*)→PR #23/#24·라이브 태스크데프 rev17→**rev19**(AWS describe 확인)·survival_score/추천 "구현"→"라이브"·최종 갱신일·프로덕션 실측 근거 / README P3 추천 라이브 마일스톤 불릿 추가 / frontend/README "급해요=nearest 팬아웃·병합"→"백엔드 /recommendations 프록시" / design-brief 급해요 탭 서술(거리순 kNN→시나리오 가중 랭킹·reason)+API 계약에 /recommendations 추가 / WORKLOG 07-05 엔트리 관련(PR·commit·rev) 트레이스 라인.
+- 결정 & 이유(why): 문서는 면접·서류 산출물이라 **"코드가 진실원천, 문서는 그와 일치"**. 새 기능 머지가 7개 문서에 드리프트를 낳아, 단일 리뷰어보다 4축 병렬 감사로 촘촘히 잡음(2026-07-04 감사와 동일 방식). **감사 확인·수정 불요**: ADR-0008 가중치/카테고리 표가 `RecommendationScenario.java`와 정확히 일치, CLAUDE.md 스펙 정합, TROUBLESHOOTING(TS-001~009 연속)·DEPLOY 무드리프트, WORKLOG 테스트 카운트 산술(단위15·IT3·SurvivalScore8 회귀0) 정확. 비밀/개인정보 유출 0건(gitleaks green).
+- 관련: 커밋 `50cc30d`, 감사 에이전트 4축(CLAUDE/README · HANDOFF · ADR/design-brief · WORKLOG/TS/DEPLOY)
