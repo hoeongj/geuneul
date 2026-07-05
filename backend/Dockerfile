@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# 그늘 백엔드 이미지 (Railway 등 컨테이너 배포용). 멀티스테이지 = 빌드/런타임 분리로 이미지 경량화.
+# 그늘 백엔드 이미지 (AWS ECS Fargate 등 컨테이너 배포용). 멀티스테이지 = 빌드/런타임 분리로 이미지 경량화.
 
 # --- build stage ---
 FROM eclipse-temurin:21-jdk AS build
