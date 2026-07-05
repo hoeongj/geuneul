@@ -1,10 +1,11 @@
 "use client";
 
 import { Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
+import type { IconName } from "@/lib/icon-paths";
 import { markerImage } from "@/lib/marker";
 
 // 상세 미니맵: 선택 장소 중심의 비대화형(드래그·줌 off) 실지도 + 마커.
-export default function DetailMiniMapLive({ lat, lng, icon }: { lat: number; lng: number; icon: string }) {
+export default function DetailMiniMapLive({ lat, lng, icon }: { lat: number; lng: number; icon: IconName }) {
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY ?? "",
     libraries: [],

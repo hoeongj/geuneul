@@ -1,6 +1,7 @@
 package com.geuneul.domain.place;
 
 import com.geuneul.domain.place.dto.PlaceResponse;
+import com.geuneul.global.web.ApiRequests;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ public class PlaceController {
 
     static final double MAX_RADIUS_M = 5_000;
     static final int MAX_LIMIT = 500;
+    static final int MAX_NEAREST_LIMIT = 50;
 
     private final PlaceSearchService placeSearchService;
 
@@ -45,7 +47,7 @@ public class PlaceController {
             @Parameter(description = "카테고리 필터") @RequestParam(required = false) PlaceCategory category,
             @Parameter(description = "최대 결과 수, 기본 100, 최대 500") @RequestParam(defaultValue = "100") int limit) {
 
-        int safeLimit = clampLimit(limit);
+        int safeLimit = ApiRequests.clampLimit(limit, MAX_LIMIT);
 
         if (bounds != null && !bounds.isBlank()) {
             double[] box = parseBounds(bounds);
@@ -54,10 +56,8 @@ public class PlaceController {
         if (lat == null || lng == null) {
             throw new ResponseStatusException(BAD_REQUEST, "lat/lng (반경 모드) 또는 bounds 중 하나는 필수입니다");
         }
-        validateLatLng(lat, lng);
-        if (radius <= 0 || radius > MAX_RADIUS_M) {
-            throw new ResponseStatusException(BAD_REQUEST, "radius는 1~" + (int) MAX_RADIUS_M + "m 범위여야 합니다");
-        }
+        ApiRequests.requireValidLatLng(lat, lng);
+        ApiRequests.requireRadiusWithin(radius, MAX_RADIUS_M);
         return placeSearchService.searchRadius(lat, lng, radius, category, safeLimit);
     }
 
@@ -69,24 +69,14 @@ public class PlaceController {
             @RequestParam double lng,
             @RequestParam(required = false) PlaceCategory category,
             @Parameter(description = "기본 5, 최대 50") @RequestParam(defaultValue = "5") int limit) {
-        validateLatLng(lat, lng);
-        return placeSearchService.searchNearest(lat, lng, category, Math.min(Math.max(limit, 1), 50));
+        ApiRequests.requireValidLatLng(lat, lng);
+        return placeSearchService.searchNearest(lat, lng, category, ApiRequests.clampLimit(limit, MAX_NEAREST_LIMIT));
     }
 
     @Operation(summary = "장소 단건 조회")
     @GetMapping("/places/{id}")
     public PlaceResponse get(@PathVariable long id) {
         return placeSearchService.getById(id);
-    }
-
-    private static void validateLatLng(double lat, double lng) {
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            throw new ResponseStatusException(BAD_REQUEST, "좌표 범위가 잘못됐습니다 (lat -90~90, lng -180~180)");
-        }
-    }
-
-    private static int clampLimit(int limit) {
-        return Math.min(Math.max(limit, 1), MAX_LIMIT);
     }
 
     /** "west,south,east,north" → double[4]. 잘못된 형식은 400. */

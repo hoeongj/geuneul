@@ -79,7 +79,11 @@ export function useCreateReport() {
   return useMutation({
     mutationFn: (payload: ReportCreatePayload) => createReport(payload),
     onSuccess: (created) => {
+      // 새 제보는 서버의 survival_score를 바꾼다 → 최근 제보 목록뿐 아니라
+      // 상세 배지(place)·지도/리스트 마커(places)도 무효화해 "지금 상태"가 즉시 반영되게 한다.
       queryClient.invalidateQueries({ queryKey: ["reports", created.placeId] });
+      queryClient.invalidateQueries({ queryKey: ["place", created.placeId] });
+      queryClient.invalidateQueries({ queryKey: ["places"] });
     },
   });
 }

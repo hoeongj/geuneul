@@ -1,4 +1,5 @@
 import { Icon } from "./Icon";
+import type { IconName } from "@/lib/icon-paths";
 
 // 민트 배경 아이콘 사각칩(리스트 로우 42 / 상세·급해요 46). 아이콘은 forest.
 export function IconChip({
@@ -7,7 +8,7 @@ export function IconChip({
   iconSize = 20,
   tone = "mint",
 }: {
-  icon: string;
+  icon: IconName;
   size?: number;
   iconSize?: number;
   tone?: "mint" | "ghost";

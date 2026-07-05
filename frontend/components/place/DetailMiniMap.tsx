@@ -2,11 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { Icon } from "@/components/ui/Icon";
+import type { IconName } from "@/lib/icon-paths";
 
 const HAS_KEY = !!process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
 
 // 키 없을 때 placeholder(디자인 톤 + "연동 예정" 칩).
-function Placeholder({ icon }: { icon: string }) {
+function Placeholder({ icon }: { icon: IconName }) {
   return (
     <div className="relative h-[150px] w-full overflow-hidden" style={{ background: "var(--color-map-base)" }}>
       <div className="absolute left-[10%] top-[18%] h-16 w-24 rounded-2xl" style={{ background: "var(--color-map-park)" }} />
@@ -29,7 +30,7 @@ const Live = dynamic(() => import("./DetailMiniMapLive"), {
   loading: () => <div className="h-[150px] w-full" style={{ background: "var(--color-map-base)" }} />,
 });
 
-export function DetailMiniMap({ lat, lng, icon }: { lat: number; lng: number; icon: string }) {
+export function DetailMiniMap({ lat, lng, icon }: { lat: number; lng: number; icon: IconName }) {
   if (!HAS_KEY) return <Placeholder icon={icon} />;
   return <Live lat={lat} lng={lng} icon={icon} />;
 }

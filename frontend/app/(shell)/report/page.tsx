@@ -177,6 +177,7 @@ export default function ReportPage() {
           value={comment}
           onChange={(e) => setComment(e.target.value.slice(0, 120))}
           placeholder="한 줄 코멘트 (선택)"
+          aria-label="한 줄 코멘트"
           maxLength={120}
           className="h-[76px] flex-1 rounded-[14px] border border-line-cream bg-white px-3.5 text-[14px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
         />

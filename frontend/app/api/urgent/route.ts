@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
   try {
     const qs = new URLSearchParams({ scenario, lat, lng, limit: String(RESULT_LIMIT) });
     const recs = await backendJson<Recommendation[]>("/recommendations", qs.toString());
-    // 랭킹(matchScore 순)은 백엔드가 확정 — 프록시는 순서를 보존하며 근거만 각 장소에 접합.
-    const places: Place[] = recs.map((r) => ({ ...r.place, matchScore: r.matchScore, reason: r.reason }));
+    // 랭킹(matchScore 순)은 백엔드가 확정 — 프록시는 순서를 보존하며 근거(reason)만 각 장소에 접합.
+    const places: Place[] = recs.map((r) => ({ ...r.place, reason: r.reason }));
     return NextResponse.json(places);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
