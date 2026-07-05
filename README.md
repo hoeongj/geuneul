@@ -45,6 +45,12 @@ POST /reports   {"placeId":1,"reportType":"COOL","comment":"에어컨 빵빵"}
 GET  /places/1/reports
 ```
 `/places`(반경·bounds)·`/places/{id}` 응답엔 **`survival`**(지금 갈만함 점수 + 등급 GOOD/OKAY/UNKNOWN)이 함께 온다 — 마커 3색·상태 배지의 원천 (P3 · [ADR-0007](./docs/adr/0007-survival-score-sql-signals-java-compose.md)).
+시나리오 추천 (P3 · survival_score에 시나리오 가중을 얹은 2단 랭킹 · [ADR-0008](./docs/adr/0008-recommendations-scenario-weighted-ranking.md)):
+```bash
+# 화장실 급함 / 잠깐 쉬어갈 곳 / 비 피할 곳 — 거리+실시간 상태로 "지금 갈만한 순"
+GET /recommendations?lat=37.4963&lng=126.9575&scenario=restroom
+# 각 결과 = 장소(survival 배지 포함) + matchScore(적합도) + reason(제보 요약)
+```
 공공데이터 적재(멱등 — 재실행해도 중복 없음):
 ```bash
 ./gradlew bootRun --args='--ingest.source=cooling_shelter --ingest.file=/path/무더위쉼터.csv --ingest.charset=MS949'

@@ -21,6 +21,7 @@ function HeroCard({ place, onOpen }: { place: Place; onOpen: () => void }) {
         <div className="mt-0.5 text-[12.5px] text-cream/80">
           {categoryLabel(place.category, place.categoryLabel)} · {place.address}
         </div>
+        {place.reason && <div className="mt-1.5 text-[12px] font-bold text-mint-3">{place.reason}</div>}
       </button>
       <div className="mt-3 flex items-center justify-between">
         {dist && <span className="text-[13px] font-bold text-cream/90">{dist}</span>}
@@ -54,6 +55,7 @@ function RankRow({ place, rank, onOpen }: { place: Place; rank: number; onOpen: 
         <div className="truncate text-[12px] text-ink-3">
           {categoryLabel(place.category, place.categoryLabel)}
           {walk ? ` · 도보 ${walk}분` : ""}
+          {place.reason ? ` · ${place.reason}` : ""}
         </div>
       </div>
       {dist && <span className="shrink-0 text-[14px] font-extrabold text-teal">{dist}</span>}

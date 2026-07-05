@@ -43,8 +43,20 @@ public record SurvivalScore(
     static final double W_RISK = 0.15;
     static final int GOOD_THRESHOLD = 60;
 
+    /** §5 표준 가중치 — survival_score(지도 배지)의 기본 프로파일. */
+    public static final Weights DEFAULT_WEIGHTS = new Weights(W_DISTANCE, W_COMFORT, W_FRESHNESS, W_RISK);
+
     /**
-     * 신호로부터 점수·등급을 조립한다.
+     * 성분 가중치 프로파일. survival_score(지도 배지)는 §5 표준({@link #DEFAULT_WEIGHTS})을 쓰고,
+     * 추천(/recommendations)은 <b>같은 조립식을 재사용</b>하되 이 가중치만 시나리오별로 바꾼다(ADR-0008).
+     *
+     * <p>distance·comfort·freshness는 "가용 긍정 성분의 가중평균(base)"을 이루고,
+     * risk는 그 base에서 빼는 감점 계수다(성분이 아니라 페널티라 가중평균 분모에 안 들어간다).
+     */
+    public record Weights(double distance, double comfort, double freshness, double risk) {}
+
+    /**
+     * §5 표준 가중치로 점수·등급을 조립한다(지도 배지 경로).
      *
      * @param distanceM 검색 중심으로부터의 거리(m). null이면 거리 성분 제외(bounds/단건).
      * @param radiusM   거리 정규화 기준 반경(m). distanceM이 있을 때만 유효(양수).
@@ -55,20 +67,30 @@ public record SurvivalScore(
      */
     public static SurvivalScore of(Double distanceM, Double radiusM, long reportCount,
                                    double freshness, double comfort, double risk) {
+        return of(DEFAULT_WEIGHTS, distanceM, radiusM, reportCount, freshness, comfort, risk);
+    }
+
+    /**
+     * 주어진 가중치 프로파일로 점수·등급을 조립한다 — 추천(시나리오 가중)이 이 오버로드를 쓴다(ADR-0008).
+     * 조립식은 §5 표준 경로와 동일하고 가중치만 다르다: {@code base = Σ(wᵢ·sᵢ)/Σ(wᵢ)},
+     * {@code score = clamp(base − w_risk·risk, 0, 1)×100}. 등급 임계(GOOD≥60)와 UNKNOWN 규칙도 공유한다.
+     */
+    public static SurvivalScore of(Weights w, Double distanceM, Double radiusM, long reportCount,
+                                   double freshness, double comfort, double risk) {
         double f = clamp01(freshness);
         double c = clamp01(comfort);
         double r = clamp01(risk);
 
         Double distanceScore = distanceScore(distanceM, radiusM);
 
-        double weightedSum = W_COMFORT * c + W_FRESHNESS * f;
-        double weightTotal = W_COMFORT + W_FRESHNESS;
+        double weightedSum = w.comfort() * c + w.freshness() * f;
+        double weightTotal = w.comfort() + w.freshness();
         if (distanceScore != null) {
-            weightedSum += W_DISTANCE * distanceScore;
-            weightTotal += W_DISTANCE;
+            weightedSum += w.distance() * distanceScore;
+            weightTotal += w.distance();
         }
-        double base = weightedSum / weightTotal;                 // 가용 긍정 성분의 가중평균 [0,1]
-        double score01 = clamp01(base - W_RISK * r);
+        double base = weightTotal > 0 ? weightedSum / weightTotal : 0; // 가용 긍정 성분의 가중평균 [0,1]
+        double score01 = clamp01(base - w.risk() * r);
         int score = (int) Math.round(score01 * 100);
 
         Grade grade = reportCount <= 0 ? Grade.UNKNOWN
