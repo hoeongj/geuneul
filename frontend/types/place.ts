@@ -52,6 +52,10 @@ export interface Place {
   features?: FeatureType[];
   /** 백엔드 미노출. 있으면 운영시간 렌더. */
   openHours?: string | null;
+  /** 추천(/recommendations)에서만 채워짐 — 시나리오 적합도(0~100, 이 목록 정렬 기준). */
+  matchScore?: number;
+  /** 추천(/recommendations)에서만 채워짐 — 실시간 제보 근거 한 줄("최근 좋은 제보 2건"). */
+  reason?: string;
 }
 
 export interface MapBounds {
