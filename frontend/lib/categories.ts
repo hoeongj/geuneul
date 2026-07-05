@@ -42,31 +42,28 @@ export const FEATURE_META: Record<FeatureType, { label: string; icon: string }> 
   no_eyes: { label: "눈치 안 보임", icon: "eyeoff" },
 };
 
-// 급해요 시나리오 → 카테고리 집합(서버 프록시가 카테고리별 nearest 를 팬아웃해 병합).
-// (place_features 기반 필터는 API 미노출이라 카테고리 신호로 근사 — README 매핑과 동일.)
+// 급해요 시나리오 표시 메타(제목/부제/아이콘/결과 헤더).
+// 카테고리 집합·가중치·랭킹은 백엔드 /recommendations(ADR-0008)가 소유한다 — 프론트는 표시만.
 export const SCENARIO_META: Record<
   Scenario,
-  { title: string; sub: string; icon: string; categories: Category[]; resultTitle: string }
+  { title: string; sub: string; icon: string; resultTitle: string }
 > = {
   restroom: {
     title: "화장실 급함",
     sub: "가까운 화장실 바로",
     icon: "toilet",
-    categories: ["TOILET"],
-    resultTitle: "화장실 급함 · 가까운 순",
+    resultTitle: "화장실 급함 · 지금 갈만한 순",
   },
   rest30: {
     title: "잠깐 쉬어갈 곳",
     sub: "시원한 실내에서 30분",
     icon: "seat",
-    categories: ["COOLING_SHELTER", "LIBRARY", "UNDERGROUND", "CIVIC"],
-    resultTitle: "잠깐 쉬어갈 곳 · 가까운 순",
+    resultTitle: "잠깐 쉬어갈 곳 · 지금 갈만한 순",
   },
   rain: {
     title: "비 피할 곳",
     sub: "실내·지하로 대피",
     icon: "umbrella",
-    categories: ["LIBRARY", "UNDERGROUND", "CIVIC", "COOLING_SHELTER"],
-    resultTitle: "비 피할 곳 · 가까운 순",
+    resultTitle: "비 피할 곳 · 지금 갈만한 순",
   },
 };
