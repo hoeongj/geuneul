@@ -1,8 +1,9 @@
+import type { IconName } from "@/lib/icon-paths";
 import type { Category, FeatureType, Scenario } from "@/types/place";
 
 // enum → 아이콘 이름(= icon-paths 키) + 라벨. 라벨은 API의 categoryLabel 을 우선 쓰되,
 // 목록/필터처럼 응답이 없는 자리에서는 아래 fallback 라벨을 쓴다.
-export const CATEGORY_META: Record<Category, { label: string; icon: string }> = {
+export const CATEGORY_META: Record<Category, { label: string; icon: IconName }> = {
   COOLING_SHELTER: { label: "무더위쉼터", icon: "snow" },
   TOILET: { label: "공중화장실", icon: "toilet" },
   WATER: { label: "음수대", icon: "droplet" },
@@ -13,7 +14,7 @@ export const CATEGORY_META: Record<Category, { label: string; icon: string }> = 
   ETC: { label: "기타", icon: "dots" },
 };
 
-export function iconForCategory(cat: Category): string {
+export function iconForCategory(cat: Category): IconName {
   return CATEGORY_META[cat]?.icon ?? "dots";
 }
 
@@ -32,7 +33,7 @@ export const FILTER_CATEGORIES: Category[] = [
   "UNDERGROUND",
 ];
 
-export const FEATURE_META: Record<FeatureType, { label: string; icon: string }> = {
+export const FEATURE_META: Record<FeatureType, { label: string; icon: IconName }> = {
   air_conditioned: { label: "냉방", icon: "snow" },
   outlet: { label: "콘센트", icon: "plug" },
   wifi: { label: "와이파이", icon: "wifi" },
@@ -46,7 +47,7 @@ export const FEATURE_META: Record<FeatureType, { label: string; icon: string }> 
 // 카테고리 집합·가중치·랭킹은 백엔드 /recommendations(ADR-0008)가 소유한다 — 프론트는 표시만.
 export const SCENARIO_META: Record<
   Scenario,
-  { title: string; sub: string; icon: string; resultTitle: string }
+  { title: string; sub: string; icon: IconName; resultTitle: string }
 > = {
   restroom: {
     title: "화장실 급함",

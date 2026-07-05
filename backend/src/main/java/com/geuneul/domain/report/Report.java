@@ -42,6 +42,9 @@ public class Report {
     @Column(name = "is_anonymous", nullable = false)
     private boolean anonymous;
 
+    // created_at은 Hibernate @CreationTimestamp(JVM 클록), expires_at은 서비스가 주입 Clock으로 산정,
+    // freshness/만료 판정은 place_report_signals 뷰가 DB now()로 한다. 세 클록이 프로덕션에선 모두 UTC라
+    // 실질 오차는 sub-second. (테스트의 fake Clock은 @CreationTimestamp까진 못 바꾸므로 IT는 "방금 생성" 기준으로 검증.)
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

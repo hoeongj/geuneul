@@ -1,17 +1,15 @@
 package com.geuneul.domain.recommend;
 
 import com.geuneul.domain.recommend.dto.RecommendationResponse;
+import com.geuneul.global.web.ApiRequests;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
  * 추천 API (CLAUDE.md §9, ADR-0008) — survival_score에 시나리오 가중을 얹은 랭킹.
@@ -46,21 +44,13 @@ public class RecommendationController {
             @Parameter(description = "반경(m), 기본 2000, 최대 5000") @RequestParam(required = false) Double radius,
             @Parameter(description = "최대 결과 수, 기본 5, 최대 20") @RequestParam(defaultValue = "5") int limit) {
 
-        validateLatLng(lat, lng);
+        ApiRequests.requireValidLatLng(lat, lng);
         RecommendationScenario sc = RecommendationScenario.fromParam(scenario);
 
         double radiusMeters = radius == null ? DEFAULT_RADIUS_M : radius;
-        if (radiusMeters <= 0 || radiusMeters > MAX_RADIUS_M) {
-            throw new ResponseStatusException(BAD_REQUEST, "radius는 1~" + (int) MAX_RADIUS_M + "m 범위여야 합니다");
-        }
-        int safeLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
+        ApiRequests.requireRadiusWithin(radiusMeters, MAX_RADIUS_M);
+        int safeLimit = ApiRequests.clampLimit(limit, MAX_LIMIT);
 
         return recommendationService.recommend(sc, lat, lng, radiusMeters, safeLimit);
-    }
-
-    private static void validateLatLng(double lat, double lng) {
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            throw new ResponseStatusException(BAD_REQUEST, "좌표 범위가 잘못됐습니다 (lat -90~90, lng -180~180)");
-        }
     }
 }
