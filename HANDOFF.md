@@ -1,10 +1,10 @@
 # 그늘(Geuneul) — 프로젝트 현황과 다음 작업
 
 > 현재 상태·완료분·다음 작업을 정리한 진행 문서. 전체 스펙·규칙은 [`CLAUDE.md`](./CLAUDE.md), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
-> 최종 갱신: 2026-07-04.
+> 최종 갱신: 2026-07-05.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(App·API). **간판 완성 — survival_score(P3) 풀스택 라이브**(PR #23, ADR-0007) + **추천(/recommendations, P3) 완성**(ADR-0008, `feat/p3-recommendations` — survival_score에 시나리오 가중을 얹은 2단 랭킹, "급해요"를 nearest 팬아웃 근사 → 정식 랭킹으로 승격). 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
+- **상태**: 라이브 정상(App·API). **간판 완성 — survival_score(P3) 풀스택 라이브**(PR #23, ADR-0007) + **추천(/recommendations, P3) 완성·라이브**(PR #24, ADR-0008 — survival_score에 시나리오 가중을 얹은 2단 랭킹, "급해요"를 nearest 팬아웃 근사 → 정식 랭킹으로 승격). 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
 - **콘솔 없이 바로 가능한 다음 = 날씨 API(기상청 초단기예보 + Redis TTL 캐시)** — open_now/기온 결측 성분을 복원해 survival_score·추천의 재정규화를 additive하게 되돌린다(Redis 헬스체크 재활성 포함). 또는 AI 한줄 요약(Claude, 곁다리).
 - **사용자 결정 대기 2건(둘 다 사용자 콘솔·자격증명 필요)**:
   1. **§② OAuth 콘솔**(카카오 로그인 ON+Redirect URI / 구글 OAuth 클라이언트) → 로그인·후기·trust_score. **survival_score 뷰에 신뢰도 가중이 이미 심겨 있어 로그인 붙으면 코드 변경 없이 점수에 반영**된다.
@@ -37,7 +37,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 ### ③ 그 밖에 바로 이어갈 수 있는 것(로그인 불필요)
 - **후기(review)** 백엔드 — 단, 후기는 "로그인 필요"라 OAuth 다음이 자연스러움. 익명 불가.
 - ~~**survival_score(P3)** — SQL 랭킹 + 마커 3색.~~ **완료(ADR-0007).**
-- ~~**추천(/recommendations, P3)** — survival_score에 시나리오 가중.~~ **완료(ADR-0008, `feat/p3-recommendations`).**
+- ~~**추천(/recommendations, P3)** — survival_score에 시나리오 가중.~~ **완료·라이브(PR #24, ADR-0008).**
 - **날씨 API(P3)** — 기상청 초단기예보 + Redis TTL 캐시. survival_score/추천의 open_now·기온 결측 성분을 복원(재정규화 되돌림). 콘솔 불필요(기상청 공공 API), 바로 착수 가능.
 - **AI 한줄 요약(P3)** — Claude API(곁다리). 상세 화면 예약 슬롯.
 - **S3 사진 업로드(presign)** — Terraform S3 + presign API. 제보/후기 사진 슬롯 대기.
@@ -61,17 +61,17 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 
 ---
 
-## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브 + P2 제보 라이브 + P3 survival_score·추천 구현
+## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브 + P2 제보 라이브 + P3 survival_score·추천 라이브
 
 🟢 **API Live:** http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com (`/actuator/health`, `/swagger-ui.html`)
 🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터 + 실시간 제보)
 
 - **백엔드:** Spring Boot 4.0.6 / Java 21. 반경(`ST_DWithin` geography)·최근접(kNN `<->`)·bounds 공간검색 API 라이브. `backend/`.
-- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev17**(SEAT PR #22·감사 #18~#21 배포 반영. §①의 rev13은 proxy-secret 활성화 당시 과거값). `infra/`.
+- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev19**(survival_score PR #23·추천 PR #24 배포 반영. rev17=SEAT PR #22·감사 #18~#21 당시, §①의 rev13=proxy-secret 활성화 당시 과거값). `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
 - **P2 제보(라이브, PR #15·#16·#17):** 익명 휘발성 제보 `POST /reports`(타입별 TTL로 `expires_at`) + `GET /places/{id}/reports`. 프론트 제보하기 실전송(장소=nearest+피커)·상세 "최근 제보" 실시간. 인메모리 레이트리밋(분3·시간10) — XFF 신뢰경계(`ProxyClientResolver`)·OOM 하드닝(TS-008).
-- **P3 survival_score(구현, `feat/p3-survival-score`·ADR-0007):** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk) → 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). `/places`(반경·bounds)·`/places/{id}` 응답에 `survival` 필드. 프론트 마커 3색 링·리스트/상세 상태 배지. open_now는 운영시간 결측이라 재정규화 제외(데이터 붙으면 복원), 후기는 §5대로 분리. **로컬 검증: postgis에 V1~V4 직접 적용 + 시나리오별 뷰/쿼리 실행으로 시맨틱 확증(TS-009), 엔드투엔드 IT는 CI.**
-- **P3 추천(구현, `feat/p3-recommendations`·ADR-0008):** `GET /recommendations?scenario=rest30|restroom|rain` — survival_score 순수 함수를 시나리오 가중치로 재사용(`SurvivalScore.Weights` 오버로드) + 2단 검색(공간 인덱스 선필터 `findWithinRadiusScoredByCategories` → 앱 재랭킹). 응답=canonical `survival` 배지 + `matchScore`(적합도, 정렬 기준) + `reason`(제보 요약). 가중치: rest30 comfort↑(0.35) / restroom distance 압도(0.60) / rain risk↑(0.40, 침수 강등 — 배지는 §6대로 −0.15 순화 유지). 프론트 "급해요"를 nearest 팬아웃 → 정식 랭킹으로 승격(`/api/urgent`가 `/recommendations` 프록시). **로컬 검증: 단위 15건 green, 엔드투엔드 IT 3건은 colima 이슈로 skip→CI.**
+- **P3 survival_score(라이브, PR #23·ADR-0007):** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk) → 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). `/places`(반경·bounds)·`/places/{id}` 응답에 `survival` 필드. 프론트 마커 3색 링·리스트/상세 상태 배지. open_now는 운영시간 결측이라 재정규화 제외(데이터 붙으면 복원), 후기는 §5대로 분리. **로컬 검증: postgis에 V1~V4 직접 적용 + 시나리오별 뷰/쿼리 실행으로 시맨틱 확증(TS-009), 엔드투엔드 IT는 CI.**
+- **P3 추천(라이브, PR #24·ADR-0008):** `GET /recommendations?scenario=rest30|restroom|rain` — survival_score 순수 함수를 시나리오 가중치로 재사용(`SurvivalScore.Weights` 오버로드) + 2단 검색(공간 인덱스 선필터 `findWithinRadiusScoredByCategories` → 앱 재랭킹). 응답=canonical `survival` 배지 + `matchScore`(적합도, 정렬 기준) + `reason`(제보 요약). 가중치: rest30 comfort↑(0.35) / restroom distance 압도(0.60) / rain risk↑(0.40, 침수 강등 — 배지는 §6대로 −0.15 순화 유지). 프론트 "급해요"를 nearest 팬아웃 → 정식 랭킹으로 승격(`/api/urgent`가 `/recommendations` 프록시). **검증: 단위 15건 green + 엔드투엔드 IT 3건은 colima 이슈로 로컬 skip→CI green 후 머지·배포. 프로덕션 실측(광화문 화장실 거리순 matchScore, 상도동 rest30에서 제보 있는 도서관이 무제보 쉼터 앞섬).**
 - **프론트(완료, PR #12·#14·#16):** Next.js 16(App Router)+TS PWA — MVP 4화면(홈 지도·장소 상세(실지도 미니맵·최근제보)·급해요·제보 실전송). **동일 오리진 서버 프록시(BFF)** 로 ALB(http)·CORS 회피(ADR-0004) → **백엔드 CORS 불필요**. Vercel git 연결로 `main` push 시 자동배포(rootDirectory=frontend). Kakao JS 키는 콘솔 **[JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록 완료(제품링크관리>웹도메인과 다른 칸 — 혼동 주의).
 - **테스트:** 파서/컨트롤러/지오코딩 단위 + 실 PostGIS IT(멱등·공간쿼리). JaCoCo floor 0.35 ratchet. CI(`ci.yml`)가 실 PostGIS로 검증. 프론트는 `frontend-ci.yml`(typecheck·lint·build).
 
@@ -106,7 +106,7 @@ docs/       adr/0001~0008 · design-brief.md
 
 ### P3 · 스코어·추천·AI
 - [x] ~~**survival_score**: 거리+open_now+comfort+freshness−risk를 **SQL/PostGIS 레이어에서** 계산(CLAUDE.md §5). 마커 3색.~~ — **완료(ADR-0007).** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk), 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). 반경/bounds/단건 스코어드 API + 프론트 마커 3색·상태 배지. open_now는 운영시간 결측이라 재정규화로 제외(데이터 붙으면 복원). 후기는 §5대로 분리.
-- [x] ~~**추천 시나리오**: `GET /recommendations?scenario=rest30|restroom|rain`.~~ — **완료(ADR-0008, `feat/p3-recommendations`).** survival_score 순수 함수를 시나리오 가중치로 재사용(SurvivalScore.Weights 오버로드) + 2단 검색(공간 인덱스 선필터 → 시나리오 재랭킹). 응답에 canonical `survival` 배지 + `matchScore`(적합도) + `reason`(제보 요약). 프론트 "급해요"를 nearest 팬아웃 → 정식 랭킹으로 승격. 콘솔 불필요라 바로 착수했음.
+- [x] ~~**추천 시나리오**: `GET /recommendations?scenario=rest30|restroom|rain`.~~ — **완료·라이브(PR #24, ADR-0008).** survival_score 순수 함수를 시나리오 가중치로 재사용(SurvivalScore.Weights 오버로드) + 2단 검색(공간 인덱스 선필터 → 시나리오 재랭킹). 응답에 canonical `survival` 배지 + `matchScore`(적합도) + `reason`(제보 요약). 프론트 "급해요"를 nearest 팬아웃 → 정식 랭킹으로 승격. 콘솔 불필요라 바로 착수했음.
 - [ ] **날씨**: 기상청 초단기예보 + **Redis TTL 캐시**(rate limit). Redis 헬스체크 다시 켜기(application.yml `management.health.redis.enabled`). **다음 콘솔 불필요 조각** — open_now/기온을 붙이면 survival_score/추천 재정규화를 additive 복원.
 - [ ] **AI 한줄 요약**: Claude API(곁다리).
 - [ ] **공공데이터 주기 동기화**: EventBridge Scheduler → ECS RunTask(월1회 등). 멱등 upsert 재실행 + **스냅샷에서 사라진 행 soft-delete 비활성화**(폐쇄 반영) + **오픈API serviceKey로 다운로드까지 무인화**(현재 수동 다운로드 병목 제거).
