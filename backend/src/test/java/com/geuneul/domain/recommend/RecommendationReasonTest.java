@@ -27,8 +27,10 @@ class RecommendationReasonTest {
     }
 
     @Test
-    @DisplayName("리스크가 편의보다 크지만 미미(≤0.2)하면 주의로 보지 않고 긍정으로 요약")
-    void tinyRiskIsNotWarned() {
-        assertThat(RecommendationReason.of(1, 0.0, 0.15)).isEqualTo("최근 좋은 제보 1건");
+    @DisplayName("긍정 신호 없이 미미한 리스크(≤0.2)만 있으면 '좋은'이 아니라 중립 '최근 제보 n건'")
+    void negativeOnlyWithTinyRiskIsNeutral() {
+        // 부정 제보 1건만(예: 오래된 BUG) → comfort 0, risk 0.15. 주의 임계(0.2) 미만이라 경고는 아니지만
+        // 긍정 신호가 없으므로 "좋은 제보"로 오표기하지 않는다.
+        assertThat(RecommendationReason.of(1, 0.0, 0.15)).isEqualTo("최근 제보 1건");
     }
 }

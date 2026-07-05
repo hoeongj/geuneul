@@ -6,7 +6,8 @@ export type IconPrim = { path: string } | { circle: [number, number, number]; fi
 // 전체 채움(fill) 아이콘 — 나머지는 stroke.
 export const ICON_FILLED = new Set<string>(["nav", "bolt"]);
 
-export const ICONS: Record<string, IconPrim[]> = {
+// satisfies(annotation 아님)로 두어 각 엔트리 타입은 검증하면서 키 리터럴 유니온(IconName)을 보존한다.
+export const ICONS = {
   // 카테고리
   snow: [{ path: "M12 3v18" }, { path: "M3 12h18" }, { path: "M5.3 7 18.7 17" }, { path: "M18.7 7 5.3 17" }],
   toilet: [{ circle: [12, 6, 2.6] }, { path: "M7.4 21c0-5.2 2.1-9.2 4.6-9.2s4.6 4 4.6 9.2" }],
@@ -46,4 +47,7 @@ export const ICONS: Record<string, IconPrim[]> = {
     { path: "M4 8.5h3l1.6-2.3a1.5 1.5 0 0 1 1.2-.7h4.4a1.5 1.5 0 0 1 1.2 .7L17 8.5h3a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18v-8A1.5 1.5 0 0 1 4 8.5z" },
     { circle: [12, 13.5, 3.4] },
   ],
-};
+} satisfies Record<string, IconPrim[]>;
+
+/** 유효한 아이콘 이름(ICONS의 키) — 컴포넌트/마커가 오타를 컴파일 타임에 잡도록 이 타입을 쓴다. */
+export type IconName = keyof typeof ICONS;

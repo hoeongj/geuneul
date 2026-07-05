@@ -30,7 +30,7 @@ function ReservedBlock({ title, badge, children }: { title: string; badge: strin
 
 // 최근 제보(라이브) — 유효(미만료) 제보 최신순. 이 제보들이 위 "지금 상태" survival_score로 집계된다(ADR-0007).
 function RecentReports({ placeId }: { placeId: number }) {
-  const { data, isLoading } = usePlaceReports(placeId);
+  const { data, isLoading, isError } = usePlaceReports(placeId);
   return (
     <section className="rounded-[14px] border border-line-cream bg-white p-3.5">
       <div className="mb-2 flex items-center gap-2">
@@ -39,6 +39,9 @@ function RecentReports({ placeId }: { placeId: number }) {
       </div>
       {isLoading ? (
         <p className="py-1 text-[12.5px] text-muted">최근 제보를 불러오는 중…</p>
+      ) : isError ? (
+        // 에러를 "제보 없음"으로 뭉뚱그리지 않는다 — 네트워크 실패와 실제 무제보는 다른 상태.
+        <p className="py-1 text-[12.5px] text-muted">최근 제보를 불러오지 못했어요</p>
       ) : !data || data.length === 0 ? (
         <p className="py-1 text-[12.5px] text-muted">아직 제보가 없어요 · 제보 탭에서 첫 제보를 남겨보세요</p>
       ) : (

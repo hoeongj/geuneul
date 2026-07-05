@@ -1,4 +1,4 @@
-import { ICON_FILLED, ICONS } from "./icon-paths";
+import { ICON_FILLED, ICONS, type IconName, type IconPrim } from "./icon-paths";
 import { GRADE_META } from "./survival";
 import type { SurvivalGrade } from "@/types/place";
 
@@ -9,8 +9,8 @@ import type { SurvivalGrade } from "@/types/place";
 const RING_SELECTED = "#163C2F";
 const ICON_COLOR = "#163C2F";
 
-function iconInner(name: string, color: string): string {
-  const prims = ICONS[name] ?? ICONS.dots;
+function iconInner(name: IconName, color: string): string {
+  const prims: IconPrim[] = ICONS[name]; // IconPrim[]로 넓혀 circle 멤버의 fill? 접근 허용
   const filled = ICON_FILLED.has(name);
   return prims
     .map((p) => {
@@ -34,7 +34,7 @@ export interface MarkerImage {
   options: { offset: { x: number; y: number } };
 }
 
-export function markerImage(iconName: string, selected = false, grade: SurvivalGrade = "UNKNOWN"): MarkerImage {
+export function markerImage(iconName: IconName, selected = false, grade: SurvivalGrade = "UNKNOWN"): MarkerImage {
   const d = selected ? 38 : 34;
   const tail = 7;
   const w = d;

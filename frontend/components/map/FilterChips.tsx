@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/ui/Icon";
 import { CATEGORY_META, FILTER_CATEGORIES } from "@/lib/categories";
+import type { IconName } from "@/lib/icon-paths";
 import type { Category } from "@/types/place";
 
 interface FilterChipsProps {
@@ -17,7 +18,7 @@ function Chip({
   onClick,
 }: {
   active: boolean;
-  icon: string;
+  icon: IconName;
   label: string;
   onClick: () => void;
 }) {

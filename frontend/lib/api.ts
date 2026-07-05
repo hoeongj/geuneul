@@ -25,8 +25,11 @@ async function toApiError(res: Response): Promise<ApiError> {
   return new ApiError(res.status, msg);
 }
 
+// 동일 오리진 프록시가 10s 상한을 갖지만, 프록시 라우트 자체가 멈추는 경우를 대비해 클라이언트도 상한을 둔다.
+const CLIENT_TIMEOUT_MS = 12_000;
+
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<T>;
 }
@@ -84,6 +87,7 @@ export async function createReport(payload: ReportCreatePayload): Promise<Report
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
   });
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<Report>;

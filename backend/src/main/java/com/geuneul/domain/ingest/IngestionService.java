@@ -70,14 +70,14 @@ public class IngestionService {
         // ③④ 좌표 결측분 지오코딩 → upsert (geocoded=true)
         GeocodeOutcome outcome = geocodeAndUpsert(spec, parsed.needGeocode());
 
-        IngestSummary report = new IngestSummary(spec.sourceKey(), parsed.totalRecords(),
+        IngestSummary summary = new IngestSummary(spec.sourceKey(), parsed.totalRecords(),
                 upserted + outcome.upserted(), parsed.skipped(),
                 outcome.geocoded(), outcome.reused(), outcome.failed(),
                 System.currentTimeMillis() - start);
         log.info("[ingest] source={} total={} upserted={} skipped={} geocoded={} geocodeReused={} geocodeFailed={} took={}ms",
-                report.source(), report.totalRecords(), report.upserted(), report.skipped(),
-                report.geocoded(), report.geocodeReused(), report.geocodeFailed(), report.tookMs());
-        return report;
+                summary.source(), summary.totalRecords(), summary.upserted(), summary.skipped(),
+                summary.geocoded(), summary.geocodeReused(), summary.geocodeFailed(), summary.tookMs());
+        return summary;
     }
 
     private record GeocodeOutcome(int upserted, int geocoded, int reused, int failed) {
@@ -124,6 +124,11 @@ public class IngestionService {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         failed.incrementAndGet();
+                    } catch (RuntimeException e) {
+                        // geocode()는 계약상 오류 시 Optional.empty()지만, 예상외 런타임 예외가 새면
+                        // 이 태스크가 조용히 사라져 카운터 합(geocoded+reused+failed)이 안 맞는다 → failed로 집계.
+                        failed.incrementAndGet();
+                        log.warn("[ingest] 지오코딩 태스크 실패(예상외) addr={}", c.address(), e);
                     }
                 });
             }

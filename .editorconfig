@@ -1,0 +1,19 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# Java (backend) — 4-space, Google/Spring 관례
+[*.java]
+indent_size = 4
+
+# TypeScript/JS/JSON/YAML (frontend·CI) — 2-space
+[*.{ts,tsx,js,jsx,json,yml,yaml,css}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
