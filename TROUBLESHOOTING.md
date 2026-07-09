@@ -196,3 +196,14 @@
 - **해결:** `filter {}`(빈 블록, 프리픽스/태그 조건 없음 = 버킷 전체)를 명시 추가. `terraform validate` 경고 0.
 - **핵심 학습 포인트:** ① Terraform 경고("This will be an error in a future version")는 무시하지 말고 그 자리에서 고친다 — 다음 프로바이더 메이저 업그레이드에서 조용히 `apply` 실패로 바뀔 수 있다. ② "조건 없음"을 표현하는 관용구가 "생략"이 아니라 "빈 블록"인 리소스가 있다 — 스키마 경고 메시지가 정확한 힌트(`filter` 또는 `prefix` 둘 중 하나)를 주므로 그대로 따르면 된다.
 - **관련:** `infra/terraform/s3.tf`(`aws_s3_bucket_lifecycle_configuration.photos`), P2 사진 presign 인프라.
+
+### TS-019 · 2026-07-10 — 부하테스트 준비 중 두 함정: ① LATERAL 서브쿼리의 random()이 전 행 동일값으로 캐시됨 ② bounds 대박스 Seq Scan을 "인덱스 미사용 버그"로 오독할 뻔
+- **상황:** P4 k6 부하테스트를 위해 합성 30만 places를 시드하려고 카테고리를 `CROSS JOIN LATERAL (SELECT (ARRAY[...])[1+floor(random()*10)] AS category)`로 뽑았다. 적재 후 분포를 확인하니 **30만 행 전부 단일 카테고리(WATER)**. 또 EXPLAIN에서 bounds 대박스(서울 도심)가 `Seq Scan on places`로 나와 "GiST 인덱스를 안 탄다"고 성급히 판단할 뻔했다.
+- **원인 분석:**
+  1. **LATERAL 서브쿼리에 outer(gs) 참조가 없으면 플래너가 한 번만 평가하고 캐시한다.** `random()`은 VOLATILE이지만, 상관(correlation) 없는 LATERAL 서브쿼리 전체가 "행마다 재평가할 이유가 없는 상수식"으로 취급돼 첫 평가값이 전 행에 뿌려졌다. 즉 VOLATILE 함수라도 **어디에 놓느냐**(파생 서브쿼리의 SELECT 목록 vs 상관 없는 LATERAL)가 행별 재평가 여부를 가른다.
+  2. **bounds 대박스의 Seq Scan은 옵티마이저의 정상 판단이었다.** `p.geom && ST_MakeEnvelope(...)` + `LIMIT 100` + `ORDER BY` 없음이고, 시드의 70%가 수도권에 몰려 있어 수도권 큰 박스는 첫 ~9천 행 안에서 100건이 다 찬다. 플래너는 "박스가 테이블의 큰 비율과 겹치고 LIMIT이 작다 → Bitmap 구성 오버헤드보다 조기종료 Seq Scan이 싸다"를 정확히 계산한 것.
+- **해결 과정:**
+  1. 카테고리/좌표 계산을 **파생 서브쿼리 `FROM (SELECT gs, (ARRAY[...])[...] AS category, ... FROM generate_series(1,:n) gs) t`의 SELECT 목록**으로 옮겨 행마다 random()이 평가되게 했다. 재적재 후 분포 정상화(TOILET 90k=30%, 나머지 ~30k씩). is_commercial은 같은 파생 컬럼 `t.category`를 참조해 재계산 캐시 문제를 원천 회피.
+  2. bounds가 진짜로 GiST를 타는지 **희소(강원 산간 작은 박스)와 밀집(서울 대박스)을 각각 EXPLAIN으로 대조**. 희소 박스는 `Bitmap Index Scan on idx_places_geom`(1.7ms)로 인덱스를 실제로 탔다. 즉 "인덱스는 이득이 될 때만 쓴다"는 정상 동작 — 대박스 Seq Scan은 버그가 아니라 정답. 이 판별을 ADR-0010·`perf/explain/RESULTS.md`에 근거와 함께 기록.
+- **핵심 학습 포인트:** ① **VOLATILE 함수의 "행별 평가"는 함수 종류가 아니라 배치 위치가 결정한다** — 상관 없는 LATERAL/서브쿼리는 상수 폴딩·단일 평가 대상이 될 수 있으니, 행마다 달라야 하는 랜덤은 반드시 행을 생성하는 스캔(generate_series)의 직접 SELECT 목록에서 계산하고 EXPLAIN/실측으로 분포를 검증한다(합성 데이터 자체가 편향되면 부하테스트 결론이 통째로 틀어진다). ② **EXPLAIN의 Seq Scan을 반사적으로 "인덱스 미사용 결함"으로 읽지 않는다** — LIMIT + 낮은 selectivity(넓은 술어)에서는 조기종료 Seq Scan이 정답일 수 있다. "인덱스가 있는데 왜 안 쓰나"가 아니라 "이 술어·LIMIT에서 인덱스가 이득인가"를 selectivity를 바꿔가며(희소 vs 밀집 박스) 대조해야 옵티마이저의 의도를 읽는다.
+- **관련:** `perf/seed/seed_synthetic_places.sql`, `perf/explain/explain_spatial_queries.sql`, `perf/explain/RESULTS.md`, ADR-0010, CLAUDE.md §0-4(GiST·전체스캔 금지). 계열: 합성 데이터/실측 검증의 중요성(TS-004·TS-017 "추정을 실측으로 검증").

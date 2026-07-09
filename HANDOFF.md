@@ -118,7 +118,7 @@ docs/       adr/0001~0008 · design-brief.md
 - [ ] **쉼터 전국 전체 데이터** 확보(행안부 safetydata) 후 재적재. 화장실 실패 7,193건 재시도.
 
 ### P4 · 심화 (간판 보강)
-- [ ] **k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN 성능 실증) — mp에 k6 레퍼런스.
+- [x] ~~**k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN 성능 실증)~~ — **완료(ADR-0010, 브랜치 `feat/k6-load-explain-p4`).** 로컬 docker-compose PostGIS에 합성 30만 places + 21만 reports 시드 → EXPLAIN으로 반경(`ST_DWithin` geography GiST)·kNN(`<->` GiST)·bounds(geometry GiST) 인덱스 사용 확증 + k6 4엔드포인트 부하 실측(green, kNN p95 213ms·반경 p95 1.4s·실패율 0%). **Flyway V8** `idx_reports_expires`로 `place_report_signals` 뷰의 만료 제보 누적 전체스캔 튜닝(뷰빌드 256→133ms). `perf/*`(k6·seed·explain·RESULTS). ⚠️ 로컬 PostGIS가 amd64 emulated라 절대 지연은 부풀려짐(실행계획·before/after 비율·처리량 상한만 유효, 프로덕션 RDS 미측정).
 - [ ] **ECS Service Auto Scaling**(=HPA 상당) 부하와 함께.
 - [ ] 실시간 이벤트(제보 급증 알림 — Redis Streams/LISTEN·NOTIFY), 캐시 전략, 관측성(OTel/Grafana), ADR 계속.
 
