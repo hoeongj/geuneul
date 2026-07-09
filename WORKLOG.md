@@ -401,3 +401,12 @@
 - 검증: 프론트 `typecheck`·`lint`·`build` 전부 green. 라우트 등록 확인(`/api/auth/[provider]`·`/callback`·`/logout`·`/api/me`·`/mypage`). 실제 로그인 왕복은 백엔드 배포(키 주입) 후 실측.
 - 산출물: 프론트 `lib/auth.ts`(provider·쿠키·authorize URL)·`app/api/auth/[provider]/route.ts`·`.../callback/route.ts`·`app/api/auth/logout/route.ts`·`app/api/me/route.ts`·`lib/api.ts`(fetchMe·logout)·`lib/queries.ts`(useMe·useLogout)·`components/shell/TabBar.tsx`(내정보 탭)·`lib/icon-paths.ts`(user 아이콘)·`app/(shell)/mypage/page.tsx`·`.env.example`(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
 - 배포 시 프론트 env(Vercel): `KAKAO_REST_API_KEY`(로그인 client_id)·`GOOGLE_CLIENT_ID` 추가(서버 전용). 콘솔 Redirect URI는 이미 `.../api/auth/{provider}/callback` 등록됨.
+
+### 2026-07-09 — 배포: 날씨(P3)·소셜 로그인(P2) 프로덕션 라이브 + 캐시 하드닝 2건
+- 한 일: 브랜치 3개(날씨 #26·OAuth #27·핫픽스)를 PR→CI(실 PostGIS IT green)→머지→**프로덕션 배포**. ElastiCache Redis + SSM 5종 `terraform apply`(8 add/0 change/0 destroy) → 라이브 태스크데프에 REDIS_HOST+secret 5종 배선(rev23) → 이미지 배포(rev24/25). Vercel env(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID) 추가 + 재배포.
+- 라이브 실측: `/weather` 광화문 `지금 23°C, 비`(기온·습도·강수·PTY 전부)·부산 `31°C`·상도동, **캐시 히트 정상**(동일값·에러0·Redis 경고0). 로그인 authorize 리다이렉트(카카오/구글 client_id·redirect_uri·state 정확)·`/me` 401. health UP. 기존 공개 API 회귀 0.
+- **라이브에서만 드러난 캐시 버그 2건(유닛테스트 사각 → 실측이 최종 게이트):**
+  - **TS-011**: `@Cacheable(unless="…#result.isEmpty()")` — Spring이 Optional을 언랩해 #result=Weather라 present일 때 SpEL `isEmpty()` 오류→500(키 없던 경로에선 안 드러남). `unless="#result == null"`로 교정 + 캐시 프록시를 태우는 `WeatherCacheProxyTest`.
+  - **TS-012**: `GenericJacksonJsonRedisSerializer.builder().build()`(Jackson3판)이 무타이핑→@class 없이 저장→GET 시 LinkedHashMap 캐스트 실패(캐시 히트 500). `JacksonJsonRedisSerializer<>(Weather.class)`(타입 바인드)로 교체 + 직렬화 왕복 `RedisCacheConfigTest`.
+- 결정 & 이유(why): ① 캐시 백엔드 ElastiCache(사용자 결정) — 프리티어 대상 + graceful degradation(지워도 날씨는 직접호출로 동작)이라 "완벽 동작→캡처→무료화" 요구와 양립. ② 태스크데프 config는 `ignore_changes`라 라이브 rev 수동 배선(describe→env/secret 추가→register→update-service, proxy-secret rev13 패턴). ③ 인프라 tf는 코드 브랜치와 분리해 통합 커밋(ecs.tf 충돌 방지). ④ 두 캐시 버그는 "프록시/직렬화로 동작하는 기능은 프록시·직렬화를 실제로 태우는 테스트가 필요"의 사례 — 회귀 테스트로 고정.
+- 관련: PR #26·#27·#28·#29, TS-011·TS-012, `elasticache.tf`·`ssm.tf`·`ecs.tf`, 라이브 rev25. 배포 접근: AWS CLI(geuneul-admin)·Vercel CLI(akftjdwn-9388) 로컬 인증.
