@@ -4,20 +4,19 @@
 > 최종 갱신: 2026-07-10.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(App·API). **2026-07-10 대규모 세션: 로드맵 P2~P4(A~D) 11개 PR 머지·배포·실측 완료 — 사실상 로드맵 완주.** 라이브 태스크데프 **rev38+**(전 secret 보존: DB·proxy·KMA·kakao×2·google×2·jwt·**openrouter·datago**·S3 env). Flyway **V5~V8** 프로덕션 무사 적용. **ECS 오토스케일링 라이브**(min1/max3, CPU60% target-tracking).
+- **상태**: 라이브 정상(App·API). **2026-07-10 대규모 세션: 로드맵 P2~P4(A~D) 11개 PR 머지·배포·실측 완료 — 사실상 로드맵 완주.** 라이브 태스크데프 **rev41**(전 secret 보존: DB·proxy·KMA·kakao×2·google×2·jwt·**ai_summary·datago**·S3 env). Flyway **V5~V8** 프로덕션 무사 적용. **ECS 오토스케일링 라이브**(min1/max3, CPU60% target-tracking). **AI 한줄요약 라이브(#41, Mistral) — aiSummary 비-null 실측 완료.**
 - **이번 세션 라이브(11 PR, 전부 실측 검증)**: #30 날씨 comfort(ADR-0009) · #31 후기(review) · #32 공부공간 데이터확장(V5, ADR-0006) · #34 trust_score 실배선(V6) · #33 모더레이션 flags(V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989) · #36 AI 한줄요약(OpenRouter, ADR-0010) · #37 주기동기화(EventBridge→RunTask, ADR-0011) · #38 k6+EXPLAIN+V8 인덱스튜닝(ADR-0012) · #39 ECS 오토스케일링(ADR-0013) · #40 관측성 OTel/Micrometer(ADR-0014). 실측: `/weather`·`/flags` 401·`/photos/presign` S3 URL·`/places`·`/recommendations` 전부 정상.
 - **인프라 신규(이번 세션)**: terraform apply — S3 버킷+IAM(7) · SSM openrouter/datago + EventBridge 스케줄(DISABLED)+IAM(5) · 오토스케일링 target+policy(2). 태스크데프 수동 rev 여러 번(secret 누적). ⚠️교훈: 라이브 rev 조립 시 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 이미지로 조립돼 presign 404 → 재조립). EventBridge Universal Target input은 **PascalCase** 필수(TS-020).
-- **AI(곁다리) 상태**: 배선·graceful degradation 실증 완료(앱이 OpenRouter 호출→429시 null 폴백, 500 없음). 단 **OpenRouter 무료티어가 현재 플랫폼 전반 rate-limited(429)라 aiSummary는 null**. 모델은 config(`OPENROUTER_MODEL` env)라 코드변경 0으로 교체 가능. 데모 출력 원하면 **유효한 비-rate-limited 키/모델**(유료 or 여유 무료) 하나만 `/geuneul/openrouter_api_key` SSM에 넣고 rev 재등록. 키체인 `.local/ai.env`(15종, 일부 stale — Groq는 무효 확인).
+- **AI(곁다리) 상태 — 라이브(2026-07-10, PR #41)**: 프로바이더를 **OpenRouter → Mistral로 전환**하고 데모 출력을 살렸다. 클라이언트가 원래 OpenAI 호환 범용(`/chat/completions`, base-url·key·model 전부 설정값)이라 **코드 로직 변경 0**으로 config만 교체 — 겸사겸사 이름-실체 불일치를 없애려 `OpenRouterClient→ChatCompletionClient`·`ai.openrouter.*→ai.summary.*`·env `OPENROUTER_*→AI_SUMMARY_*`·SSM `openrouter_api_key→ai_summary_api_key`로 **프로바이더 중립 리네임**(ADR-0010 §4 갱신). 실측: `GET /places/185` → `aiSummary="시원하다는 제보가 최근에 있습니다."`(Mistral 생성, 비-null). 프로바이더 선정 경위: OpenRouter 429(계정단위)·Groq 키무효·Gemini 429·DeepInfra 잔액부족 → **Mistral·SambaNova만 생존**, Mistral이 침수 순화 품질 우위로 채택(`mistral-small-latest`, 무료티어). 프로바이더 교체는 `AI_SUMMARY_BASE_URL/MODEL` env + SSM 키만 바꾸면 끝(코드변경 0). 키체인 `.local/ai.env`(SambaNova가 백업).
 - **보안 수정(TS-022)**: `/actuator/prometheus`가 프로덕션에 **인증 없이 공개**돼 있던 것(정보노출) 발견 → `MANAGEMENT_EXPOSURE:health,info` 기본으로 닫음(#40 배포 반영). 로컬 관측성 스택 `docker-compose --profile observability`(Prometheus+Grafana+Tempo).
-- **미착수/후속**: EventBridge 스케줄은 DISABLED — 실트리거 검증 후 `ingest_schedule_enabled=true`. AI 유효키. ALB HTTPS. 쉼터 전국 데이터(safetydata)·화장실 실패 7,193건 재적재. 상권정보 STUDY_CAFE/CAFE(403 승인대기).
+- **미착수/후속**: EventBridge 스케줄은 DISABLED — 실트리거 검증 후 `ingest_schedule_enabled=true`. ALB HTTPS. 쉼터 전국 데이터(safetydata)·화장실 실패 7,193건 재적재. 상권정보 STUDY_CAFE/CAFE(403 승인대기). (~~AI 유효키~~ — #41 Mistral 전환으로 완료.)
 - **P3 날씨 라이브(PR #26 + 핫픽스 #28·#29)**: `GET /weather?lat=&lng=` — 기상청 초단기실황(getUltraSrtNcst) + 격자변환 + **ElastiCache Redis TTL 캐시(30분) 실동작**. 프로덕션 실측: 광화문 `지금 23°C, 비`, 부산 `31°C`, 캐시 히트 정상. serviceKey는 `.local/datago.env`(data.go.kr 계정 공통 키). **하드닝: 두 캐시 버그 배포 중 발견·수정 — TS-011(@Cacheable Optional 언랩 SpEL), TS-012(무타이핑 직렬화 캐시히트 500). 회귀 테스트 2건 추가.**
 - **P2 소셜 로그인 라이브·검증 완료(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. **브라우저 실사용 성공 — 구글·카카오 둘 다 프로필까지 표시**(홍성주/카카오·구글). 카카오는 콘솔 설정 3건으로 지연됐다(TS-013): Redirect URI를 로그아웃 칸에 잘못 등록·호출허용IP 127.0.0.1·Client Secret ON 배선. 키는 `.local/oauth.env`·SSM·Vercel env(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
 - **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 6종(kma/kakao_rest/kakao_secret/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
-- **콘솔 없이 바로 가능한 다음** (~~A~D 로드맵 전 항목 완료: 날씨2부·후기·trust·flags·공부공간·presign·AI·주기동기화·k6·오토스케일링·관측성~~):
-  1. **AI 데모 출력 살리기** — 유효 OpenRouter 키/모델 하나 `/geuneul/openrouter_api_key`에 넣고 rev 재등록(코드변경 0).
-  2. **EventBridge 스케줄 활성화** — 실트리거 1회 검증(Universal Target input) 후 `ingest_schedule_enabled=true` apply.
-  3. **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
-  4. **ALB HTTPS**(ACM+도메인+443) — 공유 링크 신뢰도.
+- **콘솔 없이 바로 가능한 다음** (~~A~D 로드맵 전 항목 완료: 날씨2부·후기·trust·flags·공부공간·presign·AI·주기동기화·k6·오토스케일링·관측성~~ / ~~AI 데모 출력(#41 Mistral)~~):
+  1. **EventBridge 스케줄 활성화** — 실트리거 1회 검증(Universal Target input) 후 `ingest_schedule_enabled=true` apply.
+  2. **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
+  3. **ALB HTTPS**(ACM+도메인+443) — 공유 링크 신뢰도.
 - **§⑤ 공부공간 데이터 확장([ADR-0006])**: data.go.kr 키 확보됨(`.local/datago.env`). 전국도서관표준데이터는 **CSV 다운로드**로 적재(오픈API는 경기도만) / 상권정보(카페·스터디카페)는 오픈API. `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·파서·실적재를 실데이터로 한 번에.
 - **배포 접근(확인됨)**: 로컬에 AWS CLI(`geuneul-admin`)·Vercel CLI(`akftjdwn-9388`) 모두 인증돼 있어 Claude가 직접 배포 가능. 태스크데프 config는 `ignore_changes`라 라이브 rev는 수동 등록(describe→env/secret 추가→register→update-service). deploy.yml은 이미지만 교체(describe 기반)라 config 보존.
 - **작업 규칙 리마인더**: 커밋 신원 `hoengj`/`seongjuice999@gmail.com`, 푸시 전 비밀 스캔, 비밀은 `.local`·`.env`만, 결정은 WORKLOG에 why/대안 기록(CLAUDE.md §A~D).
@@ -78,7 +77,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터 + 실시간 제보)
 
 - **백엔드:** Spring Boot 4.0.6 / Java 21. 반경(`ST_DWithin` geography)·최근접(kNN `<->`)·bounds 공간검색 API 라이브. `backend/`.
-- **인프라:** AWS ECS Fargate(+**오토스케일링** min1/max3 CPU60%) + RDS PostgreSQL(PostGIS) + **ElastiCache Redis** + **S3**(사진) + **EventBridge Scheduler**(주기동기화, DISABLED) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev39**(REDIS_HOST·S3_BUCKET_NAME·AWS_REGION env + SSM secret **10종**=DB·PROXY·KMA·KAKAO_REST·KAKAO_SECRET·GOOGLE_ID·GOOGLE_SECRET·JWT·**OPENROUTER·DATA_GO_KR**). 라이브 태스크데프는 `ignore_changes`라 secret/env 추가 시 **수동 rev 등록**(describe→추가→register→update-service). `infra/`.
+- **인프라:** AWS ECS Fargate(+**오토스케일링** min1/max3 CPU60%) + RDS PostgreSQL(PostGIS) + **ElastiCache Redis** + **S3**(사진) + **EventBridge Scheduler**(주기동기화, DISABLED) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev41**(REDIS_HOST·S3_BUCKET_NAME·AWS_REGION·**AI_SUMMARY_BASE_URL·AI_SUMMARY_MODEL** env + SSM secret **10종**=DB·PROXY·KMA·KAKAO_REST·KAKAO_SECRET·GOOGLE_ID·GOOGLE_SECRET·JWT·**AI_SUMMARY·DATA_GO_KR**). 라이브 태스크데프는 `ignore_changes`라 secret/env 추가 시 **수동 rev 등록**(describe→추가→register→update-service). `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
 - **P2 제보(라이브, PR #15·#16·#17):** 익명 휘발성 제보 `POST /reports`(타입별 TTL로 `expires_at`) + `GET /places/{id}/reports`. 프론트 제보하기 실전송(장소=nearest+피커)·상세 "최근 제보" 실시간. 인메모리 레이트리밋(분3·시간10) — XFF 신뢰경계(`ProxyClientResolver`)·OOM 하드닝(TS-008).
 - **P3 survival_score(라이브, PR #23·ADR-0007):** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk) → 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). `/places`(반경·bounds)·`/places/{id}` 응답에 `survival` 필드. 프론트 마커 3색 링·리스트/상세 상태 배지. open_now는 운영시간 결측이라 재정규화 제외(데이터 붙으면 복원), 후기는 §5대로 분리. **로컬 검증: postgis에 V1~V4 직접 적용 + 시나리오별 뷰/쿼리 실행으로 시맨틱 확증(TS-009), 엔드투엔드 IT는 CI.**
@@ -104,13 +103,13 @@ docs/       adr/0001~0014 · design-brief.md
 - **인프라 변경:** `cd infra/terraform && terraform plan/apply` (tfvars·tfstate는 gitignore). 전체 삭제 = `terraform destroy`.
 - **비밀 위치:** 카카오/AWS/서버 키는 전부 `.local/`·`~/.aws`·env로만. 레포 커밋 금지(규칙 D). 커밋 전 유출 스캔 필수.
 - **비용:** ALB ~$16/월 + Fargate(0.25vCPU/1GB) ~$12/월. RDS·ECS·SSM·ECR 사실상 무료. 오토스케일링 스케일아웃 시 최대 ~$36/월(부하 종료 600초 후 원복). $200 크레딧 + 예산 알림(실지출 $0.01↑ 메일).
-- **AI 요약 데모 살리기(다음 세션 #1, 복붙):** 유효한 non-rate-limited 키만 있으면 코드변경 0.
+- **AI 요약 프로바이더 교체(라이브=Mistral rev41, 복붙):** 클라이언트가 OpenAI 호환 범용이라 프로바이더 교체는 코드변경 0 — SSM 키 + `AI_SUMMARY_BASE_URL/MODEL` env만 바꾼다.
   ```bash
-  # OPENROUTER_API_KEY secret은 rev37+ 태스크데프에 이미 배선됨 → SSM 값만 갱신 후 강제 재배포
-  aws ssm put-parameter --name /geuneul/openrouter_api_key --type SecureString --overwrite --value '<유효 OpenRouter 키>'
+  # 키만 회전: AI_SUMMARY_API_KEY secret은 rev41+에 배선됨 → SSM 값만 갱신 후 강제 재배포
+  aws ssm put-parameter --name /geuneul/ai_summary_api_key --type SecureString --overwrite --value '<유효 키>'
   aws ecs update-service --cluster geuneul --service geuneul --force-new-deployment
-  # (모델도 바꾸려면) 태스크데프 rev에 OPENROUTER_MODEL env 추가/변경(describe→register→update-service)
-  # 검증: 제보 있는 place 상세 GET → aiSummary 비-null. 앱 로그: /ecs/geuneul 로그그룹 "OpenRouterClient"
+  # 프로바이더/모델까지 바꾸려면 태스크데프 rev의 AI_SUMMARY_BASE_URL·AI_SUMMARY_MODEL env 변경(describe→register→update-service)
+  # 검증: 제보 있는 place 상세 GET(예: /places/185) → aiSummary 비-null. 앱 로그(/ecs/geuneul)는 실패 시에만 "[ai]" warn(성공은 무로그)
   ```
 - **주기동기화 스케줄 켜기:** `cd infra/terraform && terraform apply -var ingest_schedule_enabled=true`(실트리거 1회 검증 후). 스케줄명 `geuneul-public-data-sync`, Universal Target `aws-sdk:ecs:runTask`(input PascalCase, TS-020).
 
