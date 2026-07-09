@@ -241,3 +241,29 @@
 - **해결:** 키 값을 쓰기 전에 `key.strip().replace("\r","").replace("\n","")`로 **개행·CR·공백을 전부 제거**한 뒤 라인을 한 줄로 재작성하고, 남아 있던 잔여 `"` 라인(정확히 `"`인 줄)을 삭제했다. 이후 `terraform validate` → `plan`이 정상(`1 to add, 1 to destroy`)으로 통과했다. 시크릿 값은 gitignore된 `terraform.tfvars`에만 있고 git에는 들어가지 않는다(규칙 D) — 다만 깨진 `terraform` 에러 메시지가 값을 콘솔에 노출했으므로, 이런 스크립팅 실수 자체가 **작업 로그·터미널로의 우발적 시크릿 노출 경로**임을 유의(대화는 허용, 커밋·푸시는 금지 경계는 지켜짐).
 - **핵심 학습 포인트:** ① **셸 `. env` 소싱 → 스크립트로 파일에 써넣는 경로에서는 값의 trailing newline을 항상 제거**하라(`.strip()`/`tr -d '\n\r'`). 특히 HCL·JSON·YAML처럼 개행이 문법적으로 유의미한 포맷에 값을 끼워 넣을 때 치명적이다. ② **"한 줄만 교체"하는 편집은 그 줄이 원래 여러 줄로 오염돼 있으면 잔재를 남긴다** — 재작성 전에 대상이 정말 한 줄인지 확인하거나, 값 주입은 "라인 지우고 새로 삽입"이 아니라 "구조를 파싱해서 키만 세팅"하는 방식이 안전하다. ③ 시크릿을 파일에 주입할 때는 성공/실패와 무관하게 **값을 stdout에 찍지 않는 경로**(길이·마스킹만 출력)로 설계하면, 파싱 에러가 값을 토해내는 사고도 줄일 수 있다.
 - **관련:** `infra/terraform/terraform.tfvars`(gitignore), PR #41 후속 배포, WORKLOG 2026-07-10 AI 라이브 배포, CLAUDE.md 규칙 D(비밀 경계).
+
+## TS-025 — 네이티브 프로젝션 timestamptz는 Instant로 받아야 한다(TS-016 재발) + `gh run watch` EXIT를 CI 판정으로 오신뢰
+
+**증상**: ⑥ 후기 커뮤니티의 `GET /reviews/{id}/comments`가 실 Postgres(CI)에서만 500. 스택:
+`java.lang.UnsupportedOperationException: Cannot project java.time.Instant to java.time.OffsetDateTime;
+Target type is not an interface and no matching Converter found`. 로컬 컴파일·단위테스트는 green이라 안 잡힘(IT는 colima로 skip, TS-009).
+
+**원인 1 (재발한 함정 = TS-016)**: `ReviewCommentWithAuthorView.getCreatedAt()`를 `OffsetDateTime`으로 선언했다.
+네이티브 쿼리 결과의 PostgreSQL `TIMESTAMPTZ`는 JDBC가 `Instant`로 반환하는데, Spring Data 인터페이스
+프로젝션 팩토리는 Instant→OffsetDateTime을 자동 변환하지 못한다. `ReviewWithAuthorView`(TS-016)가 이미
+같은 이유로 `Instant` + `ReviewResponse.of`에서 `.atOffset(ZoneOffset.UTC)` 변환을 쓰고 있었는데, 새 프로젝션을
+만들며 그 교훈을 놓쳤다. **해결**: getter를 `Instant`로 바꾸고 `ReviewCommentResponse.of`에서 UTC 부착.
+
+**원인 2 (프로세스 실패, 더 중요)**: 이 결함이 ⑥ PR CI에서 실제로 **실패**했는데도 머지됐다. `gh run watch
+<run_id> --exit-status`가 EXIT=0을 반환해 통과로 오판한 것 — `gh run list --limit 1`이 집은 run_id가 실패한
+백엔드 "CI" run이 아니라 통과한 다른 run(gitleaks/Next.js)이었을 수 있다. 그 EXIT를 유일 근거로 삼아 `gh pr
+merge`를 실행했고, 같은 방식으로 ⑦·⑧까지 red 위에 쌓였다(다행히 실패 테스트는 CommunityFlowIT 1개뿐이라
+325개 중 나머지는 전부 실측 green이었다).
+
+**핵심 학습 포인트**:
+1. **머지 전 반드시 `gh pr checks <N>`로 모든 체크가 pass인지 눈으로 확인**한다. `gh run watch`의 EXIT
+   코드 하나만 믿지 않는다 — `--limit 1`이 어느 워크플로우 run을 집었는지 불확실하다(한 push가 CI·Next.js·
+   gitleaks 여러 run을 만든다). 백엔드 게이트는 이름이 "Backend (Gradle, JDK 21)"인 체크의 conclusion을 본다.
+2. **새 네이티브 쿼리 인터페이스 프로젝션에 시각 컬럼이 있으면 무조건 `Instant`**(+ DTO에서 UTC 부착).
+   기존 `ReviewWithAuthorView` 패턴을 복사한다. 로컬은 못 잡으니(IT skip) CI가 유일 게이트 — 그래서 원인 1이
+   원인 2와 겹치면 "로컬 green → 머지 → main red"가 조용히 성립한다.
