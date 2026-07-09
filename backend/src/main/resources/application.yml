@@ -85,7 +85,12 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        # ADR-0014: prometheus는 옵트인(기본 health,info만) — ECS는 MANAGEMENT_EXPOSURE를 안 주입하므로
+        # 프로덕션은 항상 이 기본값(prometheus 미노출). 로컬 observability 스택(docker-compose --profile
+        # observability)에서 백엔드를 그 프로필로 띄울 때만 health,info,prometheus로 켠다.
+        # (2026-07 라이브 재확인: 이 옵트인 도입 전엔 health,info,prometheus가 하드코딩돼 있어
+        # /actuator/prometheus가 ALB를 통해 인증 없이 공개돼 있었다 — 이번 변경이 그 노출을 닫는다.)
+        include: ${MANAGEMENT_EXPOSURE:health,info}
   endpoint:
     health:
       probes:
@@ -93,3 +98,30 @@ management:
   health:
     redis:
       enabled: false     # Redis 미프로비저닝 단계 — ALB 헬스체크(/actuator/health) 방해 방지. P3 캐시 도입 시 재활성화.
+  metrics:
+    tags:
+      application: ${spring.application.name}   # Prometheus job 여러 개를 붙일 로컬 Grafana에서 app별 필터링용
+    distribution:
+      percentiles-histogram:
+        # 히스토그램 버킷을 켜야 Grafana에서 histogram_quantile(p95/p99)을 계산할 수 있다(기본은 count/sum/max뿐
+        # — 평균만 가능). HTTP 전체 + 커스텀 반경/kNN 타이머 3개만 켠다(전 메트릭 히스토그램은 카디널리티·저장
+        # 비용이 커 과설계, CLAUDE.md §0-2). k6(ADR-0012)가 이미 p95/p99로 보고하므로 같은 기준으로 맞춘다.
+        http.server.requests: true
+        geuneul.place.search.radius: true
+        geuneul.place.search.nearest: true
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLING_PROBABILITY:1.0}   # 트래픽이 적어(포트폴리오 규모) 전량 샘플링 기본값
+    export:
+      otlp:
+        enabled: ${OTEL_TRACING_EXPORT_ENABLED:false}        # 미설정이면 OTLP 트레이스 익스포터 자체를 비활성(주기 전송 시도 없음)
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:}           # 예: http://localhost:4318/v1/traces (로컬 Tempo)
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}         # 메트릭은 prometheus 스크레이프가 1순위 — otlp push는 옵트인
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:}           # 관리형 백엔드(Grafana Cloud 등) 연결 시에만 채운다(ADR-0014 §5, 프로덕션 미적용)

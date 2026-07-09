@@ -8,13 +8,13 @@
 - **이번 세션 라이브(6 PR, 전부 실측 검증)**: #30 날씨 comfort 복원(survival_score 기온 additive, ADR-0009) · #31 후기(review) 풀스택(영구 평판, 로그인) · #32 공부공간 데이터 확장(CAFE/STUDY_CAFE·is_commercial·deleted_at soft-delete, V5, ADR-0006) · #34 trust_score 실배선(제보 user_id 부착+가중, V6) · #33 모더레이션 flags(신고+ADMIN 검수큐, V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989 + 태스크롤 IAM). 실측: `/weather` 24°C·`/flags` 401·`/photos/presign` S3 URL·`/places` 정상.
 - **인프라 신규(이번 세션)**: terraform S3 버킷+IAM 7리소스 apply 완료. 태스크데프 rev34 수동 등록(rev32 사진 이미지 + S3_BUCKET_NAME·AWS_REGION env). ⚠️교훈: 라이브 rev를 조립할 땐 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 flags 이미지로 조립돼 presign 404 → rev32 재조립으로 해결).
 - **AI 키 확보**: `.local/ai.env`(gitignore)에 멀티프로바이더 폴백 키체인 15종(로컬 mp/myInfo + prod k3s ssuai-backend-secrets: OpenRouter·Groq·Gemini·Cerebras 등). Anthropic 키만 부재 → 곁다리 AI는 OpenRouter 프라이머리.
-- **Wave 3 진행 중(2026-07-10 세션)**: C2 AI 한줄요약(OpenRouter, feat/ai-summary-p3) · C3 주기동기화(EventBridge→ECS RunTask, feat/scheduled-sync-p3) · D1 k6 부하테스트+EXPLAIN(feat/k6-load-explain-p4). **미착수**: D2 ECS 오토스케일링 · D3 관측성(OTel/Grafana). C2/C3 머지 후 SSM 키 배선(OpenRouter·serviceKey) apply 필요.
+- **Wave 3 진행 중(2026-07-10 세션)**: C2 AI 한줄요약(OpenRouter, feat/ai-summary-p3) · C3 주기동기화(EventBridge→ECS RunTask, feat/scheduled-sync-p3) · D1 k6 부하테스트+EXPLAIN(feat/k6-load-explain-p4). **D3 관측성(OTel/Grafana, ADR-0014) PR 대기 — feat/observability-otel-p4, 머지 전.** 착수 전 실측으로 `/actuator/prometheus`가 이미 프로덕션에 인증 없이 공개돼 있던 걸 발견해 옵트인 기본값으로 전환(TS-022) — 머지되면 다음 배포부터 자동으로 닫힘(인프라 변경 불필요). 로컬 Prometheus+Grafana+Tempo(`docker-compose --profile observability`)도 실기동 검증 완료. **미착수**: D2 ECS 오토스케일링. C2/C3 머지 후 SSM 키 배선(OpenRouter·serviceKey) apply 필요.
 - **P3 날씨 라이브(PR #26 + 핫픽스 #28·#29)**: `GET /weather?lat=&lng=` — 기상청 초단기실황(getUltraSrtNcst) + 격자변환 + **ElastiCache Redis TTL 캐시(30분) 실동작**. 프로덕션 실측: 광화문 `지금 23°C, 비`, 부산 `31°C`, 캐시 히트 정상. serviceKey는 `.local/datago.env`(data.go.kr 계정 공통 키). **하드닝: 두 캐시 버그 배포 중 발견·수정 — TS-011(@Cacheable Optional 언랩 SpEL), TS-012(무타이핑 직렬화 캐시히트 500). 회귀 테스트 2건 추가.**
 - **P2 소셜 로그인 라이브·검증 완료(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. **브라우저 실사용 성공 — 구글·카카오 둘 다 프로필까지 표시**(홍성주/카카오·구글). 카카오는 콘솔 설정 3건으로 지연됐다(TS-013): Redirect URI를 로그아웃 칸에 잘못 등록·호출허용IP 127.0.0.1·Client Secret ON 배선. 키는 `.local/oauth.env`·SSM·Vercel env(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
 - **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 6종(kma/kakao_rest/kakao_secret/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
 - **콘솔 없이 바로 가능한 다음** (~~날씨 2부 #30·후기 #31·trust #34 완료~~):
   1. **D2 ECS 오토스케일링** — Service Auto Scaling(=HPA 상당), D1 k6 부하와 함께(P4). terraform.
-  2. **D3 관측성** — OTel/Grafana(P4).
+  2. ~~**D3 관측성** — OTel/Grafana(P4).~~ **PR 대기(feat/observability-otel-p4, ADR-0014)** — 머지되면 CLAUDE.md 로드맵 P4의 이 항목 완료.
   3. **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
   4. **ALB HTTPS**(ACM+도메인+443) — 공유 링크 신뢰도.
 - **§⑤ 공부공간 데이터 확장([ADR-0006])**: data.go.kr 키 확보됨(`.local/datago.env`). 전국도서관표준데이터는 **CSV 다운로드**로 적재(오픈API는 경기도만) / 상권정보(카페·스터디카페)는 오픈API. `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·파서·실적재를 실데이터로 한 번에.
@@ -125,7 +125,8 @@ docs/       adr/0001~0008 · design-brief.md
 ### P4 · 심화 (간판 보강)
 - [x] ~~**k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN 성능 실증)~~ — **완료(ADR-0010, 브랜치 `feat/k6-load-explain-p4`).** 로컬 docker-compose PostGIS에 합성 30만 places + 21만 reports 시드 → EXPLAIN으로 반경(`ST_DWithin` geography GiST)·kNN(`<->` GiST)·bounds(geometry GiST) 인덱스 사용 확증 + k6 4엔드포인트 부하 실측(green, kNN p95 213ms·반경 p95 1.4s·실패율 0%). **Flyway V8** `idx_reports_expires`로 `place_report_signals` 뷰의 만료 제보 누적 전체스캔 튜닝(뷰빌드 256→133ms). `perf/*`(k6·seed·explain·RESULTS). ⚠️ 로컬 PostGIS가 amd64 emulated라 절대 지연은 부풀려짐(실행계획·before/after 비율·처리량 상한만 유효, 프로덕션 RDS 미측정).
 - [ ] **ECS Service Auto Scaling**(=HPA 상당) 부하와 함께.
-- [ ] 실시간 이벤트(제보 급증 알림 — Redis Streams/LISTEN·NOTIFY), 캐시 전략, 관측성(OTel/Grafana), ADR 계속.
+- [x] ~~관측성(OTel/Grafana)~~ — **PR 대기(ADR-0014, 브랜치 `feat/observability-otel-p4`).** Micrometer/Prometheus(pull, `/actuator/prometheus` 옵트인 — 착수 전 실측으로 이미 인증 없이 공개돼 있던 걸 발견해 기본 미노출로 전환, TS-022) + Boot 4.0 공식 OTel 스타터(push 트레이싱, OTLP) + 커스텀 latency Timer 2개(반경 ST_DWithin·kNN `<->`) + 로컬 Prometheus/Grafana/Tempo(docker-compose `observability` 프로필, 실기동 검증 완료). 프로덕션 ECS/SSM은 무변경.
+- [ ] 실시간 이벤트(제보 급증 알림 — Redis Streams/LISTEN·NOTIFY), 캐시 전략, ADR 계속.
 
 ### 인프라/프론트 백로그
 - [ ] **ALB HTTPS**(ACM 인증서 + 도메인 + 443 리스너) — 프론트가 서버 프록시를 안 쓰고 직접 붙거나, 공유 링크 신뢰도 위해.
