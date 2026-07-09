@@ -1,5 +1,6 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
+import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
 import type { User } from "@/types/user";
 import { boundsParam } from "./geo";
 
@@ -105,4 +106,22 @@ export async function createReport(payload: ReportCreatePayload): Promise<Report
   });
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<Report>;
+}
+
+// 장소의 영구 후기 목록(공개, 최신순 페이지네이션). survival_score(휘발성 제보)와 분리된 평판.
+export function fetchPlaceReviews(placeId: number, page = 0): Promise<ReviewListResponse> {
+  const qs = new URLSearchParams({ page: String(page), size: "20" });
+  return getJson<ReviewListResponse>(`/api/places/${placeId}/reviews?${qs}`);
+}
+
+// 후기 작성/수정(로그인 필요, 장소당 1건 upsert). 401 = 미로그인 — 호출부가 안내 메시지로 처리.
+export async function createReview(payload: ReviewCreatePayload): Promise<Review> {
+  const res = await fetch(`/api/reviews`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<Review>;
 }
