@@ -50,17 +50,36 @@ class RecommendationScenarioTest {
     }
 
     @Test
-    @DisplayName("각 시나리오 카테고리 CSV는 enum name 콤마 목록 — 화장실은 TOILET 단일")
-    void categoriesCsv() {
-        assertThat(RecommendationScenario.RESTROOM.categoriesCsv()).isEqualTo("TOILET");
-        assertThat(RecommendationScenario.RAIN.categoriesCsv().split(",")).contains("LIBRARY", "UNDERGROUND");
+    @DisplayName("집중(focus): 조용+시원 제보 > 붐빔 제보 (comfort↑ + risk 페널티↑)")
+    void focusFavorsQuietComfort() {
+        int quiet = match(RecommendationScenario.FOCUS, 300.0, 2, 1.0, 0.8, 0.0);
+        int crowded = match(RecommendationScenario.FOCUS, 300.0, 1, 1.0, 0.0, 0.42);
+        assertThat(quiet).isGreaterThan(crowded);
     }
 
     @Test
-    @DisplayName("파라미터 매핑은 대소문자 무관 — rest30/RESTROOM 모두 인식")
+    @DisplayName("오래 버틸 곳(longstay): 멀어도 쾌적한 곳이 가깝지만 밋밋한 곳을 이긴다(distance 가중 최하)")
+    void longstayWeighsComfortOverDistance() {
+        int farComfortable = match(RecommendationScenario.LONGSTAY, 1_500.0, 2, 1.0, 0.9, 0.0);
+        int nearPlain = match(RecommendationScenario.LONGSTAY, 100.0, 1, 1.0, 0.1, 0.0);
+        assertThat(farComfortable).isGreaterThan(nearPlain);
+    }
+
+    @Test
+    @DisplayName("각 시나리오 카테고리 CSV는 enum name 콤마 목록 — 화장실은 TOILET 단일, focus는 STUDY_CAFE 포함")
+    void categoriesCsv() {
+        assertThat(RecommendationScenario.RESTROOM.categoriesCsv()).isEqualTo("TOILET");
+        assertThat(RecommendationScenario.RAIN.categoriesCsv().split(",")).contains("LIBRARY", "UNDERGROUND");
+        assertThat(RecommendationScenario.FOCUS.categoriesCsv().split(",")).contains("STUDY_CAFE", "CAFE", "LIBRARY");
+    }
+
+    @Test
+    @DisplayName("파라미터 매핑은 대소문자 무관 — rest30/RESTROOM/focus/longstay 모두 인식")
     void fromParamCaseInsensitive() {
         assertThat(RecommendationScenario.fromParam("rest30")).isEqualTo(RecommendationScenario.REST30);
         assertThat(RecommendationScenario.fromParam("RESTROOM")).isEqualTo(RecommendationScenario.RESTROOM);
+        assertThat(RecommendationScenario.fromParam("focus")).isEqualTo(RecommendationScenario.FOCUS);
+        assertThat(RecommendationScenario.fromParam("LongStay")).isEqualTo(RecommendationScenario.LONGSTAY);
     }
 
     @Test

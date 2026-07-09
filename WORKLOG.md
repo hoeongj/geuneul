@@ -639,3 +639,11 @@
 - 산출물: `place/PlaceFeature`(읽기 엔티티)·`PlaceFeatureRepository`·`FeatureGrade`(등급 순수함수)·`dto/PlaceFeatureResponse` · `dto/PlaceResponse`(features 필드 + 상세 팩토리)·`PlaceSearchService`(features 조회·매핑) · 테스트 2 + PlaceSearchServiceTest 회귀.
 - 다음: 프론트(⑧)에서 상세 시설 칩(등급별 아이콘/색, polarity 반영). comfort_score 수치 통합은 SQL 레벨 후속 패스.
 - 관련: 브랜치 `feat/place-feature-grading-p4`, ADR-0005 §④·ADR-0006(features 백필 소스)·ADR-0009(comfort 조립 — 후속 통합 지점), CLAUDE.md §9(간판 vs 살 — 시설은 살, 마커 점수 불변)·§0.2(과설계 금지).
+
+### 2026-07-10 — 추천 시나리오 focus/longstay 추가 (브랜치 `feat/recommend-focus-longstay-p4`, ADR-0008/ADR-0005 §④)
+- 한 일: `/recommendations`에 시나리오 2개 추가 — **focus**(집중해서 공부·작업, `Weights(0.20,0.35,0.15,0.30)`, 후보 STUDY_CAFE/CAFE/LIBRARY/CIVIC)·**longstay**(오래 버틸 곳, `Weights(0.15,0.40,0.15,0.30)`, 후보 COOLING_SHELTER/LIBRARY/CIVIC/UNDERGROUND/CAFE/STUDY_CAFE). enum 값 + 가중치/카테고리만 추가 — 조립식·2단 검색·응답은 기존 `SurvivalScore.Weights` 오버로드를 100% 재사용(코드 로직 무변경).
+- 왜(why): ADR-0005 §④의 "[살] 추천 시나리오 focus/longstay 추가(파라미터만)". 가중치 근거 — **focus**는 "조용히 오래 앉을 곳"이라 comfort↑(0.35) + risk 페널티 강화(0.30, 붐빔/소음/벌레 적극 강등), 거리는 후순위(0.20, 좋은 자리 위해 이동 감수). **longstay**는 폭염 장시간 체류라 comfort 압도(0.40) + risk 중시(0.30), 거리 최하(0.15, 자리 잡으면 오래 있음). 두 시나리오 후보에 CAFE/STUDY_CAFE를 넣은 이유: 카테고리 집합은 "의미"를 표현하는 것이라 데이터 유무와 독립 — 상권정보 승인 후 적재되면 자동 커버되고, 현재는 LIBRARY/CIVIC로 동작.
+- 검토한 대안: focus/longstay를 같은 가중치로 둘까 했으나, longstay가 거리에 더 관대(0.15 vs 0.20)하고 comfort를 더 크게(0.40 vs 0.35) 봐서 "집중(자리 질)"과 "장기체류(눌러앉기)"의 뉘앙스를 가중치로 구분 — 단위테스트로 "longstay는 멀어도 쾌적한 곳이 가까운 밋밋한 곳을 이긴다"를 못 박음.
+- 검증: `RecommendationScenarioTest`(8, +focus 혼잡 페널티·longstay comfort>distance·CSV STUDY_CAFE 포함·fromParam focus/longstay) green. compile green. 기존 시나리오 테스트 회귀 없음.
+- 산출물: `RecommendationScenario`(FOCUS/LONGSTAY enum + import)·`RecommendationController`(설명/파라미터 갱신) · `RecommendationScenarioTest`(+2 케이스).
+- 관련: 브랜치 `feat/recommend-focus-longstay-p4`, ADR-0008(시나리오 가중 랭킹)·ADR-0005 §④, CLAUDE.md §9.
