@@ -1,8 +1,25 @@
 # ADR-0006. 공부 가능 공간(공공 + 카페) 데이터 커버리지 확장 — "여름 실내 오래 버티기" survival 레이어
 
-- 상태: **제안(Proposed)** — 카테고리 골격(CAFE/STUDY_CAFE 신설)도 아직 코드 미반영(PlaceCategory 8종 유지), 대량 적재는 공공데이터 serviceKey/CSV 확보 후 (2026-07-04)
-- 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), ADR-0002(멱등)·ADR-0003(지오코딩), CLAUDE.md §3(커버리지 원칙)·§9(간판 vs 살)
-- 근거 조사: 다중 에이전트 리서치(공공 공부공간 데이터셋·노들서가류·카페 데이터·모델링) — wf_e524daf8
+- 상태: **Accepted(구현 반영)** — 카테고리(CAFE/STUDY_CAFE)·스키마(is_commercial/deleted_at)·파서·인제스천 코드 완료(2026-07-09). **프로덕션 실적재는 미실행**(사용자 통제, `infra/scripts/prod-ingest.sh` 리뷰 후 실행). 상권정보(STUDY_CAFE/CAFE) 오픈API는 활용신청 미승인(403)이라 계약 미검증 상태로 코드만 준비됨 — 아래 "구현 정정" 참고.
+- 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), `domain.ingest.openapi`(도서관)·`domain.ingest.storeapi`(상권정보) 신설, Flyway V5, ADR-0002(멱등)·ADR-0003(지오코딩), CLAUDE.md §3(커버리지 원칙)·§9(간판 vs 살)
+- 근거 조사: 다중 에이전트 리서치(공공 공부공간 데이터셋·노들서가류·카페 데이터·모델링) — wf_e524daf8. 구현 단계에서 도서관 오픈API 실호출로 원안의 핵심 가정 하나를 정정함(아래).
+
+## 구현 정정(2026-07-09) — 원안과 다르게 간 지점
+
+원안(위 "결정" 섹션, 착수 시점 문서)은 소스별 접근 방식을 추정으로 정했으나, 실제 구현 중 **실 API 호출로 검증**한 결과 한 가지가 정정됐다(CLAUDE.md §B 의사결정 프로토콜 — 검증 후 재확정):
+
+- **전국도서관표준데이터 = CSV 다운로드가 아니라 JSON 오픈API로 적재.** 원안은 "오픈API는 경기도만 제공, CSV 다운로드가 전국"이라 추정했다(HANDOFF 메모 근거). 그러나 `https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api` 를 확보된 `.local/datago.env`의 `DATA_GO_KR_SERVICE_KEY`로 실호출한 결과 **지역 파라미터 없이 pageNo/numOfRows 페이지네이션만으로 전국 3,555건**을 반환했다(광주·서울 등 여러 시도 확인, `totalCount=3555`). CSV 다운로드보다 훨씬 단순하고(수동 파일 확보 불필요), 레코드마다 열람좌석수(`seatCo`)를 직접 제공해 ADR 원안의 "열람좌석수>0만 백필" 조건부 규칙을 CSV 경로의 균일 근사 없이 **그대로 정밀 구현**할 수 있었다(`domain.ingest.openapi.PublicLibraryIngestionService`).
+- **상권정보(STUDY_CAFE/CAFE)는 계약 미검증.** 같은 계정 키로 상가업소정보 오픈API(`B553077/api/open/sdsc2`)를 호출했으나 **403(활용신청 미승인)** — 도서관 API와 달리 별도 승인 절차가 있다. 코드(`domain.ingest.storeapi`)는 공식 매뉴얼·서드파티 가이드 리서치를 근거로 준비했지만, 실 필드명·enum 값(divId 등)을 확증하지 못해 **승인 후 재검증이 필요한 상태로 남겨뒀다.** 그래서 행정동코드 열거가 필요한 `storeListInDong` 대신, 우리 PostGIS 반경검색과 동일한 정신모델인 **반경 검색(`storeListInRadius`)**을 택했다 — 행정동코드 목록(또 다른 데이터셋)을 몰라도 격자 좌표 순회로 전국을 커버할 수 있어 승인 후 즉시 쓸 수 있는 형태.
+
+## 구현 결과 요약
+
+- **스키마(V5)**: `places.is_commercial`(카테고리 파생값, `PlaceCategory.commercial()`) · `places.deleted_at`(soft-delete). 5개 공간쿼리(`PlaceRepository`)에 `deleted_at IS NULL` 필터 추가.
+- **카테고리**: `PlaceCategory`에 `CAFE`·`STUDY_CAFE` 추가 + `commercial()` 판별 메서드.
+- **소스**:
+  - LIBRARY → `domain.ingest.openapi.PublicLibraryIngestionService`(JSON 오픈API, CLI `--ingest.source=library`, 파일 불필요). seatCo>0 조건부 study_ok/quiet 백필.
+  - STUDY_CAFE/CAFE → `domain.ingest.storeapi.StoreIngestionService`(JSON 오픈API, CLI `--ingest.source=study_cafe|cafe --ingest.lat= --ingest.lng= --ingest.radius=`). ⚠️계약 미검증. `StoreCategoryMapper`가 업종소분류명 텍스트로 분류(코드 매핑표 15067631 실측 전까지 임시).
+- **멱등·soft-delete**: `PlaceBulkUpsertRepository.deactivateStale()`(opt-in, 기본 false — 부분 스냅샷 재실행 사고 방지) + `backfillFeatures()`(ON CONFLICT DO NOTHING, UGC 값 보존). CSV 파이프라인(`IngestionService`)·도서관 오픈API 둘 다 재사용. 상권정보는 반경 단위 부분 스냅샷이라 soft-delete 의도적 미지원(전국 커버리지 완성 후 P3 무인화에서 다룸).
+- **테스트**: 파서/클라이언트/서비스 단위 25건(신규) + 실 PostGIS IT 4건(`StudySpaceCoverageIT`, CI에서 검증 — 로컬 colima 이슈로 skip, TS-009 선례). JaCoCo 로컬 LINE 65.7%(신규 순수 단위테스트 다수) → floor 0.35→0.60 상향(측정치 바로 아래, 회귀만 차단).
 
 ## 문제(Context)
 
@@ -56,16 +73,16 @@
 - 착수 전 소규모 결정(enum·필터·명소 시드·soft-delete)은 WORKLOG에 why/대안 기록(CLAUDE.md §C).
 - **미확정(실제 파일 필요)**: 각 CSV의 정확한 컬럼 헤더·charset, 상권정보 업종 소분류 코드값(2023 개편 — 하드코딩 금지, 업종코드 매핑표 15067631로 실측 확정).
 
-## 착수 순서(Recommended Order)
+## 착수 순서(Recommended Order) — 진행 상황(2026-07-09)
 
-0. **골격**(데이터 무관): `PlaceCategory` += CAFE/STUDY_CAFE + 프론트 categories 동기. *(아직 미착수 — serviceKey 확보 시 아래 소스 적재와 함께)*
-1. 업종코드 매핑표(15067631)로 커피점·독서실/스터디카페 소분류 코드 실측 확정.
-2. 스키마: `places` += `is_commercial`·`deleted_at` Flyway 마이그레이션. `SourceSpec` += filterColumn/acceptedValues/defaultFeatures. `IngestionService` += set-based feature 백필 + 스냅샷 diff soft-delete.
-3. 전국도서관표준데이터(LIBRARY) 적재 — 가장 쉬움, feature 백필 최초 검증.
-4. 상권정보 STUDY_CAFE(1만) → CAFE(9만) 순 적재.
-5. 공공시설개방(CIVIC) 화이트리스트 필터 적재.
-6. 명소 시드(노들서가 등) 개별 등록 + 지오코딩.
-7. P3 무인화(serviceKey 오픈API 주기 동기화).
+0. **골격**: `PlaceCategory` += CAFE/STUDY_CAFE. — ✅ **완료**(프론트 categories 동기는 미착수, 백엔드만 이번 범위).
+1. 업종코드 매핑표(15067631)로 커피점·독서실/스터디카페 소분류 코드 실측 확정. — ❌ **미착수**(상권정보 API 승인 대기 중이라 코드값 대신 업종소분류명 텍스트 매칭으로 임시 구현, `StoreCategoryMapper`).
+2. 스키마: `places` += `is_commercial`·`deleted_at`(V5). `IngestionService`/`PlaceBulkUpsertRepository` += set-based feature 백필 + 스냅샷 diff soft-delete(opt-in). — ✅ **완료**.
+3. 전국도서관표준데이터(LIBRARY) 적재 코드 — ✅ **완료**(CSV가 아니라 JSON 오픈API로 경로 정정, 위 "구현 정정" 참고). **프로덕션 실적재는 미실행**(사용자 통제).
+4. 상권정보 STUDY_CAFE → CAFE 적재 코드 — ✅ **코드 완료, ⚠️계약 미검증**(활용신청 미승인 403). 승인 후 재검증 필요.
+5. 공공시설개방(CIVIC) 화이트리스트 필터 적재. — ❌ **미착수**(이번 범위 밖, 후속 확장).
+6. 명소 시드(노들서가 등) 개별 등록 + 지오코딩. — ❌ **미착수**(이번 범위 밖, 후속 확장).
+7. P3 무인화(serviceKey 오픈API 주기 동기화 + 여러 반경 호출을 합친 전국 soft-delete diff). — ❌ **미착수**(로드맵 P3, 이번 범위 밖).
 
 ## 근거(References)
 - 리서치: 전국도서관표준데이터(15013109)·전국공공시설개방정보표준데이터(15013117)·소상공인 상가(상권)정보(15083033/15012005)·노들섬 노들서가(nodeul.org)·서울열린데이터(OA-15480/OA-21062)
