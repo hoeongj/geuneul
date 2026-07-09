@@ -51,20 +51,23 @@ class ReportFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("제보 생성 → 최근 제보 조회로 돌아온다 (TTL로 expires_at 자동 산정)")
+    @DisplayName("제보 생성 → 최근 제보 조회로 돌아온다 (TTL로 expires_at 자동 산정, photoUrl 왕복)")
     void createThenList() throws Exception {
         mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
                         .header("X-Forwarded-For", "198.51.100.1")
-                        .content("{\"placeId\":" + placeId + ",\"reportType\":\"COOL\",\"comment\":\" 에어컨 좋아요 \"}"))
+                        .content("{\"placeId\":" + placeId + ",\"reportType\":\"COOL\",\"comment\":\" 에어컨 좋아요 \","
+                                + "\"photoUrl\":\"https://geuneul-photos.s3.ap-northeast-2.amazonaws.com/report/x.jpg\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.reportTypeLabel").value("시원해요"))
                 .andExpect(jsonPath("$.comment").value("에어컨 좋아요"))  // 공백 정규화
+                .andExpect(jsonPath("$.photoUrl").value("https://geuneul-photos.s3.ap-northeast-2.amazonaws.com/report/x.jpg"))
                 .andExpect(jsonPath("$.expiresAt").exists());
 
         mvc.perform(get("/places/" + placeId + "/reports"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].reportType").value("COOL"));
+                .andExpect(jsonPath("$[0].reportType").value("COOL"))
+                .andExpect(jsonPath("$[0].photoUrl").exists());
 
         assertThat(reportRepository.count()).isEqualTo(1);
     }

@@ -39,6 +39,10 @@ public class Report {
     @Column(length = 500)
     private String comment;
 
+    /** P2 사진 presign(PhotoController) 슬롯 — S3 오브젝트 URL. 없으면 null(사진 없는 제보가 기본). */
+    @Column(name = "photo_url", length = 512)
+    private String photoUrl;
+
     @Column(name = "is_anonymous", nullable = false)
     private boolean anonymous;
 
@@ -58,22 +62,23 @@ public class Report {
     /** 비로그인(익명) 제보 — userId 없이 생성. 기존 호출부·테스트 호환을 위해 유지({@link #of} 위임). */
     public static Report anonymous(long placeId, ReportType type, String comment,
                                     boolean anonymousFlag, OffsetDateTime expiresAt) {
-        return of(null, placeId, type, comment, anonymousFlag, expiresAt);
+        return of(null, placeId, type, comment, null, anonymousFlag, expiresAt);
     }
 
     /**
      * 로그인 여부와 무관한 공통 생성 진입점. userId가 있으면 trust_score 가중 대상이 된다
      * (V4 place_report_signals 뷰가 user_id로 users.trust_score를 조인) — is_anonymous(표시 여부)와는
      * 별개다: 로그인 유저가 "익명으로 제보"를 선택해도(CLAUDE.md §6 "익명 여부") userId는 그대로 기록해
-     * 신뢰도 가중은 유지하고, 화면 표시만 감춘다.
+     * 신뢰도 가중은 유지하고, 화면 표시만 감춘다. photoUrl은 P2 사진 presign(PhotoController) 슬롯(없으면 null).
      */
-    public static Report of(Long userId, long placeId, ReportType type, String comment,
+    public static Report of(Long userId, long placeId, ReportType type, String comment, String photoUrl,
                             boolean anonymousFlag, OffsetDateTime expiresAt) {
         Report r = new Report();
         r.userId = userId;
         r.placeId = placeId;
         r.reportType = type;
         r.comment = comment;
+        r.photoUrl = photoUrl;
         r.anonymous = anonymousFlag;
         r.expiresAt = expiresAt;
         return r;
@@ -97,6 +102,10 @@ public class Report {
 
     public String getComment() {
         return comment;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
     }
 
     public boolean isAnonymous() {

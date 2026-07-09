@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/lib/context/toast";
+import { usePhotoUpload } from "@/lib/hooks";
 import { useCreateReview, useMe, usePlaceReviews } from "@/lib/queries";
 import { formatRelativeTime } from "@/lib/reports";
 
@@ -63,15 +64,18 @@ function ReviewForm({ placeId }: { placeId: number }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const mutation = useCreateReview();
+  const photo = usePhotoUpload("review");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onSubmit = () => {
-    if (rating === 0 || mutation.isPending) return;
+    if (rating === 0 || mutation.isPending || photo.state === "uploading") return;
     mutation.mutate(
-      { placeId, rating, comment: comment.trim() || undefined },
+      { placeId, rating, comment: comment.trim() || undefined, photos: photo.objectUrl ? [photo.objectUrl] : undefined },
       {
         onSuccess: () => {
           show("후기가 등록됐어요. 고마워요!");
           setComment("");
+          photo.reset();
         },
         onError: (err) => {
           if (err instanceof ApiError && err.status === 401) {
@@ -96,16 +100,46 @@ function ReviewForm({ placeId }: { placeId: number }) {
         maxLength={1000}
         className="w-full resize-none rounded-[10px] border border-line-cream bg-white px-3 py-2 text-[13px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
       />
+      <div className="flex items-center gap-2.5">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) photo.pick(file);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => (photo.state === "done" ? photo.reset() : fileInputRef.current?.click())}
+          className="relative flex h-[44px] w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-dashed border-line-dashed bg-white text-muted"
+          aria-label={photo.state === "done" ? "사진 제거" : "사진 추가"}
+        >
+          {photo.previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- presigned S3 오브젝트(blob 미리보기 포함)
+            <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Icon name="camera" size={16} />
+          )}
+          {photo.state === "uploading" && <span className="absolute inset-0 bg-black/40" />}
+        </button>
+        {photo.state === "error" && photo.errorMessage && (
+          <span className="text-[11.5px] text-red-500">{photo.errorMessage}</span>
+        )}
+      </div>
       <button
         type="button"
         onClick={onSubmit}
-        disabled={rating === 0 || mutation.isPending}
+        disabled={rating === 0 || mutation.isPending || photo.state === "uploading"}
         className="h-[40px] w-full rounded-[10px] text-[13px] font-bold text-cream disabled:text-ink-3"
         style={{
           background: rating > 0 && !mutation.isPending ? "var(--color-forest)" : "var(--color-btn-disabled)",
         }}
       >
-        {mutation.isPending ? "등록하는 중…" : "후기 등록"}
+        {mutation.isPending ? "등록하는 중…" : photo.state === "uploading" ? "사진 올리는 중…" : "후기 등록"}
       </button>
     </div>
   );

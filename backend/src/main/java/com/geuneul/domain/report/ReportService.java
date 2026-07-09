@@ -47,7 +47,7 @@ public class ReportService {
         OffsetDateTime expiresAt = OffsetDateTime.now(clock).plus(request.reportType().ttl());
         Report saved = reportRepository.save(Report.of(
                 userId, request.placeId(), request.reportType(), normalize(request.comment()),
-                anonymousFlag, expiresAt));
+                request.photoUrl(), anonymousFlag, expiresAt));
         if (userId != null) {
             trustScoreService.recalculate(userId);
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PlaceRow } from "@/components/place/PlaceRow";
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
@@ -9,6 +9,7 @@ import { iconForCategory } from "@/lib/categories";
 import { useGeo } from "@/lib/context/geo";
 import { useToast } from "@/lib/context/toast";
 import { DEFAULT_RADIUS } from "@/lib/geo";
+import { usePhotoUpload } from "@/lib/hooks";
 import { useCreateReport, useNearestPlace, useRadiusPlaces } from "@/lib/queries";
 import { REPORT_GRID, REPORT_META } from "@/lib/reports";
 import type { Place, ReportTypeKey } from "@/types/place";
@@ -65,6 +66,8 @@ export default function ReportPage() {
   const [done, setDone] = useState(false);
 
   const mutation = useCreateReport();
+  const photo = usePhotoUpload("report");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // done 상태의 라벨은 제출 버튼 JSX에서 별도 처리 → 여기선 미제출 경로만.
   const submitLabel = mutation.isPending
@@ -80,6 +83,7 @@ export default function ReportPage() {
         placeId: target.id,
         reportType: status,
         comment: comment.trim() || undefined,
+        photoUrl: photo.objectUrl ?? undefined,
         anonymous: anon,
       },
       {
@@ -102,6 +106,7 @@ export default function ReportPage() {
     setDone(false);
     setStatus(null);
     setComment("");
+    photo.reset();
     mutation.reset();
   };
 
@@ -162,16 +167,45 @@ export default function ReportPage() {
         })}
       </div>
 
-      {/* 사진(P2) + 코멘트 */}
+      {/* 사진 + 코멘트 */}
       <div className="mb-4 flex gap-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = ""; // 같은 파일 재선택도 change가 뜨도록
+            if (file) photo.pick(file);
+          }}
+        />
         <button
           type="button"
-          onClick={() => show("사진 첨부는 준비 중이에요 · P2")}
-          className="flex h-[76px] w-[76px] shrink-0 flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed border-line-dashed bg-white text-muted"
-          aria-label="사진 추가 (준비 중)"
+          onClick={() => (photo.state === "done" ? photo.reset() : fileInputRef.current?.click())}
+          className="relative flex h-[76px] w-[76px] shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[14px] border border-dashed border-line-dashed bg-white text-muted"
+          aria-label={photo.state === "done" ? "사진 제거" : "사진 추가"}
         >
-          <Icon name="camera" size={20} />
-          <span className="text-[10px] font-semibold">사진 · P2</span>
+          {photo.previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- presigned S3 오브젝트라 next/image 도메인 화이트리스트 불필요한 blob/원격 URL 혼재
+            <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <>
+              <Icon name="camera" size={20} />
+              <span className="text-[10px] font-semibold">사진</span>
+            </>
+          )}
+          {photo.state === "uploading" && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-[10px] font-bold text-cream">
+              올리는 중…
+            </span>
+          )}
+          {photo.state === "done" && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-[10px] font-bold text-cream">
+              탭해서 제거
+            </span>
+          )}
         </button>
         <input
           value={comment}
@@ -182,6 +216,9 @@ export default function ReportPage() {
           className="h-[76px] flex-1 rounded-[14px] border border-line-cream bg-white px-3.5 text-[14px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
         />
       </div>
+      {photo.state === "error" && photo.errorMessage && (
+        <p className="-mt-2.5 mb-4 text-[11.5px] text-red-500">{photo.errorMessage}</p>
+      )}
 
       {/* 익명 토글 */}
       <div className="mb-5 flex items-center justify-between rounded-[14px] border border-line-cream bg-white px-3.5 py-3">
@@ -204,18 +241,18 @@ export default function ReportPage() {
         </button>
       </div>
 
-      {/* 제출 */}
+      {/* 제출 — 사진이 올라가는 중이면 잠깐 막는다(빈 photoUrl로 먼저 나가버리는 것을 방지) */}
       <button
         type="button"
         onClick={done ? resetForNext : onSubmit}
-        disabled={(!status || !target || mutation.isPending) && !done}
+        disabled={(!status || !target || mutation.isPending || photo.state === "uploading") && !done}
         className="h-[52px] w-full rounded-[14px] text-[15px] font-bold text-cream disabled:text-ink-3"
         style={{
           background:
             done ? "var(--color-teal)" : status && target && !mutation.isPending ? "var(--color-forest)" : "var(--color-btn-disabled)",
         }}
       >
-        {done ? "고마워요! 제보 완료 · 한 번 더" : submitLabel}
+        {done ? "고마워요! 제보 완료 · 한 번 더" : photo.state === "uploading" ? "사진 올리는 중…" : submitLabel}
       </button>
       <p className="mt-2.5 text-center text-[11px] text-muted">휘발성 제보예요 · 시간이 지나면 자동으로 사라져요</p>
 
