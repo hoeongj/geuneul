@@ -151,3 +151,13 @@
 - **해결:** "weather" 캐시는 Weather만 담으므로 **타입 바인드 직렬화기 `JacksonJsonRedisSerializer<>(Weather.class)`** 로 교체 — @class 없이도 정확히 Weather로 복원, 폴리모픽 default typing(`enableUnsafeDefaultTyping`)의 RCE 보안 우려도 회피. `weatherValueSerializer()`로 노출해 **직렬화 왕복 유닛테스트(`RedisCacheConfigTest`)** 로 고정(무타이핑이면 LinkedHashMap≠Weather로 실패).
 - **핵심 학습 포인트:** ① 인메모리 캐시(ConcurrentMapCacheManager) 테스트는 **직렬화를 안 타므로** Redis 직렬화 계약을 검증 못 한다 — 직렬화기 자체를 왕복 테스트해야 한다. ② JSON 캐시 역직렬화는 **타입 정보**가 관건: 단일 타입 캐시는 타입 바인드가 가장 안전·간단(무타이핑 default typing은 보안 리스크). ③ 라이브 캐시 버그는 "1차는 되는데 2차(히트)에서 터짐"이 전형 신호. ④ TS-010·TS-011과 함께 "메이저 버전 점프에서 기본값·의미가 바뀐다"의 반복 — 실측(배포 후 2회 호출)이 최종 게이트.
 - **관련:** `RedisCacheConfig`(JacksonJsonRedisSerializer), `RedisCacheConfigTest`, TS-010·TS-011. WORKLOG 2026-07-09.
+
+### TS-013 · 2026-07-09 — 카카오 로그인이 안 되던 3중 콘솔 함정(KOE006→KOE010) — "구글이 되면 코드는 무죄"
+- **상황/증상:** 프론트→백엔드 OAuth를 배포하니 **구글 로그인은 즉시 성공**(프로필까지), **카카오만 실패**. 처음엔 KOE006(Admin Settings Issue), 콘솔 수정 후엔 동의창까지 갔다가 KOE010(Bad client credentials)로 로그인 실패.
+- **원인 분석(순차):** 동일 백엔드/프론트 코드로 구글이 되므로 코드는 정상 → 전부 **카카오 콘솔 설정** 문제로 좁힘. 세 겹이었다.
+  - **(A) KOE006 = Redirect URI 미등록.** 사용자가 콜백 URL을 **[카카오 로그인]>[고급]의 "로그아웃 리다이렉트 URI"** 칸에 넣었음(로그인용이 아님). 게다가 개편된 콘솔은 로그인 Redirect URI가 **[앱]>[플랫폼 키]>[REST API 키 수정]>"카카오 로그인 리다이렉트 URI"** 로 이동([카카오 로그인]>[일반]엔 없음). 에러 화면의 "Why/How" 아코디언이 정확한 위치([App]>[Platform Keys])와 사용된 URI를 그대로 알려줘 확정.
+  - **(B) 호출 허용 IP = 127.0.0.1.** REST API 키에 허용 IP가 로컬로 박혀 있어 AWS(ECS)에서의 토큰 교환이 차단될 소지 → 제거(전체 허용).
+  - **(C) KOE010 = Client Secret 불일치.** 콘솔에서 Client Secret "활성화 ON"이면 토큰 요청에 client_secret **필수**. 백엔드에 SSM으로 배선했으나 **스크린샷의 시크릿을 눈으로 옮길 때 `I`(대문자 i)를 `l`(소문자 L)로 오독**(`…PP5luecQj` vs `…PP5IuecQj`) → Bad credentials. 카카오가 KOE010 안내 메일도 발송(활성화됐는데 시크릿 누락/오류).
+- **해결:** (A) 로그인 Redirect URI를 올바른 칸에 정확한 문자열로 등록(`https://geuneul.vercel.app/api/auth/kakao/callback` + localhost). (B) 허용 IP 제거. (C) 정확한 Client Secret을 SSM 값 갱신 후 `update-service --force-new-deployment`(ECS secret은 태스크 시작 시 주입이라 값만 바꾸면 재기동 필요). → **구글·카카오 둘 다 실사용 성공.**
+- **핵심 학습 포인트:** ① **"한쪽 제공자가 되면 공용 코드는 무죄"** — 실패한 제공자의 외부 설정으로 범위를 좁힌다. ② OAuth 제공자 **에러 화면/이메일의 상세(아코디언)** 가 최고의 진단원 — 추측 말고 그걸 펼쳐 읽어라(KOE006이 사용된 redirect_uri·등록 위치를 직접 명시). ③ 개편된 콘솔은 **필드 위치가 이동**한다(로그인 Redirect URI ≠ 로그아웃 Redirect URI, [플랫폼 키]로 이동) — 옛 문서/기억 금지. ④ **시크릿은 눈으로 옮기지 말 것**(I/l·O/0) — 복사 버튼 값을 쓰고, 안 되면 오독부터 의심. ⑤ ECS Secrets는 **태스크 시작 시점 주입** — SSM 값 변경 후 force-new-deployment로 재주입.
+- **관련:** `KakaoOAuthClient`(client_secret 조건부 전송), `ssm.tf`(kakao_client_secret), 콘솔 앱 ID 1502770. 계열: 배포 실측이 최종 게이트(TS-011·012).
