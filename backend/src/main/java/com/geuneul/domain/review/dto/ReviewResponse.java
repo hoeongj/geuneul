@@ -28,7 +28,7 @@ public record ReviewResponse(
     }
 
     public static ReviewResponse of(ReviewWithAuthorView v, List<String> photos) {
-        // 네이티브 쿼리 프로젝션은 Instant로 받는다(ReviewWithAuthorView 주석, TS-015) — 여기서 UTC로 부착.
+        // 네이티브 쿼리 프로젝션은 Instant로 받는다(ReviewWithAuthorView 주석, TS-016) — 여기서 UTC로 부착.
         return new ReviewResponse(v.getId(), v.getPlaceId(), v.getNickname(), v.getProfileImage(),
                 v.getRating(), v.getComment(), photos,
                 v.getCreatedAt().atOffset(ZoneOffset.UTC), v.getUpdatedAt().atOffset(ZoneOffset.UTC));

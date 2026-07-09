@@ -88,4 +88,54 @@ class SurvivalScoreTest {
         assertThat(s.riskScore()).isEqualTo(0.0);
         assertThat(s.score()).isEqualTo(100);
     }
+
+    // --- 날씨 comfort additive 복원 (P3 날씨 2부, ADR-0009) ---
+
+    @Test
+    @DisplayName("weatherComfort=null(날씨 미제공)이면 기존 오버로드와 정확히 동일한 결과(폴백 회귀)")
+    void weatherComfortNullMatchesLegacyOverload() {
+        SurvivalScore legacy = SurvivalScore.of(0.0, 800.0, 2, 0.8, 0.5, 0.1);
+        SurvivalScore withNullWeather = SurvivalScore.of(0.0, 800.0, 2, 0.8, 0.5, 0.1, null);
+
+        assertThat(withNullWeather.score()).isEqualTo(legacy.score());
+        assertThat(withNullWeather.comfortScore()).isEqualTo(legacy.comfortScore());
+        assertThat(withNullWeather.grade()).isEqualTo(legacy.grade());
+    }
+
+    @Test
+    @DisplayName("날씨 comfort가 있으면 제보 comfort(0.6)·날씨 comfort(0.4) 가중평균으로 comfort_score를 조립한다")
+    void weatherComfortBlendsWithReportComfort() {
+        // 제보 comfort=0.0, 날씨 comfort=1.0(쾌적) → (0.6·0 + 0.4·1)/(1.0) = 0.4
+        SurvivalScore s = SurvivalScore.of(null, null, 1, 1.0, 0.0, 0.0, 1.0);
+
+        assertThat(s.comfortScore()).isCloseTo(0.4, within(1e-9));
+    }
+
+    @Test
+    @DisplayName("날씨가 폭염(comfort 낮음)이면 같은 제보라도 종합 점수가 더 낮게 나온다")
+    void hotWeatherLowersScoreVersusPleasant() {
+        SurvivalScore pleasant = SurvivalScore.of(null, null, 1, 1.0, 0.5, 0.0, 1.0);  // 날씨 쾌적
+        SurvivalScore heatwave = SurvivalScore.of(null, null, 1, 1.0, 0.5, 0.0, 0.0);  // 날씨 폭염(comfort 0)
+
+        assertThat(heatwave.score()).isLessThan(pleasant.score());
+    }
+
+    @Test
+    @DisplayName("제보가 0건이면(reportCount=0) 날씨가 아무리 좋아도 등급은 여전히 UNKNOWN")
+    void weatherNeverOverridesUnknownGrade() {
+        SurvivalScore s = SurvivalScore.of(null, null, 0, 0.0, 0.0, 0.0, 1.0); // 날씨 comfort 만점
+
+        assertThat(s.grade()).isEqualTo(Grade.UNKNOWN);
+        assertThat(s.comfortScore()).isGreaterThan(0.0); // comfort 자체는 날씨로 오른다(등급만 별개)
+    }
+
+    @Test
+    @DisplayName("시나리오 가중치(Weights) 오버로드도 날씨 comfort를 동일하게 additive로 반영한다")
+    void weatherComfortAppliesUnderScenarioWeights() {
+        SurvivalScore.Weights weights = new SurvivalScore.Weights(0.25, 0.35, 0.20, 0.25);
+        SurvivalScore withWeather = SurvivalScore.of(weights, null, null, 1, 0.5, 0.0, 0.0, 1.0);
+        SurvivalScore withoutWeather = SurvivalScore.of(weights, null, null, 1, 0.5, 0.0, 0.0, null);
+
+        assertThat(withWeather.score()).isGreaterThan(withoutWeather.score());
+    }
 }

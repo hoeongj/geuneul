@@ -11,7 +11,7 @@ import java.time.Instant;
  * {@code TIMESTAMPTZ}는 JDBC가 {@code Instant}로 반환하는데, Spring Data의 인터페이스 프로젝션 팩토리는
  * Instant→OffsetDateTime을 자동 변환하지 못해({@code UnsupportedOperationException: Cannot project
  * java.time.Instant to java.time.OffsetDateTime}) getter를 OffsetDateTime으로 선언하면 CI(실 Postgres)
- * 에서만 500으로 터진다(TS-015). 변환은 ReviewResponse.of에서 UTC로 명시(애플리케이션 전역이 UTC — 프로덕션
+ * 에서만 500으로 터진다(TS-016). 변환은 ReviewResponse.of에서 UTC로 명시(애플리케이션 전역이 UTC — 프로덕션
  * 세 클록이 모두 UTC라는 Report 엔티티의 기존 가정과 동일).
  */
 public interface ReviewWithAuthorView {

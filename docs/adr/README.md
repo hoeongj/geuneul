@@ -13,3 +13,4 @@
 | [0006](./0006-study-space-coverage-expansion.md) | 공부 가능 공간 데이터 커버리지 확장(survival 레이어) | 제안 |
 | [0007](./0007-survival-score-sql-signals-java-compose.md) | `survival_score` — 시공간 신호는 SQL 뷰, 가중치 조립은 순수 함수 | 승인 |
 | [0008](./0008-recommendations-scenario-weighted-ranking.md) | 추천(`/recommendations`) — survival_score에 시나리오 가중을 얹은 2단 랭킹 | 승인 |
+| [0009](./0009-weather-comfort-additive-restore.md) | survival_score comfort — 기온(체감) 신호를 comfort_score에 additive 복원 | 승인 |

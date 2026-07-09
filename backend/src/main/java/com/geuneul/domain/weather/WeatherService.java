@@ -45,4 +45,18 @@ public class WeatherService {
                 .withNano(0);
         return client.fetchNowcast(grid.nx(), grid.ny(), slot.format(DATE), slot.format(TIME));
     }
+
+    /**
+     * survival_score comfort 성분용 날씨 보정값[0,1] (P3 날씨 2부, ADR-0009).
+     *
+     * <p><b>N+1 금지 계약</b>: 호출부(PlaceSearchService·RecommendationService)는 요청(쿼리)당 이 메서드를
+     * "요청 좌표(lat/lng) 기준 1회"만 호출해, 그 결과를 응답 배치의 모든 장소에 공통으로 적용해야 한다.
+     * 장소마다 호출하면 안 된다 — 날씨는 지역 신호라 장소 단위로 달라지지 않고, 기상청 rate limit도 아낀다.
+     *
+     * <p>날씨 조회 실패(키 미설정·네트워크 장애·관측 결측)면 empty — 호출부는 이를 comfort 성분 제외(폴백)로
+     * 처리한다(SurvivalScore의 weatherComfort=null 경로, graceful degradation).
+     */
+    public Optional<Double> getComfortScore(double lat, double lon) {
+        return getWeather(lat, lon).map(HeatComfort::comfortScore);
+    }
 }

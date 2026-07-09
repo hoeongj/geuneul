@@ -418,6 +418,18 @@
 - 산출물: SSM `kakao_client_secret`(rev26), TS-013. 코드 변경 없음(콘솔·시크릿만).
 - 다음(새 세션): ① 날씨 2부(survival_score 기온 반영) ② 후기(review) 백엔드+trust_score ③ 공부공간 데이터 적재. 상세는 HANDOFF ▶세션 인계.
 
+### 2026-07-09 — 날씨 2부: survival_score comfort에 기온(체감) additive 복원 (P3, ADR-0009)
+- 한 일: HANDOFF "콘솔 없이 바로 가능한 다음 ①"인 날씨 2부 착수. P3 날씨 1부(라이브)가 준 `Weather`(기온·습도·강수)를 survival_score의 comfort_score 안에 **additive로** 붙였다 — §5 최상위 가중치 구조(distance/comfort/freshness/risk)는 안 건드리고 comfort 성분의 내부 조립만 바꿨다.
+- 결정 & 이유(why):
+  - **체감온도 공식 = 기상청 2022-06-02 개정 여름철 공식 그대로(습구온도 Stull 근사)**: 웹 검색(2026-07)으로 확인. 우리 `Weather`가 이미 가진 T1H(기온)·REH(습도)만으로 계산 가능해(풍속 불필요) 추가 데이터 소스 없이 적용. NWS Rothfusz 회귀(화씨·RH 극단 보정 다항식)는 검토했으나 관측 소스가 애초에 기상청이라 같은 기관 공식을 그대로 쓰는 게 더 방어 가능해 기각.
+  - **comfort 매핑 앵커 = 2026 기상청 폭염특보 체감온도 임계값(33/35/38도)**: 마찬가지로 웹 검색 확인. 2026년 신설된 "폭염중대경보"(체감 38도)까지 앵커에 반영 — 오케스트레이터 지시 예시값(31도)보다 **공식 기준선**이 더 방어 가능해 그쪽을 채택하고 이유를 ADR에 명시.
+  - **comfort_score 내부 서브조립 = 제보(0.6)·날씨(0.4) 가중평균**: UGC 제보는 "이 장소 자체"의 증거(에어컨·그늘)라 우선하고, 날씨는 지역 평균이라 보조 신호로만. weatherComfort=null(폴백)이면 기존과 100% 동일 — 4-인자 오버로드는 그대로 두고 5-인자 오버로드를 추가해 기존 호출부·테스트 무회귀.
+  - **날씨 주입 = 서비스 레이어에서 요청당 1회, N+1 절대 금지**: `WeatherService.getComfortScore(lat,lng)`(신규, getWeather+HeatComfort 위임)를 PlaceSearchService(반경=요청좌표/bounds=centroid/단건=그 장소좌표)·RecommendationService(요청좌표) 각각에서 딱 한 번만 불러 결과 배치 전체에 공통 적용. Mockito 단위테스트로 "결과 건수 무관 1회 호출"을 못 박았다(KMA rate limit 보호, 지역 신호라는 성질에도 부합).
+  - **강수 페널티는 균일(-0.15)만, 카테고리별 실내 선호 가중은 이번 스코프 제외**: `place_features`에 실내/실외 플래그가 없어 정밀 반영 불가 — 지어내지 않고(§0-B) 확장점으로 ADR에 기록.
+  - **등급(UNKNOWN/GOOD/OKAY)은 여전히 reportCount로만 결정**: 날씨가 좋아도 제보 0건 장소가 GOOD으로 승격되지 않게 — ADR-0007 등급 규칙 불변.
+- 검증: 유닛 43건 로컬 green(기존 전체 + 신규 `HeatComfortTest` 9·`SurvivalScoreTest` +5·`WeatherServiceTest` +2·`PlaceSearchServiceTest` 5·`RecommendationServiceTest` 2). 체감온도·comfort 매핑 수치는 Python으로 선검증 후 테스트 값 확정(23/55→comfort 1.0, 33/70→0.266, 37/90→체감 40.16→comfort 0.0). IT(`WeatherComfortIT`, `@MockitoBean WeatherClient`로 KMA 네트워크 없이 관측값 주입해 `/places/{id}` 응답까지 관통 검증 — 폴백/쾌적/폭염/UNKNOWN 불변 4건)는 **로컬 colima Docker 미가용으로 skip**(XML `skipped="4"`, TS-009와 동일 — SKIP≠통과, CI green으로 최종 판정 필요).
+- 산출물: 백엔드 `domain/weather/HeatComfort.java`(신규, 순수 함수)·`WeatherService.getComfortScore`(신규)·`domain/place/SurvivalScore.java`(weatherComfort 오버로드 4종 추가)·`domain/place/dto/PlaceResponse.java`(3-인자 오버로드)·`PlaceSearchService`·`domain/recommend/RecommendationService`(WeatherService 배선). 테스트 `HeatComfortTest`·`PlaceSearchServiceTest`·`RecommendationServiceTest`(신규)·`SurvivalScoreTest`·`WeatherServiceTest`(추가)·`WeatherComfortIT`(신규). 문서 `docs/adr/0009-weather-comfort-additive-restore.md`. Flyway 마이그레이션 없음(순수 계산, DB 스키마 무변경).
+- 관련: 브랜치 `feat/weather-comfort-p3`, ADR-0009, ADR-0007(재정규화 원칙 계승)·ADR-0008(가중치 오버로드 재사용 패턴 계승), TS-009(로컬 SKIP≠통과 원칙 재적용).
 ### 2026-07-09 — 후기(review) 풀스택 (P2): 영구 평판 백엔드 + 프론트, survival_score와 완전 분리
 - 한 일: HANDOFF ▶세션 인계 ②가 지목한 **후기(review)** 를 풀스택으로 완성. 백엔드 `POST /reviews`(로그인 필요, JWT)·`GET /places/{id}/reviews`(공개, 페이지네이션) + 프론트 장소 상세 "후기" 섹션(목록+별점 작성 폼, 로그인 시에만 폼 노출). reviews 테이블은 V2에 이미 있어 **신규 Flyway 불필요**(V5/V6/V7 어느 것도 안 씀).
 - 결정 & 이유(why):
