@@ -25,6 +25,7 @@ public interface ReportSurgeRepository extends JpaRepository<Report, Long> {
             SELECT COUNT(*) FROM reports
             WHERE place_id = :placeId
               AND expires_at > now()
+              AND NOT hidden
               AND created_at >= now() - (:windowMinutes * interval '1 minute')
             """, nativeQuery = true)
     long countRecent(@Param("placeId") long placeId, @Param("windowMinutes") int windowMinutes);
@@ -45,6 +46,7 @@ public interface ReportSurgeRepository extends JpaRepository<Report, Long> {
                 FROM reports
                 WHERE place_id = :placeId
                   AND expires_at > now()
+                  AND NOT hidden
                   AND created_at >= now() - (:windowMinutes * interval '1 minute')
                 GROUP BY place_id
                 HAVING COUNT(*) >= :minReports
@@ -71,6 +73,7 @@ public interface ReportSurgeRepository extends JpaRepository<Report, Long> {
                        mode() WITHIN GROUP (ORDER BY report_type) AS top_type
                 FROM reports
                 WHERE expires_at > now()
+                  AND NOT hidden
                   AND created_at >= now() - (:windowMinutes * interval '1 minute')
                 GROUP BY place_id
                 HAVING COUNT(*) >= :minReports

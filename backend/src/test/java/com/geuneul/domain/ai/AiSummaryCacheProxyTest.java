@@ -57,7 +57,7 @@ class AiSummaryCacheProxyTest {
         Report r = Report.of(null, 1L, ReportType.COOL, null, null, false, false,
                 OffsetDateTime.now(CLOCK).plusHours(1));
         ReflectionTestUtils.setField(r, "createdAt", OffsetDateTime.now(CLOCK).minusMinutes(10));
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(List.of(r));
         when(client.complete(anyString(), anyString())).thenReturn(Optional.of("최근 제보 기준 시원해요"));
 
@@ -73,7 +73,7 @@ class AiSummaryCacheProxyTest {
             assertThat(first).contains("최근 제보 기준 시원해요");
             assertThat(second).contains("최근 제보 기준 시원해요");
             verify(reportRepository, times(1))
-                    .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any());
+                    .findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any());
             verify(client, times(1)).complete(anyString(), anyString());
         }
     }
@@ -83,7 +83,7 @@ class AiSummaryCacheProxyTest {
     void emptyResultNotCached() {
         ReportRepository reportRepository = mock(ReportRepository.class);
         ChatCompletionClient client = mock(ChatCompletionClient.class);
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(2L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(2L), any()))
                 .thenReturn(List.of());
 
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
@@ -96,7 +96,7 @@ class AiSummaryCacheProxyTest {
             service.summarize(2L);
 
             verify(reportRepository, times(2))
-                    .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(2L), any());
+                    .findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(2L), any());
         }
     }
 }

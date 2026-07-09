@@ -41,7 +41,7 @@ class AiSummaryServiceTest {
     @Test
     @DisplayName("유효 제보가 없으면 AI를 호출하지 않고 empty를 반환한다(비용 방어)")
     void noReportsSkipsAiCall() {
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(List.of());
 
         Optional<String> result = service.summarize(1L);
@@ -54,7 +54,7 @@ class AiSummaryServiceTest {
     @DisplayName("유효 제보가 있으면 프롬프트를 구성해 클라이언트를 호출하고 결과를 그대로 반환한다")
     void reportsPresentDelegatesToClient() {
         Report r = reportOf(ReportType.COOL, OffsetDateTime.now(CLOCK).minusMinutes(30));
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(List.of(r));
         when(client.complete(anyString(), anyString())).thenReturn(Optional.of("최근 제보 기준 시원해요"));
 
@@ -68,7 +68,7 @@ class AiSummaryServiceTest {
     @DisplayName("클라이언트가 실패(empty)하면 그대로 empty를 반환한다(graceful degradation, 예외 없음)")
     void clientFailurePropagatesAsEmpty() {
         Report r = reportOf(ReportType.HOT, OffsetDateTime.now(CLOCK).minusMinutes(10));
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(List.of(r));
         when(client.complete(anyString(), anyString())).thenReturn(Optional.empty());
 
@@ -79,7 +79,7 @@ class AiSummaryServiceTest {
     @DisplayName("프롬프트는 침수 위험 표현을 순화하도록 시스템 프롬프트에 명시한다(공포 조장 금지, CLAUDE.md §0-6)")
     void systemPromptForbidsFearMongering() {
         Report r = reportOf(ReportType.FLOOD, OffsetDateTime.now(CLOCK).minusMinutes(5));
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(List.of(r));
         when(client.complete(anyString(), anyString())).thenReturn(Optional.of("요약"));
 
@@ -95,7 +95,7 @@ class AiSummaryServiceTest {
     void deduplicatesSameTypeToLatest() {
         Report older = reportOf(ReportType.COOL, OffsetDateTime.now(CLOCK).minusHours(3));
         Report newer = reportOf(ReportType.COOL, OffsetDateTime.now(CLOCK).minusMinutes(5));
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(List.of(newer, older));
         when(client.complete(anyString(), anyString())).thenReturn(Optional.of("요약"));
 
@@ -117,7 +117,7 @@ class AiSummaryServiceTest {
         for (int i = 0; i < types.length; i++) {
             all.add(reportOf(types[i], OffsetDateTime.now(CLOCK).minusMinutes(i + 1)));
         }
-        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))
+        when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))
                 .thenReturn(all);
         when(client.complete(anyString(), anyString())).thenReturn(Optional.of("요약"));
 

@@ -657,3 +657,13 @@
 - 산출물: `db/migration/V11__review_comments_reactions.sql` · `domain/community/`(ReviewComment·Reaction 엔티티, ReactionTarget/Type enum, 2 리포지토리, 2 서비스, CommunityController, 4 DTO, 1 뷰) · `SecurityConfig`(인증 경로 +3) · 테스트 1 IT.
 - 다음: 프론트(⑧)에서 상세의 후기에 댓글·"유용했어요" 최소 UI(간판을 가리지 않게).
 - 관련: 브랜치 `feat/review-community-p4`, CLAUDE.md §8(ERD)·§0-9(커뮤니티=살, 리뷰앱화 경고)·§0-2(과설계 금지), ADR-0007(survival 분리 — 커뮤니티 무영향).
+
+### 2026-07-10 — 모더레이션 확장: 신고 RESOLVED 시 콘텐츠 숨김 + 상태별 이력 (브랜치 `feat/moderation-expand-p4`, V12)
+- 한 일: 기존 신고 큐(#33 flags)는 상태만 마킹하고 실제 콘텐츠는 그대로 남아 "이빨이 없던" 것을 실효화했다. **신고를 RESOLVED(타당)로 처리하면 대상(제보/후기)이 hidden 처리**돼 공개에서 사라진다(Flyway **V12** `reports.hidden`/`reviews.hidden`). hidden 제보/후기는 **공개 조회·survival_score(뷰)·급증 알림·시간대별 혼잡·AI 요약·후기 목록에서 전부 제외**된다. DISMISSED(오신고)면 콘텐츠는 그대로. 추가로 ADMIN 상태별 이력 조회 `GET /admin/flags?status=PENDING|RESOLVED|DISMISSED`(처리 이력 확인).
+- 왜(why): ① **왜 hidden(soft)인가** — 물리 삭제 대신 숨김이면 오처리 복구 여지가 있고, 이력·감사 추적이 남는다(모더레이션 표준). ② **왜 전(全) 공개 경로에서 제외인가** — 숨김이 "공개 조회"에서만 빠지고 스코어/급증엔 남으면 반쪽짜리다. 확정된 허위 제보가 survival_score를 흔들거나 급증 알림을 유발하면 안 되므로, 6개 읽기 경로(recent·view·surge×3·popular-times·AI·review list) 전부에 `NOT hidden`을 걸었다. ③ **왜 RESOLVED에서만 숨기나** — RESOLVED="신고가 타당함"이 곧 "콘텐츠 부적절"이라 숨김의 트리거로 자연스럽다. 숨김은 멱등(`hide()`)이라 같은 대상에 여러 신고가 각각 RESOLVED돼도 안전.
+- 안전성(회귀 없음): hidden 기본 false → 기존 제보/후기 전부 노출 유지, place_report_signals 뷰도 V10과 동일 결과(숨김이 없으므로). 뷰는 CREATE OR REPLACE로 verified 가중(V10) 보존 + `AND NOT r.hidden` 한 줄만 추가.
+- 검토한 대안: ① **물리 삭제(DELETE)** — 복구 불가·감사 추적 소실이라 기각(soft-hide가 모더레이션 관행). ② **숨김을 공개 조회에서만** — 스코어/급증에 남아 반쪽. 전 경로 제외가 정합. ③ **자동 임계 숨김(N개 신고 시 자동)** — 오남용(신고 폭탄) 위험이라 사람(ADMIN) 판단을 유지, 자동화는 후속.
+- 검증: IT `ModerationHideIT`(2: RESOLVED→공개 조회에서 사라짐 + status=RESOLVED 이력에 잡힘 / DISMISSED→유지)는 실 PostGIS+Security라 CI 게이트. 메서드 리네임(`findTop20...AndHiddenFalse...`) 호출부(AiSummaryService + 테스트 2) 갱신 후 단위 회귀 green. compile green.
+- 산출물: `db/migration/V12__moderation_hidden.sql`(컬럼2+뷰) · `Report`/`Review`(hidden·hide()) · `ReportRepository`(recent/congestion NOT hidden)·`ReportSurgeRepository`(3쿼리 NOT hidden)·`ReviewRepository`(list NOT hidden)·`AiSummaryService`(hidden 제외) · `FlagService`(resolve→hideTarget, byStatus)·`AdminFlagController`(GET /admin/flags?status=) · 테스트 1 IT.
+- 다음: 프론트(⑧) ADMIN 큐에 처리 이력 탭(선택). 자동 임계 숨김·복구(unhide) 경로는 후속.
+- 관련: 브랜치 `feat/moderation-expand-p4`, #33(flags 기반)·ADR-0007(뷰)·ADR-0016(급증)·ADR-0005 §④(혼잡/verified), CLAUDE.md §0-7(모더레이션 처음부터)·§9(관리자 큐)·§6(표현).
