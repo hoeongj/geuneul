@@ -22,6 +22,9 @@ import org.testcontainers.utility.DockerImageName;
  */
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
+// 실시간 급증 리스너(ADR-0016)는 IT에서 끈다 — 백그라운드 LISTEN 스레드가 컨텍스트 캐시 수명 내내
+// 떠 있을 필요가 없고, 급증 감지 SQL·NOTIFY 트리거는 리스너 없이 직접(서비스/JDBC) 검증한다.
+@org.springframework.test.context.TestPropertySource(properties = "geuneul.realtime.enabled=false")
 @org.springframework.context.annotation.Import({
         com.geuneul.domain.ingest.geocode.FakeGeocodingConfig.class,
         com.geuneul.domain.ingest.openapi.FakeLibraryApiConfig.class
