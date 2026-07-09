@@ -37,7 +37,11 @@ resource "aws_ecs_task_definition" "app" {
     secrets = [
       { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn },
       { name = "GEUNEUL_PROXY_SECRET", valueFrom = aws_ssm_parameter.proxy_secret.arn },
-      { name = "KMA_SERVICE_KEY", valueFrom = aws_ssm_parameter.kma_service_key.arn }
+      { name = "KMA_SERVICE_KEY", valueFrom = aws_ssm_parameter.kma_service_key.arn },
+      { name = "KAKAO_REST_API_KEY", valueFrom = aws_ssm_parameter.kakao_rest_api_key.arn },
+      { name = "GOOGLE_CLIENT_ID", valueFrom = aws_ssm_parameter.google_client_id.arn },
+      { name = "GOOGLE_CLIENT_SECRET", valueFrom = aws_ssm_parameter.google_client_secret.arn },
+      { name = "JWT_SECRET", valueFrom = aws_ssm_parameter.jwt_secret.arn }
     ]
     logConfiguration = {
       logDriver = "awslogs"
