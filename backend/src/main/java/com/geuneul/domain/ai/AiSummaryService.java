@@ -27,7 +27,7 @@ import java.util.Optional;
  *       택했다("정보 부족" 정적 문구 대신): 상세 화면이 이미 "최근 제보 없음"을 별도로 보여주므로 AI가
  *       같은 말을 문장으로 반복할 필요가 없고, 빈 응답은 캐시하지 않아(unless) 다음 제보가 오면 즉시
  *       재평가된다(정적 문구를 캐시했다면 그 TTL 동안 새 제보를 반영 못 했을 것).</li>
- *   <li><b>graceful degradation</b> — {@link OpenRouterClient}가 이미 모든 실패(키 없음·타임아웃·5xx)를
+ *   <li><b>graceful degradation</b> — {@link ChatCompletionClient}가 이미 모든 실패(키 없음·타임아웃·5xx)를
  *       삼켜 empty를 반환한다. 이 서비스는 그 위에 얹을 뿐 추가 예외 경로가 없다 — AI 없이도 상세 응답은
  *       항상 200이다.</li>
  * </ul>
@@ -49,10 +49,10 @@ public class AiSummaryService {
     private static final int MAX_REPORT_TYPES_IN_PROMPT = 8;
 
     private final ReportRepository reportRepository;
-    private final OpenRouterClient client;
+    private final ChatCompletionClient client;
     private final Clock clock;
 
-    public AiSummaryService(ReportRepository reportRepository, OpenRouterClient client, Clock clock) {
+    public AiSummaryService(ReportRepository reportRepository, ChatCompletionClient client, Clock clock) {
         this.reportRepository = reportRepository;
         this.client = client;
         this.clock = clock;

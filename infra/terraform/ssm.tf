@@ -62,11 +62,12 @@ resource "aws_ssm_parameter" "datago_service_key" {
   value = var.datago_service_key
 }
 
-# OpenRouter API 키 (P3 AI 한줄 요약, 곁다리 — ADR-0010). Anthropic 키가 없어 OpenRouter(OpenAI 호환)로
-# 이탈(WORKLOG 기록). 값은 var.openrouter_api_key(tfvars)로만. 실행 롤 SSM 정책은 와일드카드라 무변경.
-# 미설정이어도 앱은 정상 기동 — OpenRouterClient가 호출 시점에 지연검증해 AI 요약만 null로 폴백한다.
-resource "aws_ssm_parameter" "openrouter_api_key" {
-  name  = "/${var.project}/openrouter_api_key"
+# AI 요약 프로바이더 API 키 (P3 AI 한줄 요약, 곁다리 — ADR-0010). 프로바이더 중립 OpenAI 호환 클라이언트
+# (현재 Mistral). Anthropic 키가 없어 이탈(WORKLOG 기록). 값은 var.ai_summary_api_key(tfvars)로만.
+# 실행 롤 SSM 정책은 와일드카드라 무변경. 미설정이어도 앱은 정상 기동 — ChatCompletionClient가 호출
+# 시점에 지연검증해 AI 요약만 null로 폴백한다.
+resource "aws_ssm_parameter" "ai_summary_api_key" {
+  name  = "/${var.project}/ai_summary_api_key"
   type  = "SecureString"
-  value = var.openrouter_api_key
+  value = var.ai_summary_api_key
 }

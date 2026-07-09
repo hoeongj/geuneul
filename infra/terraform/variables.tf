@@ -78,8 +78,8 @@ variable "datago_service_key" {
   sensitive   = true
 }
 
-variable "openrouter_api_key" {
-  description = "OpenRouter(OpenAI 호환) API 키 — P3 AI 한줄 요약(곁다리, ADR-0010). Anthropic 키가 없어 OpenRouter로 이탈(WORKLOG 기록). terraform.tfvars(gitignore) 또는 TF_VAR_openrouter_api_key로 주입. 절대 커밋 금지. (SSM은 빈 값을 거부하므로 default 없이 필수 — 값을 아직 못 넣으면 이 변수를 빈 문자열로 채운 tfvars 항목을 추가하지 말고 apply를 보류할 것.)"
+variable "ai_summary_api_key" {
+  description = "AI 요약 프로바이더(프로바이더 중립 OpenAI 호환 클라이언트, 현재 Mistral) API 키 — P3 AI 한줄 요약(곁다리, ADR-0010). Anthropic 키가 없어 이탈(WORKLOG 기록). terraform.tfvars(gitignore) 또는 TF_VAR_ai_summary_api_key로 주입. 절대 커밋 금지. (SSM은 빈 값을 거부하므로 default 없이 필수 — 값을 아직 못 넣으면 이 변수를 빈 문자열로 채운 tfvars 항목을 추가하지 말고 apply를 보류할 것.)"
   type        = string
   sensitive   = true
 }

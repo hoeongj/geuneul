@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
  *
  * AiSummaryServiceTest는 서비스를 직접 호출해 캐시 프록시를 우회한다 → Optional 언랩 후 unless SpEL이
  * 실제로는 평가되지 않는 함정을 놓칠 수 있다. 이 테스트는 프록시된 빈을 통해 present 결과를 캐시하고
- * (예외 없이), 2회차가 ReportRepository/OpenRouterClient 재호출 없이 캐시에서 오는지 확인한다.
+ * (예외 없이), 2회차가 ReportRepository/ChatCompletionClient 재호출 없이 캐시에서 오는지 확인한다.
  */
 class AiSummaryCacheProxyTest {
 
@@ -53,7 +53,7 @@ class AiSummaryCacheProxyTest {
     @DisplayName("present 결과는 SpEL 오류 없이 캐시되고, 2회차는 리포지토리/클라이언트 재호출 없이 캐시 히트")
     void presentResultCachedWithoutSpelError() {
         ReportRepository reportRepository = mock(ReportRepository.class);
-        OpenRouterClient client = mock(OpenRouterClient.class);
+        ChatCompletionClient client = mock(ChatCompletionClient.class);
         Report r = Report.of(null, 1L, ReportType.COOL, null, null, false,
                 OffsetDateTime.now(CLOCK).plusHours(1));
         ReflectionTestUtils.setField(r, "createdAt", OffsetDateTime.now(CLOCK).minusMinutes(10));
@@ -82,7 +82,7 @@ class AiSummaryCacheProxyTest {
     @DisplayName("empty 결과(제보 없음)는 캐시하지 않는다 — 다음 호출에서 다시 리포지토리를 조회한다")
     void emptyResultNotCached() {
         ReportRepository reportRepository = mock(ReportRepository.class);
-        OpenRouterClient client = mock(OpenRouterClient.class);
+        ChatCompletionClient client = mock(ChatCompletionClient.class);
         when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(2L), any()))
                 .thenReturn(List.of());
 

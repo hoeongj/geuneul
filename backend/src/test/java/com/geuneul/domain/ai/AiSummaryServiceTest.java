@@ -35,7 +35,7 @@ class AiSummaryServiceTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-07-10T12:00:00Z"), ZoneOffset.UTC);
 
     private final ReportRepository reportRepository = mock(ReportRepository.class);
-    private final OpenRouterClient client = mock(OpenRouterClient.class);
+    private final ChatCompletionClient client = mock(ChatCompletionClient.class);
     private final AiSummaryService service = new AiSummaryService(reportRepository, client, CLOCK);
 
     @Test
