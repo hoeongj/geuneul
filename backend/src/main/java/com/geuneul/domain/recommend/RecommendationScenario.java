@@ -9,10 +9,12 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.geuneul.domain.place.PlaceCategory.CAFE;
 import static com.geuneul.domain.place.PlaceCategory.CIVIC;
 import static com.geuneul.domain.place.PlaceCategory.COOLING_SHELTER;
 import static com.geuneul.domain.place.PlaceCategory.LIBRARY;
 import static com.geuneul.domain.place.PlaceCategory.PARK;
+import static com.geuneul.domain.place.PlaceCategory.STUDY_CAFE;
 import static com.geuneul.domain.place.PlaceCategory.TOILET;
 import static com.geuneul.domain.place.PlaceCategory.UNDERGROUND;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -36,7 +38,13 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
  *   <li><b>RAIN</b>(비 피할 곳): 침수·미끄럼 회피가 목적이라 risk 페널티를 강화(0.40).
  *       지도 배지는 §6("공포 조장 금지")대로 risk를 −0.15로 순화하지만, <b>비 피난 추천은 사용자가
  *       명시적으로 침수를 피하려는 상황</b>이라 랭킹에서 젖은 곳을 적극 강등한다(빨간 경고 라벨이 아니라 순위 하향).</li>
+ *   <li><b>FOCUS</b>(집중해서 공부·작업): "조용히 오래 앉을 곳"이라 comfort↑(0.35) + risk 페널티 강화(0.30 —
+ *       붐빔/소음/벌레를 적극 강등). 거리는 후순위(0.20 — 좋은 자리를 위해 좀 이동 감수).</li>
+ *   <li><b>LONGSTAY</b>(오래 버틸 곳): 폭염 피해 장시간 체류라 comfort가 압도(0.40, 시원·자리) +
+ *       risk 중시(0.30, 붐비면 오래 못 있음). 거리는 최하(0.15 — 자리 잡으면 오래 있으니 이동 감수).</li>
  * </ul>
+ * FOCUS/LONGSTAY의 후보에는 CAFE·STUDY_CAFE도 넣는다 — 상권정보 활용신청 승인 후 적재되면 자동 커버되고,
+ * 현재는 LIBRARY/CIVIC 등 적재된 카테고리로 동작한다(카테고리 집합은 데이터 유무와 독립적으로 "의미"를 표현).
  */
 public enum RecommendationScenario {
 
@@ -50,7 +58,15 @@ public enum RecommendationScenario {
 
     RAIN("비 피할 곳",
             new SurvivalScore.Weights(0.35, 0.15, 0.15, 0.40),
-            EnumSet.of(LIBRARY, UNDERGROUND, CIVIC, COOLING_SHELTER));
+            EnumSet.of(LIBRARY, UNDERGROUND, CIVIC, COOLING_SHELTER)),
+
+    FOCUS("집중해서 공부·작업할 곳",
+            new SurvivalScore.Weights(0.20, 0.35, 0.15, 0.30),
+            EnumSet.of(STUDY_CAFE, CAFE, LIBRARY, CIVIC)),
+
+    LONGSTAY("오래 버틸 곳",
+            new SurvivalScore.Weights(0.15, 0.40, 0.15, 0.30),
+            EnumSet.of(COOLING_SHELTER, LIBRARY, CIVIC, UNDERGROUND, CAFE, STUDY_CAFE));
 
     private final String label;
     private final SurvivalScore.Weights weights;
@@ -75,13 +91,13 @@ public enum RecommendationScenario {
         return categories.stream().map(Enum::name).collect(Collectors.joining(","));
     }
 
-    /** API 파라미터(rest30|restroom|rain, 대소문자 무관) → enum. 미지원 값은 400. */
+    /** API 파라미터(rest30|restroom|rain|focus|longstay, 대소문자 무관) → enum. 미지원 값은 400. */
     public static RecommendationScenario fromParam(String param) {
         try {
             return valueOf(param.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException | NullPointerException e) {
             throw new ResponseStatusException(BAD_REQUEST,
-                    "지원하지 않는 시나리오: " + param + " (rest30 | restroom | rain)");
+                    "지원하지 않는 시나리오: " + param + " (rest30 | restroom | rain | focus | longstay)");
         }
     }
 }
