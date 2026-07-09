@@ -41,6 +41,11 @@ jwt:
   secret: ${JWT_SECRET:}          # HS256 서명키(≥32바이트). 규칙 D: .env/SSM으로만. 미설정이어도 부팅됨(발급/검증 시점 검사).
   expiration-hours: ${JWT_EXPIRATION_HOURS:168}  # 세션 만료 기본 7일.
 
+weather:
+  # 기상청 초단기실황(getUltraSrtNcst). 공공데이터포털 serviceKey. 규칙 D: 값은 .env/SSM으로만.
+  # data.go.kr의 이중 인코딩 함정 회피를 위해 **디코딩 키**를 넣는다(UriBuilder가 한 번만 인코딩).
+  service-key: ${KMA_SERVICE_KEY:}
+
 geuneul:
   # BFF(Vercel 서버 프록시) ↔ 백엔드 공유 시크릿. 설정되면 익명 제보 레이트리밋이 BFF가 준
   # 실 클라이언트 IP(X-Client-Ip, X-Proxy-Auth로 증명)를 신뢰 → XFF 위조 우회 차단(ProxyClientResolver).
