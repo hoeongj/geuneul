@@ -5,6 +5,7 @@ import com.geuneul.domain.place.ScoredPlaceView;
 import com.geuneul.domain.place.SurvivalScore;
 import com.geuneul.domain.place.dto.PlaceResponse;
 import com.geuneul.domain.recommend.dto.RecommendationResponse;
+import com.geuneul.domain.weather.WeatherService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,9 +36,11 @@ public class RecommendationService {
     static final int MAX_POOL = 200;
 
     private final PlaceRepository placeRepository;
+    private final WeatherService weatherService;
 
-    public RecommendationService(PlaceRepository placeRepository) {
+    public RecommendationService(PlaceRepository placeRepository, WeatherService weatherService) {
         this.placeRepository = placeRepository;
+        this.weatherService = weatherService;
     }
 
     public List<RecommendationResponse> recommend(RecommendationScenario scenario,
@@ -46,9 +49,11 @@ public class RecommendationService {
 
         List<ScoredPlaceView> candidates = placeRepository.findWithinRadiusScoredByCategories(
                 lat, lng, radiusMeters, scenario.categoriesCsv(), pool);
+        // 요청 좌표 기준 1회만 조회해 후보 풀 전체에 공통 comfort 보정으로 적용한다(N+1 금지, ADR-0009).
+        Double weatherComfort = weatherService.getComfortScore(lat, lng).orElse(null);
 
         return candidates.stream()
-                .map(v -> toItem(scenario, v, radiusMeters))
+                .map(v -> toItem(scenario, v, radiusMeters, weatherComfort))
                 .sorted(Comparator.comparingInt(RecommendationResponse::matchScore).reversed()
                         .thenComparing(RecommendationService::distanceOrMax))
                 .limit(limit)
@@ -56,11 +61,11 @@ public class RecommendationService {
     }
 
     private static RecommendationResponse toItem(RecommendationScenario scenario,
-                                                 ScoredPlaceView v, double radiusMeters) {
-        PlaceResponse place = PlaceResponse.of(v, radiusMeters); // canonical survival(§5) 포함
+                                                 ScoredPlaceView v, double radiusMeters, Double weatherComfort) {
+        PlaceResponse place = PlaceResponse.of(v, radiusMeters, weatherComfort); // canonical survival(§5) 포함
         int matchScore = SurvivalScore.of(
                 scenario.weights(), v.getDistanceM(), radiusMeters, v.getReportCount(),
-                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore()).score();
+                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore(), weatherComfort).score();
         String reason = RecommendationReason.of(v.getReportCount(), v.getComfortScore(), v.getRiskScore());
         return new RecommendationResponse(place, matchScore, reason);
     }
