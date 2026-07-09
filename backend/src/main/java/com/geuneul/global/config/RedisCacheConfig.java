@@ -19,7 +19,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import java.time.Duration;
 
 /**
- * Redis 캐시 구성 — P3 날씨 TTL 캐시(CLAUDE.md §7). 지금은 "weather" 캐시만 쓴다.
+ * Redis 캐시 구성 — P3 날씨 TTL 캐시(CLAUDE.md §7) + AI 요약 캐시(P3, 곁다리).
  *
  * 설계 결정(WORKLOG 기록):
  * - 값 직렬화는 **타입 바인드 JSON**(JacksonJsonRedisSerializer&lt;Weather&gt;) — "weather" 캐시는 Weather만
@@ -29,10 +29,13 @@ import java.time.Duration;
  * - null(빈 결과)은 캐시하지 않는다(disableCachingNullValues) — 클라이언트에서 실패는 unless로도 거르지만
  *   이중 방어. 일시 장애가 TTL 동안 굳는 걸 막는다.
  * - **캐시 장애를 삼킨다(CacheErrorHandler)**: Redis가 죽거나(ElastiCache 프로비저닝 전/네트워크 단절)
- *   미프로비저닝이어도 캐시 오류로 요청이 실패하지 않고 원본 로직(기상청 직접 호출)로 우회한다.
+ *   미프로비저닝이어도 캐시 오류로 요청이 실패하지 않고 원본 로직(기상청 직접 호출/AI 미사용)으로 우회한다.
  *   캐시는 가용성을 낮추면 안 되는 부가 계층이라는 원칙.
- * - TTL 30분: 초단기실황은 매시각 갱신이라 발표시각(캐시 키)이 매시각 바뀐다. 30분이면 같은 슬롯 내
+ * - TTL 30분(weather): 초단기실황은 매시각 갱신이라 발표시각(캐시 키)이 매시각 바뀐다. 30분이면 같은 슬롯 내
  *   재조회를 막아 rate limit을 아끼면서, 키가 넘어가면 자연히 새 값으로 교체된다.
+ * - TTL 3시간(aiSummary): AI 한줄 요약(AiSummaryService)은 장소별로 캐시해 상세 조회마다 호출하지 않는다.
+ *   지시 범위(1~6h)의 중간값 — 너무 짧으면 비용 방어 효과가 작고, 너무 길면 새 제보가 와도 요약이 안 바뀐다.
+ *   값은 String(Jackson으로 감싸 타입 바인드) — weather와 동일하게 무타이핑 캐스트 실패(TS-011)를 피한다.
  */
 @Configuration
 @EnableCaching
@@ -41,11 +44,18 @@ public class RedisCacheConfig implements CachingConfigurer {
     private static final Logger log = LoggerFactory.getLogger(RedisCacheConfig.class);
 
     public static final String WEATHER_CACHE = "weather";
+    public static final String AI_SUMMARY_CACHE = "aiSummary";
     private static final Duration WEATHER_TTL = Duration.ofMinutes(30);
+    private static final Duration AI_SUMMARY_TTL = Duration.ofHours(3);
 
     /** "weather" 캐시 값 직렬화기 — 타입을 Weather로 바인드(테스트가 왕복을 검증할 수 있게 노출). */
     public static JacksonJsonRedisSerializer<Weather> weatherValueSerializer() {
         return new JacksonJsonRedisSerializer<>(Weather.class);
+    }
+
+    /** "aiSummary" 캐시 값 직렬화기 — 타입을 String으로 바인드(TS-011과 동일 사유로 GenericJackson 배제). */
+    public static JacksonJsonRedisSerializer<String> aiSummaryValueSerializer() {
+        return new JacksonJsonRedisSerializer<>(String.class);
     }
 
     @Bean
@@ -55,8 +65,14 @@ public class RedisCacheConfig implements CachingConfigurer {
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(weatherValueSerializer()));
+        RedisCacheConfiguration aiSummary = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(AI_SUMMARY_TTL)
+                .disableCachingNullValues()
+                .serializeValuesWith(RedisSerializationContext.SerializationPair
+                        .fromSerializer(aiSummaryValueSerializer()));
         return RedisCacheManager.builder(connectionFactory)
                 .withCacheConfiguration(WEATHER_CACHE, weather)
+                .withCacheConfiguration(AI_SUMMARY_CACHE, aiSummary)
                 .build();
     }
 
