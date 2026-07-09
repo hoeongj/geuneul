@@ -33,6 +33,9 @@ public enum SourceSpec {
             List.of("WGS84위도", "위도", "lat", "latitude"),
             List.of("WGS84경도", "경도", "lng", "lon", "longitude"));
 
+    // LIBRARY(전국도서관표준데이터)는 CSV가 아니라 실측 확인된 JSON 오픈API로 적재한다
+    // (domain.ingest.openapi.PublicLibraryIngestionService, ADR-0006) — SourceSpec(CSV 전용) 대상이 아니다.
+
     private final String cliName;
     private final String sourceKey;
     private final PlaceCategory category;
