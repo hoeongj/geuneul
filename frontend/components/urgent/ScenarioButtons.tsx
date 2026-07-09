@@ -5,7 +5,7 @@ import { IconChip } from "@/components/ui/IconChip";
 import { SCENARIO_META } from "@/lib/categories";
 import type { Scenario } from "@/types/place";
 
-const ORDER: Scenario[] = ["restroom", "rest30", "rain"];
+const ORDER: Scenario[] = ["restroom", "rest30", "rain", "focus", "longstay"];
 
 export function ScenarioButtons({
   selected,
