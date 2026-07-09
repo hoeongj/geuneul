@@ -15,3 +15,4 @@
 | [0008](./0008-recommendations-scenario-weighted-ranking.md) | 추천(`/recommendations`) — survival_score에 시나리오 가중을 얹은 2단 랭킹 | 승인 |
 | [0009](./0009-weather-comfort-additive-restore.md) | survival_score comfort — 기온(체감) 신호를 comfort_score에 additive 복원 | 승인 |
 | [0010](./0010-ai-summary-openrouter-provider.md) | AI 한줄 요약 — 프로바이더는 OpenRouter(Anthropic 키 부재로 이탈), 상세 전용 additive | 승인 |
+| [0011](./0011-scheduled-public-data-sync.md) | 공공데이터 주기 동기화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock | 승인(스캐폴드, 미활성) |

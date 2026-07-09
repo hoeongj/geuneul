@@ -52,6 +52,16 @@ resource "aws_ssm_parameter" "jwt_secret" {
   value = var.jwt_secret
 }
 
+# data.go.kr 오픈API serviceKey (P3 무인 동기화). 값은 var.datago_service_key(tfvars)로만.
+# ECS task def(ecs.tf)의 secrets로 주입되어 DataGoKrPublicLibraryClient가 사람 개입 없이 다운로드까지
+# 자족 실행한다 — 이전엔 prod-ingest.sh처럼 실행할 때마다 셸 환경변수로 수동 주입해야 했다(무인 스케줄 불가 지점).
+# 실행 롤 SSM 정책은 /${var.project}/* 와일드카드라 별도 IAM 변경 불필요.
+resource "aws_ssm_parameter" "datago_service_key" {
+  name  = "/${var.project}/datago_service_key"
+  type  = "SecureString"
+  value = var.datago_service_key
+}
+
 # OpenRouter API 키 (P3 AI 한줄 요약, 곁다리 — ADR-0010). Anthropic 키가 없어 OpenRouter(OpenAI 호환)로
 # 이탈(WORKLOG 기록). 값은 var.openrouter_api_key(tfvars)로만. 실행 롤 SSM 정책은 와일드카드라 무변경.
 # 미설정이어도 앱은 정상 기동 — OpenRouterClient가 호출 시점에 지연검증해 AI 요약만 null로 폴백한다.
