@@ -102,6 +102,8 @@ resource "aws_ecs_service" "app" {
   depends_on = [aws_lb_listener.http]
 
   # 배포는 CI가 task_definition 리비전을 갱신 → TF가 되돌리지 않도록.
+  # desired_count도 ignore — 배포 직후 수동 조정뿐 아니라, P4 ECS Service Auto Scaling(autoscaling.tf)이
+  # 이 값을 부하에 따라 바꿀 때 TF apply가 그걸 되돌려 오토스케일러와 싸우지 않게 한다.
   lifecycle {
     ignore_changes = [task_definition, desired_count]
   }
