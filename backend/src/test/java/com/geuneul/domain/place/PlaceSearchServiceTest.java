@@ -3,6 +3,7 @@ package com.geuneul.domain.place;
 import com.geuneul.domain.ai.AiSummaryService;
 import com.geuneul.domain.place.dto.PlaceResponse;
 import com.geuneul.domain.weather.WeatherService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,14 +31,19 @@ import static org.mockito.Mockito.when;
  * <p>AI 요약(P3, ADR-0010)의 <b>단건 상세 전용 계약</b>도 여기서 못 박는다: AiSummaryService는
  * {@link PlaceSearchService#getById(long)}에서만 호출되고, 목록/반경/bounds/nearest 경로에서는
  * 절대 호출되지 않는다(비용 방어 — AI는 상세 조회 1건에만 붙는다).
+ *
+ * <p>관측성(P4, ADR-0014)의 <b>커스텀 타이머 계약</b>도 여기서 못 박는다: 반경/kNN 검색은 각각
+ * {@code geuneul.place.search.radius}/{@code geuneul.place.search.nearest} Timer를 정확히 1회 기록한다
+ * (SimpleMeterRegistry — 실 Prometheus/OTLP 없이도 Micrometer 표준 인메모리 레지스트리로 검증 가능).
  */
 class PlaceSearchServiceTest {
 
     private final PlaceRepository placeRepository = mock(PlaceRepository.class);
     private final WeatherService weatherService = mock(WeatherService.class);
     private final AiSummaryService aiSummaryService = mock(AiSummaryService.class);
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final PlaceSearchService service =
-            new PlaceSearchService(placeRepository, weatherService, aiSummaryService);
+            new PlaceSearchService(placeRepository, weatherService, aiSummaryService, meterRegistry);
 
     @BeforeEach
     void stubWeatherAvailable() {
@@ -159,6 +165,33 @@ class PlaceSearchServiceTest {
         service.searchNearest(37.5, 127.0, null, 5);
 
         verify(aiSummaryService, never()).summarize(anyLong());
+    }
+
+    @Test
+    @DisplayName("반경 검색은 geuneul.place.search.radius 타이머를 category 태그와 함께 정확히 1회 기록한다")
+    void searchRadiusRecordsCustomTimer() {
+        when(placeRepository.findWithinRadiusScored(anyDouble(), anyDouble(), anyDouble(), any(), anyInt()))
+                .thenReturn(List.of(view(1, 10.0)));
+
+        service.searchRadius(37.5, 127.0, 800, PlaceCategory.COOLING_SHELTER, 100);
+
+        var timer = meterRegistry.find("geuneul.place.search.radius")
+                .tag("category", PlaceCategory.COOLING_SHELTER.name())
+                .timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("nearest(kNN) 검색은 geuneul.place.search.nearest 타이머를 category=ALL 태그로 기록한다(카테고리 미지정)")
+    void searchNearestRecordsCustomTimerWithAllTag() {
+        when(placeRepository.findNearest(anyDouble(), anyDouble(), any(), anyInt())).thenReturn(List.of());
+
+        service.searchNearest(37.5, 127.0, null, 5);
+
+        var timer = meterRegistry.find("geuneul.place.search.nearest").tag("category", "ALL").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
     }
 
     private static ScoredPlaceView view(long id, Double distanceM) {
