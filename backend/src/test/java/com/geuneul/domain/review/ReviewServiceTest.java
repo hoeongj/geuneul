@@ -1,6 +1,7 @@
 package com.geuneul.domain.review;
 
 import com.geuneul.domain.auth.AuthProvider;
+import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.auth.User;
 import com.geuneul.domain.auth.UserRepository;
 import com.geuneul.domain.place.PlaceRepository;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -39,6 +41,7 @@ class ReviewServiceTest {
     private ReviewRepository reviewRepository;
     private PlaceRepository placeRepository;
     private UserRepository userRepository;
+    private TrustScoreService trustScoreService;
     private ReviewService reviewService;
 
     @BeforeEach
@@ -46,9 +49,10 @@ class ReviewServiceTest {
         reviewRepository = mock(ReviewRepository.class);
         placeRepository = mock(PlaceRepository.class);
         userRepository = mock(UserRepository.class);
+        trustScoreService = mock(TrustScoreService.class);
         // 실 Jackson 3 ObjectMapper — photos<->JSON 직렬화 계약을 실제로 태워 검증한다.
         reviewService = new ReviewService(reviewRepository, placeRepository, userRepository,
-                JsonMapper.builder().build());
+                trustScoreService, JsonMapper.builder().build());
 
         when(placeRepository.existsById(1L)).thenReturn(true);
         when(userRepository.findById(10L)).thenReturn(Optional.of(user(10L, "그늘러버")));
@@ -85,6 +89,7 @@ class ReviewServiceTest {
         assertThat(response.photos()).containsExactly("https://img/1.jpg", "https://img/2.jpg");
         assertThat(response.authorNickname()).isEqualTo("그늘러버");
         verify(reviewRepository).save(any(Review.class));
+        verify(trustScoreService).recalculate(10L); // 후기도 trust_score 활동 신호(TrustScore 근거)
     }
 
     @Test
@@ -111,6 +116,7 @@ class ReviewServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
         verify(reviewRepository, never()).save(any());
+        verify(trustScoreService, never()).recalculate(anyLong());
     }
 
     @Test

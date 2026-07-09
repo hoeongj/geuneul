@@ -1,5 +1,6 @@
 package com.geuneul.domain.review;
 
+import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.auth.User;
 import com.geuneul.domain.auth.UserRepository;
 import com.geuneul.domain.place.PlaceRepository;
@@ -29,13 +30,16 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final PlaceRepository placeRepository;
     private final UserRepository userRepository;
+    private final TrustScoreService trustScoreService;
     private final ObjectMapper objectMapper;
 
     public ReviewService(ReviewRepository reviewRepository, PlaceRepository placeRepository,
-                         UserRepository userRepository, ObjectMapper objectMapper) {
+                         UserRepository userRepository, TrustScoreService trustScoreService,
+                         ObjectMapper objectMapper) {
         this.reviewRepository = reviewRepository;
         this.placeRepository = placeRepository;
         this.userRepository = userRepository;
+        this.trustScoreService = trustScoreService;
         this.objectMapper = objectMapper;
     }
 
@@ -62,6 +66,9 @@ public class ReviewService {
                 .orElseGet(() -> Review.of(userId, request.placeId(), rating, comment, photosJson));
 
         Review saved = reviewRepository.save(review);
+        // 후기도 trust_score 활동 신호다(TrustScore 근거) — 신규 작성·재작성(upsert) 모두 재계산해 둔다
+        // (재작성은 count가 안 변하지만 age는 계속 흐르므로 최신 유지, 비용은 저빈도 UGC라 무시할 만함).
+        trustScoreService.recalculate(userId);
         return ReviewResponse.of(saved, user.getNickname(), user.getProfileImage(), toPhotos(photosJson));
     }
 

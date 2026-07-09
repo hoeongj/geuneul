@@ -17,7 +17,8 @@ import java.time.OffsetDateTime;
  * - 자연키는 (provider, provider_id) — 재로그인 시 이 쌍으로 조회해 upsert(중복 계정 방지).
  * - trust_score(0~100, double): 제보 신뢰도 가중에 쓰인다(V4 place_report_signals 뷰가
  *   0.7 + 0.3*min(trust/100,1)로 로그인 제보를 가산). 신규 유저는 0(익명과 동일 기저)에서 시작해
- *   좋은 제보로 쌓는다(trust 계산은 후속 작업).
+ *   좋은 제보로 쌓는다 — 산출식은 {@link TrustScore}, 재계산 오케스트레이션은
+ *   {@link TrustScoreService}(제보/후기 작성 시 온디맨드 호출, P2 trust_score 계산).
  * - email은 nullable — 카카오는 이메일 동의(비즈 인증)가 없으면 안 오므로 provider_id로만 식별한다.
  */
 @Entity
@@ -69,6 +70,14 @@ public class User {
         u.trustScore = 0;
         u.role = Role.USER;
         return u;
+    }
+
+    /**
+     * trust_score 재계산 결과 반영. {@link com.geuneul.domain.auth.TrustScoreService}만 호출한다 —
+     * 클라이언트 요청으로 직접 지정 불가(신원 위조 방지, ReviewService.create의 userId 패턴과 동일 원칙).
+     */
+    public void updateTrustScore(double trustScore) {
+        this.trustScore = trustScore;
     }
 
     /** 재로그인 시 프로필 최신화(닉네임/이미지/이메일이 바뀌었을 수 있음). trust/role은 건드리지 않는다. */
