@@ -54,7 +54,7 @@ class AiSummaryCacheProxyTest {
     void presentResultCachedWithoutSpelError() {
         ReportRepository reportRepository = mock(ReportRepository.class);
         ChatCompletionClient client = mock(ChatCompletionClient.class);
-        Report r = Report.of(null, 1L, ReportType.COOL, null, null, false,
+        Report r = Report.of(null, 1L, ReportType.COOL, null, null, false, false,
                 OffsetDateTime.now(CLOCK).plusHours(1));
         ReflectionTestUtils.setField(r, "createdAt", OffsetDateTime.now(CLOCK).minusMinutes(10));
         when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(eq(1L), any()))

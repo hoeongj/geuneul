@@ -17,6 +17,7 @@ public record ReportResponse(
         @Schema(description = "한 줄 코멘트", example = "에어컨 빵빵해요", nullable = true) String comment,
         @Schema(description = "사진 URL", nullable = true) String photoUrl,
         @Schema(description = "익명 여부", example = "true") boolean anonymous,
+        @Schema(description = "GPS 방문 인증 여부 — 제보자가 장소 100m 이내에서 올린 제보", example = "true") boolean verified,
         @Schema(description = "제보 시각") OffsetDateTime createdAt,
         @Schema(description = "만료 시각 — 지나면 조회에서 제외") OffsetDateTime expiresAt
 ) {
@@ -30,6 +31,7 @@ public record ReportResponse(
                 r.getComment(),
                 r.getPhotoUrl(),
                 r.isAnonymous(),
+                r.isVerified(),
                 r.getCreatedAt(),
                 r.getExpiresAt()
         );
