@@ -3,6 +3,7 @@ package com.geuneul.domain.report;
 import com.geuneul.domain.auth.JwtService;
 import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.place.PlaceRepository;
+import com.geuneul.domain.report.dto.PopularTimesSlot;
 import com.geuneul.domain.report.dto.ReportCreateRequest;
 import com.geuneul.domain.report.dto.ReportResponse;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,17 @@ public class ReportService {
                 .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock))
                 .stream()
                 .map(ReportResponse::of)
+                .toList();
+    }
+
+    /**
+     * 장소의 시간대별 혼잡 파생(자체 popular-times, ADR-0005 §④) — 제보 이력을 KST 요일×시간으로 집계.
+     * 제보가 있는 슬롯만 반환한다(빈 슬롯은 클라이언트가 그리드에서 채움). 외부 API 0 — 우리 UGC만으로 유도.
+     */
+    public List<PopularTimesSlot> popularTimes(long placeId) {
+        requirePlace(placeId);
+        return reportRepository.congestionByPlace(placeId).stream()
+                .map(PopularTimesSlot::of)
                 .toList();
     }
 
