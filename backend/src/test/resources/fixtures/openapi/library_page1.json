@@ -1,0 +1,37 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL_SERVICE"
+    },
+    "body": {
+      "items": [
+        {
+          "lbrryNm": "숭실대학교 중앙도서관",
+          "ctprvnNm": "서울특별시",
+          "signguNm": "동작구",
+          "lbrrySe": "대학도서관",
+          "rdnmadr": "서울특별시 동작구 상도로 369",
+          "seatCo": "800",
+          "latitude": "37.4962",
+          "longitude": "126.9573",
+          "referenceDate": "2026-06-02"
+        },
+        {
+          "lbrryNm": "동작구립 사당도서관",
+          "ctprvnNm": "서울특별시",
+          "signguNm": "동작구",
+          "lbrrySe": "공공도서관",
+          "rdnmadr": "서울특별시 동작구 사당로 40",
+          "seatCo": "",
+          "latitude": "",
+          "longitude": "",
+          "referenceDate": "2026-06-02"
+        }
+      ],
+      "totalCount": "2",
+      "numOfRows": "500",
+      "pageNo": "1"
+    }
+  }
+}

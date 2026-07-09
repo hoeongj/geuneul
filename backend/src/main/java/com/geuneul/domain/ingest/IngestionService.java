@@ -9,10 +9,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,10 +52,21 @@ public class IngestionService {
 
     /** 인제스천 실행 요약 — 도메인의 휘발성 제보 {@code report.Report}와 구분되게 IngestSummary로 명명. */
     public record IngestSummary(String source, int totalRecords, int upserted, int skipped,
-                                int geocoded, int geocodeReused, int geocodeFailed, long tookMs) {
+                                int geocoded, int geocodeReused, int geocodeFailed,
+                                int deactivated, int featuresBackfilled, long tookMs) {
     }
 
+    /** 기존 호출부(쉼터/화장실) 호환 — soft-delete diff 비활성(ADR-0006 안전장치, 부분 샘플 재적재 보호). */
     public IngestSummary ingest(SourceSpec spec, Path csvFile, Charset charset) {
+        return ingest(spec, csvFile, charset, false);
+    }
+
+    /**
+     * @param deactivateStale true면 이번 스냅샷에 없는 기존 활성 행을 soft-delete한다(ADR-0006).
+     *                        전량 스냅샷을 매번 통째로 넣는 소스(도서관/카페 등)에서만 켠다 — 부분 파일을
+     *                        재실행하는 소스(현재 쉼터 샘플·화장실 실패건 재시도)는 반드시 false로 유지.
+     */
+    public IngestSummary ingest(SourceSpec spec, Path csvFile, Charset charset, boolean deactivateStale) {
         long start = System.currentTimeMillis();
 
         // ① 파싱
@@ -70,13 +83,29 @@ public class IngestionService {
         // ③④ 좌표 결측분 지오코딩 → upsert (geocoded=true)
         GeocodeOutcome outcome = geocodeAndUpsert(spec, parsed.needGeocode());
 
+        // 이번 스냅샷 전체 external_id (좌표보유 + 지오코딩대상, 성공/실패 무관 — "소스에 존재"의 정의).
+        Set<String> currentExternalIds = new HashSet<>();
+        parsed.rows().forEach(r -> currentExternalIds.add(r.externalId()));
+        parsed.needGeocode().forEach(c -> currentExternalIds.add(c.externalId()));
+
+        int deactivated = deactivateStale
+                ? upsertRepository.deactivateStale(spec.sourceKey(), currentExternalIds)
+                : 0;
+
+        // ADR-0006: 신규 카테고리(LIBRARY/STUDY_CAFE)의 study_ok/quiet 기본 백필 — 대상 없으면 no-op.
+        int featuresBackfilled = upsertRepository.backfillFeatures(
+                spec.sourceKey(), currentExternalIds, DefaultFeatureBackfill.forCategory(spec.category()));
+
         IngestSummary summary = new IngestSummary(spec.sourceKey(), parsed.totalRecords(),
                 upserted + outcome.upserted(), parsed.skipped(),
                 outcome.geocoded(), outcome.reused(), outcome.failed(),
+                deactivated, featuresBackfilled,
                 System.currentTimeMillis() - start);
-        log.info("[ingest] source={} total={} upserted={} skipped={} geocoded={} geocodeReused={} geocodeFailed={} took={}ms",
+        log.info("[ingest] source={} total={} upserted={} skipped={} geocoded={} geocodeReused={} geocodeFailed={} "
+                        + "deactivated={} featuresBackfilled={} took={}ms",
                 summary.source(), summary.totalRecords(), summary.upserted(), summary.skipped(),
-                summary.geocoded(), summary.geocodeReused(), summary.geocodeFailed(), summary.tookMs());
+                summary.geocoded(), summary.geocodeReused(), summary.geocodeFailed(),
+                summary.deactivated(), summary.featuresBackfilled(), summary.tookMs());
         return summary;
     }
 
