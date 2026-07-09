@@ -591,3 +591,13 @@
 - 검토한 대안: SSM 파라미터를 destroy 없이 신규 추가만 하고 구 파라미터를 rev41 전환 후 별도 apply로 지우는 2단 apply(파괴-창 완전 제거)도 가능했으나, tfvars/코드가 이미 리네임돼 있어 terraform이 구 리소스를 자동 파괴하는 게 상태-현실 정합상 더 단순 — 무부하 창의 실질 리스크가 낮아 단일 apply를 택했다.
 - 산출물(인프라, 코드/문서 변경 없음): SSM `/geuneul/ai_summary_api_key`(SecureString, Mistral 키) · 태스크데프 **rev41**(라이브) · `.local` tfvars(gitignore) 갱신. 라이브 rev는 `ignore_changes`라 terraform이 아닌 수동 rev로 반영(HANDOFF 패턴).
 - 관련: PR #41, ADR-0010(§4), TS-024(tfvars 멀티라인 함정), CLAUDE.md 규칙 A(신원)·D(비밀 .local/SSM만)·HANDOFF 운영 치트시트(AI 프로바이더 교체 복붙 갱신).
+
+### 2026-07-10 — ALB 무료 HTTPS: CloudFront 기본 도메인(ADR-0015) + EventBridge 스케줄 활성화 + 화장실 재적재
+- 한 일(3건, 로드맵 후속 "외부 스위치"):
+  - **① EventBridge 주기동기화 활성화(#42)**: 스케줄이 쓰는 것과 동일한 입력(`--ingest.source=library --deactivate-stale --exit-after`)으로 수동 `ecs run-task` 1회 실검증 → exitCode=0, `[library-api] fetched=3555 upserted=3551 geocoded=145 deactivated=0 featuresBackfilled=6828`, Flyway V8 정합. `terraform apply -var ingest_schedule_enabled=true`로 State=ENABLED, 이후 variables.tf default를 true로 승격(repo=live 정합, 되돌림 방지).
+  - **② 화장실 지오코딩 실패 재시도**: `prod-ingest.sh public_toilet`(toilets.csv 59,768행 + KAKAO 지오코딩) 재실행 — 멱등이라 이미 좌표 있는 46,897건은 재사용 스킵, **실패 7,193건 중 5,437건 신규 지오코딩 성공**(`upserted=5437 geocodeReused=46897 geocodeFailed=1756`). 총 화장실 좌표 46,897 → 52,334건. 남은 1,756건은 카카오가 못 푸는 옛 지번·산번지·공백없는 주소(데이터 품질 한계, 재시도 무의미). 창원 3km=58건 라이브 확인.
+  - **③ ALB 무료 HTTPS(ADR-0015)**: 통제 도메인이 없어 ACM 공개 인증서를 못 받는 상황(2026 무료 도메인 사실상 폐지) → CloudFront 배포를 ALB 앞에 두고 기본 도메인(`*.cloudfront.net`)의 AWS 관리 인증서로 즉시 HTTPS. `cloudfront.tf`(오리진=ALB http-only, redirect-to-https, Managed-CachingDisabled+AllViewer로 캐시 없는 관리형 HTTPS 프록시). 실측: `https://d2pedv974beobb.cloudfront.net` health 200(TLS 검증 통과)·/places 30건·http→301·swagger 200.
+- 왜: 전부 "외부 키/스위치" 잔여 항목. HTTPS는 도메인 부재라 CloudFront 기본 도메인이 유일한 무료·즉시 경로(§0-B 웹 확인, ADR-0015 대안표). 스케줄·화장실은 콘솔 없이 바로 가능한 것부터.
+- 블로커(사용자 콘솔 필요, 자율 불가): **쉼터 전국** — 전국무더위쉼터 표준데이터 API가 `resultCode 12`(미승인/폐기), safetydata 전용 키 없음. **상권정보 STUDY_CAFE/CAFE** — 같은 datago 키로 library=정상(resultCode 00)인데 상가업소 API(B553077)만 **403 Forbidden** = 활용신청 미승인. 둘 다 data.go.kr/safetydata 콘솔에서 사용자가 활용신청 승인받아야 풀림.
+- 산출물: `infra/terraform/cloudfront.tf`(신규)·`outputs.tf`(https_url)·`variables.tf`(ingest default true)·`docs/adr/0015-*.md`(신규)·`docs/adr/README.md`(0015 색인+0010 제목 정정). 라이브: CloudFront 배포 E2WO35VKYGKAGX, 스케줄 ENABLED, 화장실 52,334.
+- 관련: PR #42(스케줄), CloudFront PR, ADR-0015, CLAUDE.md §7·§10 P4·§0-B, HANDOFF 남은목록.
