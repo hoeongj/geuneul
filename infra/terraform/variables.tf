@@ -113,3 +113,15 @@ variable "task_memory" {
   type        = string
   default     = "1024"
 }
+
+variable "autoscaling_enabled" {
+  description = "ECS Service Auto Scaling(CPU target tracking, P4)을 켤지 여부. 기본 true — ADR-0011의 공공데이터 스케줄과 달리 오토스케일링의 위험은 유계·가역적 비용뿐이라(autoscaling.tf 상단 주석·ADR-0012) 기본 활성으로 뒀다. 필요 시 false로 즉시 비활성화 가능(리소스 자체가 생성되지 않음 — desired_count는 ecs.tf의 수동값 1로 고정)."
+  type        = bool
+  default     = true
+}
+
+variable "autoscaling_max" {
+  description = "ECS Service Auto Scaling 최대 태스크 수. min은 1로 고정(autoscaling.tf). 기본 3 — Fargate 0.25vCPU/1GB 태스크 기준 베이스라인(~$12/월) 대비 최대 3배(~$36/월)로 비용을 유계시킨 값($200 크레딧 보호, CLAUDE.md §7)."
+  type        = number
+  default     = 3
+}
