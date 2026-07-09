@@ -85,9 +85,9 @@ variable "ai_summary_api_key" {
 }
 
 variable "ingest_schedule_enabled" {
-  description = "EventBridge Scheduler(월1회 공공데이터 동기화 RunTask)를 실제로 켤지 여부. 기본 false(스캐줄 리소스는 생성되지만 DISABLED 상태 — apply해도 자동 실행되지 않는다). 사람이 검토 후 true로 바꿔 재적용해야 실행 시작(운영 안전장치, CLAUDE.md §0.2)."
+  description = "EventBridge Scheduler(월1회 공공데이터 동기화 RunTask)를 실제로 켤지 여부. 2026-07-10 실트리거 검증 완료(library ingest RunTask exitCode=0, fetched=3555 upserted=3551 deactivated=0) 후 default를 true로 승격 — 운영 안전장치(CLAUDE.md §0.2)로 처음엔 false였고, 사람이 1회 수동 검증한 뒤 켜는 설계였다. 되돌리려면 apply 시 -var ingest_schedule_enabled=false."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "container_image" {
