@@ -85,6 +85,9 @@ export default function ReportPage() {
         comment: comment.trim() || undefined,
         photoUrl: photo.objectUrl ?? undefined,
         anonymous: anon,
+        // 실측 GPS일 때만 좌표를 실어 보낸다(폴백 센터는 실위치가 아니라 verified 오판 방지).
+        // 장소 100m 이내면 백엔드가 "방문 인증"(verified) 처리(ADR-0005 §④).
+        ...(!geo.isFallback ? { lat: coords.lat, lng: coords.lng } : {}),
       },
       {
         onSuccess: () => {

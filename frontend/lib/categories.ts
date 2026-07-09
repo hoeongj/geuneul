@@ -11,6 +11,8 @@ export const CATEGORY_META: Record<Category, { label: string; icon: IconName }> 
   LIBRARY: { label: "도서관", icon: "book" },
   CIVIC: { label: "공공기관", icon: "civic" },
   UNDERGROUND: { label: "지하상가", icon: "stairs" },
+  CAFE: { label: "카페", icon: "seat" },
+  STUDY_CAFE: { label: "스터디카페", icon: "pen" },
   ETC: { label: "기타", icon: "dots" },
 };
 
@@ -31,6 +33,8 @@ export const FILTER_CATEGORIES: Category[] = [
   "LIBRARY",
   "CIVIC",
   "UNDERGROUND",
+  "CAFE",
+  "STUDY_CAFE",
 ];
 
 export const FEATURE_META: Record<FeatureType, { label: string; icon: IconName }> = {
@@ -41,6 +45,9 @@ export const FEATURE_META: Record<FeatureType, { label: string; icon: IconName }
   water: { label: "음수대", icon: "droplet" },
   seating: { label: "앉을 곳", icon: "seat" },
   no_eyes: { label: "눈치 안 보임", icon: "eyeoff" },
+  study_ok: { label: "공부 가능", icon: "pen" },
+  quiet: { label: "조용함", icon: "book" },
+  noise_level: { label: "소음", icon: "book" },
 };
 
 // 급해요 시나리오 표시 메타(제목/부제/아이콘/결과 헤더).
@@ -66,5 +73,17 @@ export const SCENARIO_META: Record<
     sub: "실내·지하로 대피",
     icon: "umbrella",
     resultTitle: "비 피할 곳 · 지금 갈만한 순",
+  },
+  focus: {
+    title: "집중해서 공부",
+    sub: "조용히 오래 앉을 곳",
+    icon: "pen",
+    resultTitle: "집중하기 좋은 곳 · 지금 갈만한 순",
+  },
+  longstay: {
+    title: "오래 버틸 곳",
+    sub: "더위 피해 장시간",
+    icon: "seat",
+    resultTitle: "오래 머물 곳 · 지금 갈만한 순",
   },
 };

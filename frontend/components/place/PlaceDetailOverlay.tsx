@@ -54,6 +54,12 @@ function RecentReports({ placeId }: { placeId: number }) {
                 <div className="flex items-baseline gap-2">
                   <span className="text-[13px] font-bold text-ink">{r.reportTypeLabel}</span>
                   <span className="text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
+                  {r.verified && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-mint-2 px-1.5 py-px text-[10px] font-bold text-teal-deep">
+                      <Icon name="locate" size={10} />
+                      방문 인증
+                    </span>
+                  )}
                   {r.anonymous && <span className="text-[10px] text-muted-3">익명</span>}
                 </div>
                 {r.comment && <p className="truncate text-[12.5px] text-ink-3">{r.comment}</p>}
@@ -201,11 +207,21 @@ export function PlaceDetailOverlay() {
           </button>
         </div>
 
-        {/* 예약 섹션(P2/P3) */}
+        {/* AI 한 줄 요약(라이브, ADR-0010) — 유효 제보 없으면 안내 문구로 폴백 */}
         <div className="mt-1 flex flex-col gap-3">
-          <ReservedBlock title="AI 한 줄 요약" badge="P3">
-            <p className="text-[13px] italic text-muted">“최근 제보가 쌓이면 이곳의 지금 상태를 한 줄로 요약해 드려요.”</p>
-          </ReservedBlock>
+          {place?.aiSummary ? (
+            <div className="rounded-[14px] border border-mint bg-mint-2/40 px-3.5 py-3">
+              <div className="mb-1 flex items-center gap-1.5">
+                <Icon name="bolt" size={14} />
+                <span className="text-[11px] font-bold text-teal-deep">AI 한 줄 요약</span>
+              </div>
+              <p className="text-[13.5px] leading-snug text-ink">{place.aiSummary}</p>
+            </div>
+          ) : (
+            <ReservedBlock title="AI 한 줄 요약" badge="곁다리">
+              <p className="text-[13px] italic text-muted">“최근 제보가 쌓이면 이곳의 지금 상태를 한 줄로 요약해 드려요.”</p>
+            </ReservedBlock>
+          )}
           {id != null && <RecentReports placeId={id} />}
           {id != null && <ReviewsSection placeId={id} />}
         </div>

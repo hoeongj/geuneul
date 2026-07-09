@@ -667,3 +667,12 @@
 - 산출물: `db/migration/V12__moderation_hidden.sql`(컬럼2+뷰) · `Report`/`Review`(hidden·hide()) · `ReportRepository`(recent/congestion NOT hidden)·`ReportSurgeRepository`(3쿼리 NOT hidden)·`ReviewRepository`(list NOT hidden)·`AiSummaryService`(hidden 제외) · `FlagService`(resolve→hideTarget, byStatus)·`AdminFlagController`(GET /admin/flags?status=) · 테스트 1 IT.
 - 다음: 프론트(⑧) ADMIN 큐에 처리 이력 탭(선택). 자동 임계 숨김·복구(unhide) 경로는 후속.
 - 관련: 브랜치 `feat/moderation-expand-p4`, #33(flags 기반)·ADR-0007(뷰)·ADR-0016(급증)·ADR-0005 §④(혼잡/verified), CLAUDE.md §0-7(모더레이션 처음부터)·§9(관리자 큐)·§6(표현).
+
+### 2026-07-10 — 프론트: 백엔드 신규 기능 노출(카테고리 필터·시설 등급·방문 인증·시나리오·AI요약) (브랜치 `feat/frontend-surface-p4`)
+- 한 일: 이번 세션에 백엔드가 새로 노출한 것들을 프론트에 반영했다(BFF가 순수 패스스루라 타입+렌더만 갱신). ① **CAFE/STUDY_CAFE 카테고리** — Category 타입·CATEGORY_META·FILTER_CATEGORIES에 추가(데이터 승인 전이라 결과는 비지만 필터 UI 선반영, 핸드오프 지시). ② **place_features 등급 칩(④)** — `PlaceFeature`(type/value/level/label/polarity) 타입 신설, FeaturePills를 등급 라벨("콘센트 많음")+polarity 색(POSITIVE 민트/NEGATIVE 레드/NEUTRAL 회색)으로 재작성. ③ **방문 인증 배지(③)** — Report에 `verified` 추가, 상세 최근제보에 "방문 인증" 배지, 제보 제출 시 실측 GPS(!isFallback)면 lat/lng 전송해 verified 실동작. ④ **추천 시나리오 focus/longstay(⑤)** — Scenario 타입·SCENARIO_META·ScenarioButtons ORDER에 추가(급해요 탭에 2개 버튼). ⑤ **AI 한줄 요약 라이브** — 상세의 "P3 준비중" 플레이스홀더를 실제 `place.aiSummary`로 교체(있으면 요약 카드, 없으면 안내 폴백).
+- 왜(why): ① **왜 타입+렌더만인가** — BFF(app/api/*)가 ALB 응답을 그대로 프록시(패스스루)라 verified/features/aiSummary가 자동으로 흘러온다 → 프론트는 TS 타입과 표시 컴포넌트만 고치면 된다(백엔드 계약 재-매핑 없음). ② **왜 실측 GPS일 때만 좌표 전송** — geo 컨텍스트는 권한 거부 시 폴백 센터(동작구)를 반환하는데, 그걸 "제보자 위치"로 보내면 폴백 근처 장소에 허위 verified가 붙는다 → `!isFallback`으로 실측만 전송(정확성). ③ **커뮤니티 UI 최소** — 사용자 지시대로 후기 댓글/리액션(⑥) UI는 이번에 안 만들었다(커뮤니티가 전면에 나오지 않게, 간판 우선).
+- 스코프 규율: 급증 SSE 구독·popular-times 히트맵은 이번 스코프 밖(핸드오프 ⑧은 "필터·등급 UI·UX 폴리시"로 한정) — 백엔드는 준비됐으니 후속에 additive.
+- 검증: `npm run typecheck`·`lint`·`build` 전부 green(프론트 CI와 동일 게이트). 20개 라우트 정상 빌드.
+- 산출물: `types/place.ts`(Category+2·PlaceFeature·verified·aiSummary·Scenario+2·payload lat/lng) · `lib/categories.ts`(CATEGORY/FEATURE/SCENARIO_META·FILTER +CAFE/STUDY_CAFE·focus/longstay) · `components/place/FeaturePills.tsx`(등급 렌더 재작성) · `components/place/PlaceDetailOverlay.tsx`(verified 배지·라이브 AI요약) · `components/urgent/ScenarioButtons.tsx`(ORDER) · `app/(shell)/report/page.tsx`(GPS 좌표 전송).
+- 다음: (후속) 급증 배지·EventSource 구독·popular-times 히트맵·커뮤니티 최소 UI. 카테고리 필터는 상권정보 승인 시 결과가 채워진다.
+- 관련: 브랜치 `feat/frontend-surface-p4`, ADR-0004(BFF 패스스루)·ADR-0005 §④(features/verified/시나리오)·ADR-0010(AI요약)·ADR-0016(급증, 후속), CLAUDE.md §9(간판 우선, 커뮤니티는 살).
