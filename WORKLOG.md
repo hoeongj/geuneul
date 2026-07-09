@@ -410,3 +410,10 @@
   - **TS-012**: `GenericJacksonJsonRedisSerializer.builder().build()`(Jackson3판)이 무타이핑→@class 없이 저장→GET 시 LinkedHashMap 캐스트 실패(캐시 히트 500). `JacksonJsonRedisSerializer<>(Weather.class)`(타입 바인드)로 교체 + 직렬화 왕복 `RedisCacheConfigTest`.
 - 결정 & 이유(why): ① 캐시 백엔드 ElastiCache(사용자 결정) — 프리티어 대상 + graceful degradation(지워도 날씨는 직접호출로 동작)이라 "완벽 동작→캡처→무료화" 요구와 양립. ② 태스크데프 config는 `ignore_changes`라 라이브 rev 수동 배선(describe→env/secret 추가→register→update-service, proxy-secret rev13 패턴). ③ 인프라 tf는 코드 브랜치와 분리해 통합 커밋(ecs.tf 충돌 방지). ④ 두 캐시 버그는 "프록시/직렬화로 동작하는 기능은 프록시·직렬화를 실제로 태우는 테스트가 필요"의 사례 — 회귀 테스트로 고정.
 - 관련: PR #26·#27·#28·#29, TS-011·TS-012, `elasticache.tf`·`ssm.tf`·`ecs.tf`, 라이브 rev25. 배포 접근: AWS CLI(geuneul-admin)·Vercel CLI(akftjdwn-9388) 로컬 인증.
+
+### 2026-07-09 — 소셜 로그인 실사용 검증 완료(구글·카카오) + 카카오 콘솔 3중 함정 해소
+- 한 일: 배포된 OAuth를 브라우저에서 실제 로그인까지 검증. **구글은 첫 시도에 프로필까지 성공**. **카카오는 콘솔 설정 3건 해소 후 성공**(TS-013): (A) 로그인 Redirect URI를 [고급]의 로그아웃 칸이 아닌 [플랫폼 키]>[REST API 키]의 로그인 칸에 정확히 등록(KOE006 해소), (B) 호출 허용 IP 127.0.0.1 제거, (C) Client Secret 활성화 ON이라 백엔드에 SSM 배선 — 스크린샷 시크릿의 I/l 오독 정정 후 KOE010 해소. → 라이브 rev26.
+- 결정 & 이유(why): Client Secret은 **ON 유지 + 백엔드 배선**(OFF보다 보안·포트폴리오 우위). 정정은 SSM 값 갱신 + `force-new-deployment`(ECS secret은 태스크 시작 시 주입). "구글이 같은 코드로 되면 카카오 실패는 콘솔 문제"로 범위를 좁혀 코드 무변경으로 해결.
+- 검증(프로덕션 실사용): 구글 로그인 → 프로필(가_홍성주…·Google·이메일·신뢰도0), 카카오 로그인 → 프로필(홍성주·카카오·신뢰도0). 로그인 P2 **실질 완성**.
+- 산출물: SSM `kakao_client_secret`(rev26), TS-013. 코드 변경 없음(콘솔·시크릿만).
+- 다음(새 세션): ① 날씨 2부(survival_score 기온 반영) ② 후기(review) 백엔드+trust_score ③ 공부공간 데이터 적재. 상세는 HANDOFF ▶세션 인계.

@@ -4,10 +4,10 @@
 > 최종 갱신: 2026-07-09.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(App·API). **날씨(P3)·소셜 로그인(P2) 신규 라이브**(2026-07-09). 간판(survival_score·추천)은 기존대로 라이브. **현재 라이브 태스크데프 rev25**(ElastiCache+SSM 5종 배선 + 캐시 핫픽스 2건 반영).
+- **상태**: 라이브 정상(App·API). **날씨(P3)·소셜 로그인(P2) 신규 라이브·실사용 검증 완료**(2026-07-09). 간판(survival_score·추천)은 기존대로 라이브. **현재 라이브 태스크데프 rev26**(ElastiCache+SSM 6종 배선 + 캐시 핫픽스 2건 + 카카오 client_secret).
 - **P3 날씨 라이브(PR #26 + 핫픽스 #28·#29)**: `GET /weather?lat=&lng=` — 기상청 초단기실황(getUltraSrtNcst) + 격자변환 + **ElastiCache Redis TTL 캐시(30분) 실동작**. 프로덕션 실측: 광화문 `지금 23°C, 비`, 부산 `31°C`, 캐시 히트 정상. serviceKey는 `.local/datago.env`(data.go.kr 계정 공통 키). **하드닝: 두 캐시 버그 배포 중 발견·수정 — TS-011(@Cacheable Optional 언랩 SpEL), TS-012(무타이핑 직렬화 캐시히트 500). 회귀 테스트 2건 추가.**
-- **P2 소셜 로그인 라이브(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. 실측: authorize 리다이렉트·`/me` 401 정상. 실제 로그인 왕복은 사용자가 동의창에서 로그인 시 완결(Redirect URI 콘솔 등록 일치 확인). 키는 `.local/oauth.env`·SSM·Vercel env.
-- **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 5종(kma/kakao/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
+- **P2 소셜 로그인 라이브·검증 완료(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. **브라우저 실사용 성공 — 구글·카카오 둘 다 프로필까지 표시**(홍성주/카카오·구글). 카카오는 콘솔 설정 3건으로 지연됐다(TS-013): Redirect URI를 로그아웃 칸에 잘못 등록·호출허용IP 127.0.0.1·Client Secret ON 배선. 키는 `.local/oauth.env`·SSM·Vercel env(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
+- **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 6종(kma/kakao_rest/kakao_secret/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
 - **콘솔 없이 바로 가능한 다음**:
   1. **날씨 2부** — survival_score 기온(comfort) 성분 additive 복원(SurvivalScore.Weights 확장 + ADR + IT). 날씨 소스는 이미 라이브.
   2. **후기(review) 백엔드** — `POST /reviews`·`GET /places/{id}/reviews`(영구 평판, 로그인 필요). 로그인이 라이브라 바로 착수 가능. trust_score 계산(로그인 제보 가중, V4 뷰가 이미 준비됨).
@@ -72,7 +72,7 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터 + 실시간 제보)
 
 - **백엔드:** Spring Boot 4.0.6 / Java 21. 반경(`ST_DWithin` geography)·최근접(kNN `<->`)·bounds 공간검색 API 라이브. `backend/`.
-- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev20**(품질 하드닝 PR #25 배포 반영. rev19=추천 PR #24, rev17=SEAT PR #22·감사 #18~#21, §①의 rev13=proxy-secret 활성화 당시 과거값). `infra/`.
+- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + **ElastiCache Redis** + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev26**(날씨+로그인 배선: REDIS_HOST env + SSM secret 8종=DB·PROXY·KMA·KAKAO_REST·KAKAO_SECRET·GOOGLE_ID·GOOGLE_SECRET·JWT). rev25=캐시 핫픽스, rev23=ElastiCache 배선, rev20=품질 하드닝 PR #25(과거값). `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
 - **P2 제보(라이브, PR #15·#16·#17):** 익명 휘발성 제보 `POST /reports`(타입별 TTL로 `expires_at`) + `GET /places/{id}/reports`. 프론트 제보하기 실전송(장소=nearest+피커)·상세 "최근 제보" 실시간. 인메모리 레이트리밋(분3·시간10) — XFF 신뢰경계(`ProxyClientResolver`)·OOM 하드닝(TS-008).
 - **P3 survival_score(라이브, PR #23·ADR-0007):** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk) → 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). `/places`(반경·bounds)·`/places/{id}` 응답에 `survival` 필드. 프론트 마커 3색 링·리스트/상세 상태 배지. open_now는 운영시간 결측이라 재정규화 제외(데이터 붙으면 복원), 후기는 §5대로 분리. **로컬 검증: postgis에 V1~V4 직접 적용 + 시나리오별 뷰/쿼리 실행으로 시맨틱 확증(TS-009), 엔드투엔드 IT는 CI.**
