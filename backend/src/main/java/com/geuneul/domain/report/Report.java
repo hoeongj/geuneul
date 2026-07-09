@@ -39,6 +39,10 @@ public class Report {
     @Column(length = 500)
     private String comment;
 
+    /** P2 사진 presign(PhotoController) 슬롯 — S3 오브젝트 URL. 없으면 null(사진 없는 제보가 기본). */
+    @Column(name = "photo_url", length = 512)
+    private String photoUrl;
+
     @Column(name = "is_anonymous", nullable = false)
     private boolean anonymous;
 
@@ -57,10 +61,16 @@ public class Report {
 
     public static Report anonymous(long placeId, ReportType type, String comment,
                                     boolean anonymousFlag, OffsetDateTime expiresAt) {
+        return anonymous(placeId, type, comment, null, anonymousFlag, expiresAt);
+    }
+
+    public static Report anonymous(long placeId, ReportType type, String comment, String photoUrl,
+                                    boolean anonymousFlag, OffsetDateTime expiresAt) {
         Report r = new Report();
         r.placeId = placeId;
         r.reportType = type;
         r.comment = comment;
+        r.photoUrl = photoUrl;
         r.anonymous = anonymousFlag;
         r.expiresAt = expiresAt;
         return r;
@@ -84,6 +94,10 @@ public class Report {
 
     public String getComment() {
         return comment;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
     }
 
     public boolean isAnonymous() {

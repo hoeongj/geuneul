@@ -86,6 +86,8 @@ export interface Report {
   reportType: ReportTypeKey;
   reportTypeLabel: string;
   comment: string | null;
+  /** P2 사진 presign(POST /photos/presign) 결과 objectUrl — 없으면 null. */
+  photoUrl: string | null;
   anonymous: boolean;
   createdAt: string; // ISO-8601 — 상대 시간은 클라이언트가 계산
   expiresAt: string;
@@ -95,5 +97,6 @@ export interface ReportCreatePayload {
   placeId: number;
   reportType: ReportTypeKey;
   comment?: string;
+  photoUrl?: string;
   anonymous?: boolean;
 }

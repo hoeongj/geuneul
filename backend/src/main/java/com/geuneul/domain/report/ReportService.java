@@ -33,7 +33,7 @@ public class ReportService {
         // expires_at = 타입별 TTL(ReportType 주석 참고) — 만료된 제보는 조회·스코어에서 빠진다.
         OffsetDateTime expiresAt = OffsetDateTime.now(clock).plus(request.reportType().ttl());
         Report saved = reportRepository.save(Report.anonymous(
-                request.placeId(), request.reportType(), normalize(request.comment()),
+                request.placeId(), request.reportType(), normalize(request.comment()), request.photoUrl(),
                 request.anonymousOrDefault(), expiresAt));
         return ReportResponse.of(saved);
     }

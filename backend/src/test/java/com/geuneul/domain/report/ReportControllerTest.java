@@ -48,7 +48,7 @@ class ReportControllerTest {
     }
 
     private static ReportResponse sample() {
-        return new ReportResponse(1L, 1L, "COOL", "시원해요", null, true,
+        return new ReportResponse(1L, 1L, "COOL", "시원해요", null, null, true,
                 OffsetDateTime.now(), OffsetDateTime.now().plusHours(3));
     }
 
@@ -87,6 +87,24 @@ class ReportControllerTest {
         mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"placeId\":1,\"reportType\":\"COOL\",\"comment\":\"" + longComment + "\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("photoUrl이 https://로 시작하지 않으면 400 (POST /photos/presign 결과만 수용)")
+    void nonHttpsPhotoUrlIs400() throws Exception {
+        mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placeId\":1,\"reportType\":\"COOL\",\"photoUrl\":\"javascript:alert(1)\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("photoUrl 미지정이면 정상 통과(선택 필드)")
+    void missingPhotoUrlIsOptional() throws Exception {
+        given(reportService.create(any())).willReturn(sample());
+
+        mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placeId\":1,\"reportType\":\"COOL\"}"))
+                .andExpect(status().isCreated());
     }
 
     @Test
