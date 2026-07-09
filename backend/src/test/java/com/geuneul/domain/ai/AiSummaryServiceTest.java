@@ -131,7 +131,7 @@ class AiSummaryServiceTest {
     }
 
     private static Report reportOf(ReportType type, OffsetDateTime createdAt) {
-        Report r = Report.of(null, 1L, type, null, null, false, createdAt.plusHours(1));
+        Report r = Report.of(null, 1L, type, null, null, false, false, createdAt.plusHours(1));
         ReflectionTestUtils.setField(r, "createdAt", createdAt);
         return r;
     }

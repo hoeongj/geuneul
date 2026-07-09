@@ -61,7 +61,7 @@ class ReportControllerTest {
     }
 
     private static ReportResponse sample() {
-        return new ReportResponse(1L, 1L, "COOL", "시원해요", null, null, true,
+        return new ReportResponse(1L, 1L, "COOL", "시원해요", null, null, true, false,
                 OffsetDateTime.now(), OffsetDateTime.now().plusHours(3));
     }
 

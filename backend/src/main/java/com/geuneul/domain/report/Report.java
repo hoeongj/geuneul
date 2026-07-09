@@ -46,6 +46,10 @@ public class Report {
     @Column(name = "is_anonymous", nullable = false)
     private boolean anonymous;
 
+    /** GPS 방문 인증(ADR-0005 §④): 제보 시 제보자 좌표가 장소 100m 이내면 true. survival_score에서 가중(V10). */
+    @Column(name = "verified", nullable = false)
+    private boolean verified;
+
     // created_at은 Hibernate @CreationTimestamp(JVM 클록), expires_at은 서비스가 주입 Clock으로 산정,
     // freshness/만료 판정은 place_report_signals 뷰가 DB now()로 한다. 세 클록이 프로덕션에선 모두 UTC라
     // 실질 오차는 sub-second. (테스트의 fake Clock은 @CreationTimestamp까진 못 바꾸므로 IT는 "방금 생성" 기준으로 검증.)
@@ -59,10 +63,10 @@ public class Report {
     protected Report() {
     }
 
-    /** 비로그인(익명) 제보 — userId 없이 생성. 기존 호출부·테스트 호환을 위해 유지({@link #of} 위임). */
+    /** 비로그인(익명) 제보 — userId 없이 생성(비검증). 기존 호출부·테스트 호환을 위해 유지({@link #of} 위임). */
     public static Report anonymous(long placeId, ReportType type, String comment,
                                     boolean anonymousFlag, OffsetDateTime expiresAt) {
-        return of(null, placeId, type, comment, null, anonymousFlag, expiresAt);
+        return of(null, placeId, type, comment, null, anonymousFlag, false, expiresAt);
     }
 
     /**
@@ -70,9 +74,10 @@ public class Report {
      * (V4 place_report_signals 뷰가 user_id로 users.trust_score를 조인) — is_anonymous(표시 여부)와는
      * 별개다: 로그인 유저가 "익명으로 제보"를 선택해도(CLAUDE.md §6 "익명 여부") userId는 그대로 기록해
      * 신뢰도 가중은 유지하고, 화면 표시만 감춘다. photoUrl은 P2 사진 presign(PhotoController) 슬롯(없으면 null).
+     * verified는 GPS 방문 인증(ADR-0005 §④): 제보자 좌표가 장소 100m 이내면 true → V10 뷰에서 가중.
      */
     public static Report of(Long userId, long placeId, ReportType type, String comment, String photoUrl,
-                            boolean anonymousFlag, OffsetDateTime expiresAt) {
+                            boolean anonymousFlag, boolean verified, OffsetDateTime expiresAt) {
         Report r = new Report();
         r.userId = userId;
         r.placeId = placeId;
@@ -80,6 +85,7 @@ public class Report {
         r.comment = comment;
         r.photoUrl = photoUrl;
         r.anonymous = anonymousFlag;
+        r.verified = verified;
         r.expiresAt = expiresAt;
         return r;
     }
@@ -110,6 +116,10 @@ public class Report {
 
     public boolean isAnonymous() {
         return anonymous;
+    }
+
+    public boolean isVerified() {
+        return verified;
     }
 
     public OffsetDateTime getCreatedAt() {
