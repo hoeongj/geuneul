@@ -39,6 +39,10 @@ import java.time.Duration;
  * 옵션:  --ingest.exit-after=true → 인제스천 후 프로세스 종료(one-off task용, 기본 false=서버 유지).
  *        --ingest.deactivate-stale=true → 스냅샷에서 사라진 기존 행을 soft-delete(ADR-0006).
  *        전량 스냅샷 소스(도서관 등)에서만 켠다 — 부분 파일 재실행 소스(쉼터 샘플 등)는 기본(false) 유지.
+ *
+ * 무인 스케줄(P3, EventBridge Scheduler → ECS RunTask): 매 실행은 {@link IngestBatchLock}으로
+ * Postgres advisory lock을 먼저 얻는다 — 스케줄이 겹치거나 사람이 수동 실행과 동시에 돌려도
+ * 나중 실행은 논블로킹으로 즉시 포기(exitCode=0, "건너뜀")하고 다음 스케줄을 기다린다.
  */
 @Component
 public class IngestionRunner implements ApplicationRunner {
@@ -51,46 +55,39 @@ public class IngestionRunner implements ApplicationRunner {
     private final IngestionService ingestionService;
     private final PublicLibraryIngestionService libraryIngestionService;
     private final StoreIngestionService storeIngestionService;
+    private final IngestBatchLock batchLock;
     private final ConfigurableApplicationContext context;
 
     public IngestionRunner(IngestionService ingestionService,
                            PublicLibraryIngestionService libraryIngestionService,
                            StoreIngestionService storeIngestionService,
+                           IngestBatchLock batchLock,
                            ConfigurableApplicationContext context) {
         this.ingestionService = ingestionService;
         this.libraryIngestionService = libraryIngestionService;
         this.storeIngestionService = storeIngestionService;
+        this.batchLock = batchLock;
         this.context = context;
     }
 
     @Override
-    public void run(ApplicationArguments args) throws IOException {
+    public void run(ApplicationArguments args) throws Exception {
         if (!args.containsOption("ingest.source")) {
             return;
         }
         int exitCode = 0;
         try {
-            String source = first(args, "ingest.source");
-            boolean deactivateStale = args.containsOption("ingest.deactivate-stale")
-                    && "true".equalsIgnoreCase(first(args, "ingest.deactivate-stale"));
-
-            if (LIBRARY_CLI_NAME.equals(source)) {
-                // JSON 오픈API 경로 — 파일/URL 불필요, 서비스가 자체 페이지네이션으로 전량 수집(ADR-0006).
-                libraryIngestionService.ingestAll(deactivateStale);
-            } else if (STUDY_CAFE_CLI_NAME.equals(source) || CAFE_CLI_NAME.equals(source)) {
-                // 반경 오픈API 경로 — 지역 중심좌표+반경 필요, soft-delete 미지원(StoreIngestionService 주석).
-                double lat = Double.parseDouble(require(args, "ingest.lat"));
-                double lng = Double.parseDouble(require(args, "ingest.lng"));
-                int radius = Integer.parseInt(require(args, "ingest.radius"));
-                storeIngestionService.ingestRegion(lat, lng, radius);
-            } else {
-                SourceSpec spec = SourceSpec.fromCliName(source);
-                Charset charset = Charset.forName(args.containsOption("ingest.charset")
-                        ? first(args, "ingest.charset") : "UTF-8");
-                Path file = resolveFile(args);
-                ingestionService.ingest(spec, file, charset, deactivateStale);
+            boolean acquired = batchLock.runExclusive(() -> {
+                dispatch(args);
+                return null;
+            });
+            if (!acquired) {
+                // IngestBatchLock이 이미 warn 로그를 남긴다 — 실패가 아니라 "건너뜀"이라 exitCode=0 유지.
+                log.info("[ingest] 이번 실행은 건너뜀(동시 실행 방지) — exitCode=0으로 정상 종료 처리");
             }
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
+            // RuntimeException(도메인 서비스)과 dispatch()의 체크 IOException(다운로드 실패 등) 둘 다 여기로 —
+            // run()이 ApplicationRunner 계약대로 Exception을 던질 수 있어 굳이 종류별로 나눌 이유가 없다.
             log.error("[ingest] 실패", e);
             exitCode = 1;
             if (!exitRequested(args)) {
@@ -101,6 +98,30 @@ public class IngestionRunner implements ApplicationRunner {
             log.info("[ingest] exit-after=true → 종료(code={})", exitCode);
             int code = exitCode;
             System.exit(SpringApplication.exit(context, () -> code));
+        }
+    }
+
+    private void dispatch(ApplicationArguments args) throws IOException {
+        String source = first(args, "ingest.source");
+        boolean deactivateStale = args.containsOption("ingest.deactivate-stale")
+                && "true".equalsIgnoreCase(first(args, "ingest.deactivate-stale"));
+
+        if (LIBRARY_CLI_NAME.equals(source)) {
+            // JSON 오픈API 경로 — 파일/URL 불필요, 서비스가 자체 페이지네이션으로 전량 수집(ADR-0006).
+            // P3 무인 스케줄 대상: serviceKey(DATA_GO_KR_SERVICE_KEY)만으로 다운로드까지 자족 실행.
+            libraryIngestionService.ingestAll(deactivateStale);
+        } else if (STUDY_CAFE_CLI_NAME.equals(source) || CAFE_CLI_NAME.equals(source)) {
+            // 반경 오픈API 경로 — 지역 중심좌표+반경 필요, soft-delete 미지원(StoreIngestionService 주석).
+            double lat = Double.parseDouble(require(args, "ingest.lat"));
+            double lng = Double.parseDouble(require(args, "ingest.lng"));
+            int radius = Integer.parseInt(require(args, "ingest.radius"));
+            storeIngestionService.ingestRegion(lat, lng, radius);
+        } else {
+            SourceSpec spec = SourceSpec.fromCliName(source);
+            Charset charset = Charset.forName(args.containsOption("ingest.charset")
+                    ? first(args, "ingest.charset") : "UTF-8");
+            Path file = resolveFile(args);
+            ingestionService.ingest(spec, file, charset, deactivateStale);
         }
     }
 
