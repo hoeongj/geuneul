@@ -3,6 +3,11 @@ output "alb_url" {
   value       = "http://${aws_lb.app.dns_name}"
 }
 
+output "https_url" {
+  description = "CloudFront 기본 도메인 HTTPS URL (공유용 신뢰 링크 — health: /actuator/health, swagger: /swagger-ui.html)"
+  value       = "https://${aws_cloudfront_distribution.app.domain_name}"
+}
+
 output "ecr_repository_url" {
   description = "이미지 push 대상"
   value       = aws_ecr_repository.backend.repository_url
