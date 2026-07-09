@@ -30,11 +30,14 @@ resource "aws_ecs_task_definition" "app" {
       { name = "DB_PORT", value = "5432" },
       { name = "DB_NAME", value = var.db_name },
       { name = "DB_USERNAME", value = var.db_username },
-      { name = "PORT", value = "8080" }
+      { name = "PORT", value = "8080" },
+      { name = "REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
+      { name = "REDIS_PORT", value = "6379" }
     ]
     secrets = [
       { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn },
-      { name = "GEUNEUL_PROXY_SECRET", valueFrom = aws_ssm_parameter.proxy_secret.arn }
+      { name = "GEUNEUL_PROXY_SECRET", valueFrom = aws_ssm_parameter.proxy_secret.arn },
+      { name = "KMA_SERVICE_KEY", valueFrom = aws_ssm_parameter.kma_service_key.arn }
     ]
     logConfiguration = {
       logDriver = "awslogs"

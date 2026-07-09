@@ -36,6 +36,12 @@ variable "proxy_secret" {
   sensitive   = true
 }
 
+variable "kma_service_key" {
+  description = "기상청 초단기실황(getUltraSrtNcst) serviceKey. data.go.kr **디코딩 키**(이중 인코딩 함정 회피). P3 날씨 캐시가 사용. terraform.tfvars(gitignore) 또는 TF_VAR_kma_service_key로 주입. 절대 커밋 금지. (SSM은 빈 값을 거부하므로 default 없이 필수.)"
+  type        = string
+  sensitive   = true
+}
+
 variable "container_image" {
   description = "ECS 태스크 이미지. 비우면 ECR:latest. 실제 배포 태그는 GitHub Actions(deploy.yml)가 갱신하며, TF는 ignore_changes로 되돌리지 않음."
   type        = string
