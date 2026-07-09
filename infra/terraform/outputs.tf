@@ -44,3 +44,8 @@ output "ingest_schedule_state" {
   description = "현재 ENABLED/DISABLED. var.ingest_schedule_enabled=true로 재적용해야 ENABLED(운영 안전장치)."
   value       = aws_scheduler_schedule.public_data_sync.state
 }
+
+output "autoscaling_status" {
+  description = "P4 ECS Service Auto Scaling 활성 여부 + min/max. var.autoscaling_enabled=false로 언제든 비활성화 가능."
+  value       = var.autoscaling_enabled ? "ENABLED min=1 max=${var.autoscaling_max} (CPU target 60%)" : "DISABLED"
+}
