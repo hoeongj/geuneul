@@ -47,11 +47,13 @@ class WeatherComfortIT extends AbstractIntegrationTest {
     private static final double LAT = 37.4986;
     private static final double LNG = 126.9531;
 
-    @Autowired
-    MockMvc mvc;
+    // 앱 컨텍스트의 ObjectMapper 빈에 의존하지 않는다 — 이 IT의 관심사는 응답 JSON의 단순 필드 파싱뿐이라
+    // 커스텀 모듈이 필요 없고, @SpringBootTest(웹 MVC 슬라이스 없이) 컨텍스트엔 JacksonAutoConfiguration이
+    // 항상 ObjectMapper 빈을 등록해 주지 않는다(WebMvcTest와 달리).
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
-    ObjectMapper objectMapper;
+    MockMvc mvc;
 
     @Autowired
     PlaceRepository placeRepository;
@@ -136,7 +138,7 @@ class WeatherComfortIT extends AbstractIntegrationTest {
     }
 
     private JsonNode survivalNode(ResultActions result) throws Exception {
-        JsonNode root = objectMapper.readTree(result.andReturn().getResponse().getContentAsString());
+        JsonNode root = OBJECT_MAPPER.readTree(result.andReturn().getResponse().getContentAsString());
         return root.path("survival");
     }
 }
