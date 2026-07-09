@@ -612,3 +612,12 @@
 - 산출물: `domain/alert/`(신규 도메인 — `ReportSurgeService`·`ReportSurgeRepository`·`SurgingPlaceView`·`SurgeEmitterRegistry`·`ReportNotificationListener`·`AlertController`·`dto/SurgeInfo`) · `db/migration/V9__report_surge_notify_trigger.sql`(신규) · `application.yml`(`geuneul.realtime.*`) · `AbstractIntegrationTest`(IT에서 realtime off) · 테스트 3파일 · `docs/adr/0016-realtime-report-surge-listen-notify-sse.md`(신규).
 - 다음: 프론트(⑧)에서 지도 급증 배지 + EventSource 구독(초기 스냅샷은 `/alerts/surge`). 임계값(window/minReports)은 P5 동작구 필드테스트에서 시딩 밀도에 맞춰 조정.
 - 관련: 브랜치 `feat/realtime-report-surge-p4`, ADR-0016, ADR-0013(오토스케일링 — 팬아웃 정당화)·ADR-0007(시공간 신호)·ADR-0009(Redis 선택적 캐시)·ADR-0004(BFF)·ADR-0015(CloudFront), CLAUDE.md §7(실시간 메커니즘)·§5(DB 시공간)·§6(표현 규율)·§10 P4.
+
+### 2026-07-10 — 시간대별 혼잡 파생(자체 popular-times) (브랜치 `feat/popular-times-p4`, ADR-0005 §④)
+- 한 일: 외부 API 없이 우리 UGC(reports)만으로 장소별 "요일×시간 혼잡 패턴"을 유도했다. `GET /places/{id}/popular-times` — reports 이력을 **KST 기준** 요일(0=일~6=토)×시간(0~23)으로 집계해 슬롯별 sampleCount(활동량)·crowdedCount·seatOkCount와 혼잡 등급(BUSY/MODERATE/QUIET/UNKNOWN)을 반환. 등급은 순수 함수 `PopularTimesSlot.level` — `crowdScore=(crowded−seatOk)/(crowded+seatOk)` ≥+1/3 BUSY, ≤−1/3 QUIET, 혼잡 신호 없으면 UNKNOWN.
+- 왜(why): ADR-0005 §④의 "시간대별 혼잡 파생(자체 popular-times, 외부 API 0)" 항목 — 카공맵류의 "지금 붐비나"를 외부 popular-times API에 의존하지 않고 SEAT_OK/CROWDED 제보 이력으로 자체 유도(간판=우리 데이터·SQL 정합). 두 가지 설계 결정: ① **만료 제보도 포함** — 휘발성 규약(expires_at)은 survival_score 같은 "지금" 신호에만 적용하고, 혼잡 패턴은 "과거 이력의 분포"를 채굴하므로 만료분도 살아있는 데이터다(급증 알림 ①의 '지금 몰리나'와 정반대 시간관). ② **KST 변환** — created_at은 timestamptz(UTC 저장)라 `AT TIME ZONE 'Asia/Seoul'`로 한국 벽시계로 바꾼 뒤 요일/시간을 뽑는다(국내 전용 서비스라 로컬 시간이 사용자 직관과 일치).
+- 설계 판단(뷰 vs 파라미터 쿼리): 전역 뷰(place×dow×hour) 대신 **place_id 선필터 파라미터 쿼리**를 택했다 — 상세 화면에서 한 장소만 조회하는 접근 패턴이라 `idx_reports_place_created` 선필터가 전역 뷰 스캔보다 효율적이고, Flyway 마이그레이션도 불필요(스키마 무변경). 집계 SQL 자체가 "SQL 중심"(ADR-0005 §④ 의도)을 만족.
+- 검증: 단위 `PopularTimesSlotTest`(4, 등급 경계 BUSY/QUIET/MODERATE/UNKNOWN) green. IT `PopularTimesIT`(3: KST 슬롯 집계·**UTC→KST hour=14 변환 정확성**·토요일 DOW=6·만료 포함·빈 목록)는 실 PostGIS라 CI 게이트. `2026-07-11`이 토요일(DOW 6)임을 `date`로 확인. `compileJava/compileTestJava` green.
+- 산출물: `domain/report/PlaceCongestionSlotView`(신규 투영)·`dto/PopularTimesSlot`(신규)·`ReportRepository.congestionByPlace`(네이티브 집계)·`ReportService.popularTimes`·`ReportController`(GET /places/{id}/popular-times) · 테스트 2파일.
+- 다음: 프론트(⑧)에서 상세 화면에 요일×시간 히트맵. 시딩 밀도가 낮은 초기엔 UNKNOWN이 많음(P5 필드테스트로 채워짐).
+- 관련: 브랜치 `feat/popular-times-p4`, ADR-0005 §④, CLAUDE.md §10 P4(시간대별 혼잡 파생)·§0-3(멱등)·§5(DB 시공간). 급증 알림 ①(ADR-0016)과 시간관이 반대(지금 vs 이력)라는 점을 대비 문서화.

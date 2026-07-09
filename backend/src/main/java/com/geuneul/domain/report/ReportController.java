@@ -1,6 +1,7 @@
 package com.geuneul.domain.report;
 
 import com.geuneul.domain.auth.JwtService;
+import com.geuneul.domain.report.dto.PopularTimesSlot;
 import com.geuneul.domain.report.dto.ReportCreateRequest;
 import com.geuneul.domain.report.dto.ReportResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,5 +61,13 @@ public class ReportController {
     @GetMapping("/places/{placeId}/reports")
     public List<ReportResponse> recent(@PathVariable long placeId) {
         return reportService.recentByPlace(placeId);
+    }
+
+    @Operation(summary = "장소의 시간대별 혼잡 파생 (자체 popular-times)",
+            description = "제보 이력을 KST 요일(0=일~6=토)×시간(0~23)으로 집계한 혼잡 패턴. 외부 API 없이 UGC로 유도. "
+                    + "만료 제보도 포함(과거 이력 채굴). 제보가 있는 슬롯만 반환한다.")
+    @GetMapping("/places/{placeId}/popular-times")
+    public List<PopularTimesSlot> popularTimes(@PathVariable long placeId) {
+        return reportService.popularTimes(placeId);
     }
 }
