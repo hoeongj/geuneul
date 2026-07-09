@@ -1,5 +1,6 @@
 package com.geuneul.domain.place;
 
+import com.geuneul.domain.ai.AiSummaryService;
 import com.geuneul.domain.place.dto.PlaceResponse;
 import com.geuneul.domain.weather.WeatherService;
 import org.springframework.stereotype.Service;
@@ -16,10 +17,13 @@ public class PlaceSearchService {
 
     private final PlaceRepository placeRepository;
     private final WeatherService weatherService;
+    private final AiSummaryService aiSummaryService;
 
-    public PlaceSearchService(PlaceRepository placeRepository, WeatherService weatherService) {
+    public PlaceSearchService(PlaceRepository placeRepository, WeatherService weatherService,
+                              AiSummaryService aiSummaryService) {
         this.placeRepository = placeRepository;
         this.weatherService = weatherService;
+        this.aiSummaryService = aiSummaryService;
     }
 
     public List<PlaceResponse> searchRadius(double lat, double lng, double radiusMeters,
@@ -54,7 +58,10 @@ public class PlaceSearchService {
         ScoredPlaceView v = placeRepository.findByIdScored(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "place not found: " + id));
         // 단건은 이 장소 좌표 기준 1회 조회(어차피 장소가 하나라 N+1 문제 없음).
-        return PlaceResponse.of(v, null, weatherComfort(v.getLat(), v.getLng()));
+        // AI 한줄 요약도 단건 상세에서만 조회한다(ADR-0010, 목록/반경/bounds는 비용 방어를 위해 미조회).
+        Double weatherComfort = weatherComfort(v.getLat(), v.getLng());
+        String aiSummary = aiSummaryService.summarize(id).orElse(null);
+        return PlaceResponse.of(v, null, weatherComfort, aiSummary);
     }
 
     /** 날씨 조회 실패(키 미설정·장애 등)는 null — 호출부는 comfort 성분 제외로 폴백한다(graceful degradation). */

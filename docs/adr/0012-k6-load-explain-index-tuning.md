@@ -1,4 +1,4 @@
-# ADR-0010. 간판(PostGIS 대용량 지리검색) 성능 실증 — k6 부하테스트 + EXPLAIN 인덱스 튜닝
+# ADR-0012. 간판(PostGIS 대용량 지리검색) 성능 실증 — k6 부하테스트 + EXPLAIN 인덱스 튜닝
 
 - 상태: 승인 (2026-07-10)
 - 관련: `perf/k6/spatial_load.js`, `perf/seed/seed_synthetic_places.sql`, `perf/explain/explain_spatial_queries.sql`,

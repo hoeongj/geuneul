@@ -1,7 +1,7 @@
 # perf/ — 간판 성능 실증 (k6 부하테스트 + EXPLAIN 인덱스 튜닝, P4)
 
 CLAUDE.md §10 P4·§11(간판=PostGIS 대용량 지리검색)의 성능 실증 자산. 결정·분석은
-[docs/adr/0010](../docs/adr/0010-k6-load-explain-index-tuning.md), 실행계획 결과는
+[docs/adr/0010](../docs/adr/0012-k6-load-explain-index-tuning.md), 실행계획 결과는
 [explain/RESULTS.md](explain/RESULTS.md).
 
 ```

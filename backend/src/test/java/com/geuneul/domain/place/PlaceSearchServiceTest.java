@@ -1,5 +1,6 @@
 package com.geuneul.domain.place;
 
+import com.geuneul.domain.ai.AiSummaryService;
 import com.geuneul.domain.place.dto.PlaceResponse;
 import com.geuneul.domain.weather.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,8 +14,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,16 +26,23 @@ import static org.mockito.Mockito.when;
  * PlaceSearchService 단위 테스트(Mockito, DB 불필요) — 날씨 comfort 배선(P3 날씨 2부, ADR-0009)의
  * <b>N+1 금지 계약</b>을 못 박는다: 결과에 장소가 몇 개든 WeatherService는 요청(쿼리)당 정확히 1회만
  * 호출돼야 한다. 공간쿼리 정확성·survival 조립은 SurvivalScoreIT(실 PostGIS)가 검증.
+ *
+ * <p>AI 요약(P3, ADR-0010)의 <b>단건 상세 전용 계약</b>도 여기서 못 박는다: AiSummaryService는
+ * {@link PlaceSearchService#getById(long)}에서만 호출되고, 목록/반경/bounds/nearest 경로에서는
+ * 절대 호출되지 않는다(비용 방어 — AI는 상세 조회 1건에만 붙는다).
  */
 class PlaceSearchServiceTest {
 
     private final PlaceRepository placeRepository = mock(PlaceRepository.class);
     private final WeatherService weatherService = mock(WeatherService.class);
-    private final PlaceSearchService service = new PlaceSearchService(placeRepository, weatherService);
+    private final AiSummaryService aiSummaryService = mock(AiSummaryService.class);
+    private final PlaceSearchService service =
+            new PlaceSearchService(placeRepository, weatherService, aiSummaryService);
 
     @BeforeEach
     void stubWeatherAvailable() {
         when(weatherService.getComfortScore(anyDouble(), anyDouble())).thenReturn(Optional.of(0.8));
+        when(aiSummaryService.summarize(anyLong())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -93,6 +103,62 @@ class PlaceSearchServiceTest {
         service.searchNearest(37.5, 127.0, null, 5);
 
         verify(weatherService, times(0)).getComfortScore(anyDouble(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("단건 상세: AiSummaryService가 이 장소 ID로 정확히 1회 호출되고 결과가 응답에 반영된다")
+    void getByIdCallsAiSummaryOnceAndPopulatesResponse() {
+        when(placeRepository.findByIdScored(1L)).thenReturn(Optional.of(view(1, null)));
+        when(aiSummaryService.summarize(1L)).thenReturn(Optional.of("최근 제보 기준 시원해요"));
+
+        PlaceResponse result = service.getById(1L);
+
+        assertThat(result.aiSummary()).isEqualTo("최근 제보 기준 시원해요");
+        verify(aiSummaryService, times(1)).summarize(1L);
+    }
+
+    @Test
+    @DisplayName("AI 요약 실패(빈 Optional)여도 예외 없이 aiSummary=null로 폴백한다(graceful degradation)")
+    void aiSummaryUnavailableStillReturnsResponseWithNullSummary() {
+        when(placeRepository.findByIdScored(1L)).thenReturn(Optional.of(view(1, null)));
+        when(aiSummaryService.summarize(1L)).thenReturn(Optional.empty());
+
+        PlaceResponse result = service.getById(1L);
+
+        assertThat(result.aiSummary()).isNull();
+        assertThat(result.survival()).isNotNull(); // survival_score는 AI와 무관하게 정상 조립
+    }
+
+    @Test
+    @DisplayName("반경 검색은 AiSummaryService를 호출하지 않는다(목록 경로는 AI 비용을 지지 않는다)")
+    void searchRadiusNeverCallsAiSummary() {
+        when(placeRepository.findWithinRadiusScored(anyDouble(), anyDouble(), anyDouble(), any(), anyInt()))
+                .thenReturn(List.of(view(1, 10.0), view(2, 20.0)));
+
+        service.searchRadius(37.5, 127.0, 800, null, 100);
+
+        verify(aiSummaryService, never()).summarize(anyLong());
+    }
+
+    @Test
+    @DisplayName("bounds 검색은 AiSummaryService를 호출하지 않는다(마커 조회는 AI 비용을 지지 않는다)")
+    void searchBoundsNeverCallsAiSummary() {
+        when(placeRepository.findInBoundsScored(anyDouble(), anyDouble(), anyDouble(), anyDouble(), any(), anyInt()))
+                .thenReturn(List.of(view(1, null)));
+
+        service.searchBounds(126.9, 37.4, 127.1, 37.6, null, 100);
+
+        verify(aiSummaryService, never()).summarize(anyLong());
+    }
+
+    @Test
+    @DisplayName("nearest(팬아웃) 경로는 AiSummaryService를 호출하지 않는다")
+    void searchNearestNeverCallsAiSummary() {
+        when(placeRepository.findNearest(anyDouble(), anyDouble(), any(), anyInt())).thenReturn(List.of());
+
+        service.searchNearest(37.5, 127.0, null, 5);
+
+        verify(aiSummaryService, never()).summarize(anyLong());
     }
 
     private static ScoredPlaceView view(long id, Double distanceM) {
