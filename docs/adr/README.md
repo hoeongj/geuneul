@@ -17,5 +17,5 @@
 | [0010](./0010-ai-summary-openrouter-provider.md) | AI 한줄 요약 — 프로바이더는 OpenRouter(Anthropic 키 부재로 이탈), 상세 전용 additive | 승인 |
 | [0011](./0011-scheduled-public-data-sync.md) | 공공데이터 주기 동기화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock | 승인(스캐폴드, 미활성) |
 | [0012](./0012-k6-load-explain-index-tuning.md) | 간판 성능 실증 — k6 부하테스트 + EXPLAIN 인덱스 튜닝(V8 만료 제보 인덱스) | 승인 |
-| [0013](./0013-ecs-service-autoscaling.md) | ECS Service Auto Scaling — CPU target tracking, min=1/max=3, 기본 ENABLED | 승인(스캐폴드, apply 대기) |
+| [0013](./0013-ecs-service-autoscaling.md) | ECS Service Auto Scaling — CPU target tracking, min=1/max=3, 기본 ENABLED | 승인(apply 완료·라이브) |
 | [0014](./0014-observability-otel-micrometer-grafana.md) | 관측성 — Micrometer/Prometheus(pull)+Boot 4 OTel 스타터(push 트레이싱)+로컬 Grafana/Tempo, prometheus는 프로덕션 기본 미노출 | 승인 |

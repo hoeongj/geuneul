@@ -72,26 +72,28 @@ XFF 위조 우회가 **완전 차단**됐다. 한 일:
 
 ---
 
-## 지금 상태 — P1(지리 코어) 완결 + 프론트 MVP 라이브 + P2 제보 라이브 + P3 survival_score·추천 라이브
+## 지금 상태 — 로드맵 P1~P4(A~D) 완주 · 프론트 MVP 라이브 · 간판(지리검색+UGC 스코어링) 완성
 
 🟢 **API Live:** http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com (`/actuator/health`, `/swagger-ui.html`)
 🟢 **App Live:** https://geuneul.vercel.app (프론트 PWA — Kakao 실지도 + 라이브 데이터 + 실시간 제보)
 
 - **백엔드:** Spring Boot 4.0.6 / Java 21. 반경(`ST_DWithin` geography)·최근접(kNN `<->`)·bounds 공간검색 API 라이브. `backend/`.
-- **인프라:** AWS ECS Fargate + RDS PostgreSQL(PostGIS) + **ElastiCache Redis** + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev26**(날씨+로그인 배선: REDIS_HOST env + SSM secret 8종=DB·PROXY·KMA·KAKAO_REST·KAKAO_SECRET·GOOGLE_ID·GOOGLE_SECRET·JWT). rev25=캐시 핫픽스, rev23=ElastiCache 배선, rev20=품질 하드닝 PR #25(과거값). `infra/`.
+- **인프라:** AWS ECS Fargate(+**오토스케일링** min1/max3 CPU60%) + RDS PostgreSQL(PostGIS) + **ElastiCache Redis** + **S3**(사진) + **EventBridge Scheduler**(주기동기화, DISABLED) + Terraform(IaC) + GitHub Actions OIDC + ECR + ALB. `main`에 `backend/**` push 시 자동배포. **현재 라이브 태스크데프 rev39**(REDIS_HOST·S3_BUCKET_NAME·AWS_REGION env + SSM secret **10종**=DB·PROXY·KMA·KAKAO_REST·KAKAO_SECRET·GOOGLE_ID·GOOGLE_SECRET·JWT·**OPENROUTER·DATA_GO_KR**). 라이브 태스크데프는 `ignore_changes`라 secret/env 추가 시 **수동 rev 등록**(describe→추가→register→update-service). `infra/`.
 - **데이터(프로덕션 RDS):** 무더위쉼터 100건(전국 샘플) + 공중화장실 **46,897건**(카카오 지오코딩). 광화문·대전·부산·강릉 라이브 검증 통과.
 - **P2 제보(라이브, PR #15·#16·#17):** 익명 휘발성 제보 `POST /reports`(타입별 TTL로 `expires_at`) + `GET /places/{id}/reports`. 프론트 제보하기 실전송(장소=nearest+피커)·상세 "최근 제보" 실시간. 인메모리 레이트리밋(분3·시간10) — XFF 신뢰경계(`ProxyClientResolver`)·OOM 하드닝(TS-008).
 - **P3 survival_score(라이브, PR #23·ADR-0007):** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk) → 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). `/places`(반경·bounds)·`/places/{id}` 응답에 `survival` 필드. 프론트 마커 3색 링·리스트/상세 상태 배지. open_now는 운영시간 결측이라 재정규화 제외(데이터 붙으면 복원), 후기는 §5대로 분리. **로컬 검증: postgis에 V1~V4 직접 적용 + 시나리오별 뷰/쿼리 실행으로 시맨틱 확증(TS-009), 엔드투엔드 IT는 CI.**
 - **P3 추천(라이브, PR #24·ADR-0008):** `GET /recommendations?scenario=rest30|restroom|rain` — survival_score 순수 함수를 시나리오 가중치로 재사용(`SurvivalScore.Weights` 오버로드) + 2단 검색(공간 인덱스 선필터 `findWithinRadiusScoredByCategories` → 앱 재랭킹). 응답=canonical `survival` 배지 + `matchScore`(적합도, 정렬 기준) + `reason`(제보 요약). 가중치: rest30 comfort↑(0.35) / restroom distance 압도(0.60) / rain risk↑(0.40, 침수 강등 — 배지는 §6대로 −0.15 순화 유지). 프론트 "급해요"를 nearest 팬아웃 → 정식 랭킹으로 승격(`/api/urgent`가 `/recommendations` 프록시). **검증: 단위 15건 green + 엔드투엔드 IT 3건은 colima 이슈로 로컬 skip→CI green 후 머지·배포. 프로덕션 실측(광화문 화장실 거리순 matchScore, 상도동 rest30에서 제보 있는 도서관이 무제보 쉼터 앞섬).**
 - **프론트(완료, PR #12·#14·#16):** Next.js 16(App Router)+TS PWA — MVP 4화면(홈 지도·장소 상세(실지도 미니맵·최근제보)·급해요·제보 실전송). **동일 오리진 서버 프록시(BFF)** 로 ALB(http)·CORS 회피(ADR-0004) → **백엔드 CORS 불필요**. Vercel git 연결로 `main` push 시 자동배포(rootDirectory=frontend). Kakao JS 키는 콘솔 **[JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록 완료(제품링크관리>웹도메인과 다른 칸 — 혼동 주의).
-- **테스트:** 파서/컨트롤러/지오코딩 단위 + 실 PostGIS IT(멱등·공간쿼리). JaCoCo floor 0.35 ratchet. CI(`ci.yml`)가 실 PostGIS로 검증. 프론트는 `frontend-ci.yml`(typecheck·lint·build).
+- **테스트:** 파서/컨트롤러/지오코딩/스코어/AI/모더레이션 단위 + 실 PostGIS IT(멱등·공간쿼리·뷰·플래그·트러스트). **JaCoCo floor 0.60 ratchet**(#32에서 0.35→0.60, 실측 65.7%). CI(`ci.yml`)가 실 PostGIS로 검증. 프론트는 `frontend-ci.yml`(typecheck·lint·build). **로컬 IT는 colima 이슈로 skip(TS-009) — CI가 유일한 실 게이트, SKIP≠통과.**
 
 ## 아키텍처 한눈에
 ```
-backend/    Spring Boot 4 — domain.place(공간검색·survival) · domain.report(제보) · domain.recommend(추천) · domain.ingest(+geocode) · global.geo/config
-infra/      terraform/(VPC·RDS·ECS·ALB·ECR·IAM OIDC) · scripts/prod-ingest.sh
-frontend/   Next.js 16 App Router PWA — app/(shell)(4화면) · app/api(서버 프록시 BFF) · components · lib
-docs/       adr/0001~0008 · design-brief.md
+backend/    Spring Boot 4 — domain.place(공간검색·survival) · domain.report(제보) · domain.review(후기) · domain.flag(모더레이션) · domain.photo(presign) · domain.recommend(추천) · domain.weather(날씨) · domain.ai(요약) · domain.auth(OAuth·JWT·trust) · domain.ingest(+geocode·openapi·storeapi·batchlock) · global.geo/config/security
+infra/      terraform/(VPC·RDS·ECS+오토스케일링·ALB·ECR·IAM OIDC·ElastiCache·S3·SSM·EventBridge scheduler) · scripts/prod-ingest.sh
+frontend/   Next.js 16 App Router PWA — app/(shell)(홈지도·상세·급해요·제보·후기·내정보) · app/api(서버 프록시 BFF) · components · lib
+observability/  로컬 관측성 스택(Prometheus·Grafana·Tempo, docker-compose --profile observability)
+perf/       k6 부하테스트(spatial_load.js)·seed·EXPLAIN RESULTS(P4)
+docs/       adr/0001~0014 · design-brief.md
 .github/    ci.yml(백엔드 테스트) · deploy.yml(OIDC 배포, paths=backend/**) · frontend-ci.yml(paths=frontend/**)
 .local/     (gitignore) myInfo·PORTFOLIO-CONTEXT — 비밀·회사매핑
 ```
@@ -101,33 +103,30 @@ docs/       adr/0001~0008 · design-brief.md
 - **공공데이터 재적재(멱등):** `KAKAO_REST_API_KEY=<키> ./infra/scripts/prod-ingest.sh public_toilet <릴리즈URL> MS949` (쉼터는 키 불필요·UTF-8). 데이터 스냅샷은 GitHub Release `data-v1`.
 - **인프라 변경:** `cd infra/terraform && terraform plan/apply` (tfvars·tfstate는 gitignore). 전체 삭제 = `terraform destroy`.
 - **비밀 위치:** 카카오/AWS/서버 키는 전부 `.local/`·`~/.aws`·env로만. 레포 커밋 금지(규칙 D). 커밋 전 유출 스캔 필수.
-- **비용:** ALB ~$16/월 + Fargate(0.25vCPU/1GB) ~$12/월. RDS·ECS·SSM·ECR 사실상 무료. $200 크레딧 + 예산 알림(실지출 $0.01↑ 메일).
+- **비용:** ALB ~$16/월 + Fargate(0.25vCPU/1GB) ~$12/월. RDS·ECS·SSM·ECR 사실상 무료. 오토스케일링 스케일아웃 시 최대 ~$36/월(부하 종료 600초 후 원복). $200 크레딧 + 예산 알림(실지출 $0.01↑ 메일).
+- **AI 요약 데모 살리기(다음 세션 #1, 복붙):** 유효한 non-rate-limited 키만 있으면 코드변경 0.
+  ```bash
+  # OPENROUTER_API_KEY secret은 rev37+ 태스크데프에 이미 배선됨 → SSM 값만 갱신 후 강제 재배포
+  aws ssm put-parameter --name /geuneul/openrouter_api_key --type SecureString --overwrite --value '<유효 OpenRouter 키>'
+  aws ecs update-service --cluster geuneul --service geuneul --force-new-deployment
+  # (모델도 바꾸려면) 태스크데프 rev에 OPENROUTER_MODEL env 추가/변경(describe→register→update-service)
+  # 검증: 제보 있는 place 상세 GET → aiSummary 비-null. 앱 로그: /ecs/geuneul 로그그룹 "OpenRouterClient"
+  ```
+- **주기동기화 스케줄 켜기:** `cd infra/terraform && terraform apply -var ingest_schedule_enabled=true`(실트리거 1회 검증 후). 스케줄명 `geuneul-public-data-sync`, Universal Target `aws-sdk:ecs:runTask`(input PascalCase, TS-020).
 
 ## 다음 할 일 (우선순위)
 
-### P2 · UGC + 인증 (진행 중)
-- [x] ~~**제보(report)**: `POST /reports` 휘발성(`expires_at`, 타입별 TTL). 익명 허용~~ — **완료·라이브(PR #15·#16·#17).** 백엔드 API + 프론트 실전송 + 상세 최근제보. 레이트리밋 XFF 신뢰경계·OOM 하드닝(TS-008). `GET /places/{id}/reports`도.
-- [ ] **소셜 로그인**: 카카오/구글 OAuth2 + JWT 세션. (Boot 4 `spring-boot-starter-oauth2-client`/`-resource-server`, jjwt. mp에 레퍼런스.) **선행: 카카오·구글 콘솔 앱 설정(아침 체크리스트).**
-- [ ] **후기(review)**: `POST /reviews`·`GET /places/{id}/reviews` 영구 평판(별점/코멘트/사진). 로그인 필요 → OAuth 다음.
-- [ ] **사진 업로드**: `POST /photos/presign` — **S3 버킷 + presigned URL**(terraform에 S3 추가 필요, 태스크 롤에 s3 권한). 프론트 제보 화면 사진 슬롯이 대기.
-- [ ] **신뢰도(trust_score)** 계산 + 제보 가중(로그인 제보에). 로그인 시 `reports.user_id`·`is_anonymous=false` 경로는 엔티티에 이미 준비됨.
-- [ ] **모더레이션 큐**: `POST /flags` 신고 + `GET /admin/flags/pending`(관리자).
-- [x] ~~**레이트리밋 proxy-secret 활성화**~~ — **완료(2026-07-04).** BFF 공유시크릿 라이브, XFF 위조 우회 차단 검증(TS-008, 체크리스트 §1).
-- 프론트 예약 슬롯: 최근 제보·**survival_score 마커 3색·상태 배지=완료**. 후기·로그인 배지·AI 요약은 여전히 대기.
+### ✅ 완료·라이브 (로드맵 P2~P4 — 2026-07-10 세션 반영)
+- **P2 UGC+인증**: 제보(#15~17) · 소셜로그인 카카오/구글 OAuth+JWT(#27) · 후기 review(#31) · 사진 presign S3(#35) · trust_score 실배선(#34, V6) · 모더레이션 flags+ADMIN 큐(#33, V7) · 레이트리밋 proxy-secret(TS-008). **프론트 예약슬롯 중 후기·사진 업로드까지 라이브.**
+- **P3 스코어·추천·AI·데이터**: survival_score(#23, ADR-0007) · 추천(#24, ADR-0008) · 날씨+Redis캐시(#26) · 날씨 comfort 복원(#30, ADR-0009) · AI 한줄요약(#36, ADR-0010 — 배선완료·무료티어 대기) · 공부공간 데이터확장(#32, V5, ADR-0006) · 주기동기화 EventBridge→RunTask(#37, ADR-0011 — DISABLED).
+- **P4 심화(간판)**: k6+EXPLAIN+V8 인덱스튜닝(#38, ADR-0012) · ECS 오토스케일링(#39, ADR-0013, apply 완료) · 관측성 OTel/Micrometer(#40, ADR-0014, `/actuator/prometheus` 노출 닫음 실측 404).
 
-### P3 · 스코어·추천·AI
-- [x] ~~**survival_score**: 거리+open_now+comfort+freshness−risk를 **SQL/PostGIS 레이어에서** 계산(CLAUDE.md §5). 마커 3색.~~ — **완료(ADR-0007).** `place_report_signals` 뷰(V4)가 유효제보를 최근성×신뢰도로 집계(freshness/comfort/risk), 순수 함수 `SurvivalScore`가 §5 가중치 조립·등급(GOOD/OKAY/UNKNOWN). 반경/bounds/단건 스코어드 API + 프론트 마커 3색·상태 배지. open_now는 운영시간 결측이라 재정규화로 제외(데이터 붙으면 복원). 후기는 §5대로 분리.
-- [x] ~~**추천 시나리오**: `GET /recommendations?scenario=rest30|restroom|rain`.~~ — **완료·라이브(PR #24, ADR-0008).** survival_score 순수 함수를 시나리오 가중치로 재사용(SurvivalScore.Weights 오버로드) + 2단 검색(공간 인덱스 선필터 → 시나리오 재랭킹). 응답에 canonical `survival` 배지 + `matchScore`(적합도) + `reason`(제보 요약). 프론트 "급해요"를 nearest 팬아웃 → 정식 랭킹으로 승격. 콘솔 불필요라 바로 착수했음.
-- [ ] **날씨**: 기상청 초단기예보 + **Redis TTL 캐시**(rate limit). Redis 헬스체크 다시 켜기(application.yml `management.health.redis.enabled`). **다음 콘솔 불필요 조각** — open_now/기온을 붙이면 survival_score/추천 재정규화를 additive 복원.
-- [ ] **AI 한줄 요약**: Claude API(곁다리).
-- [ ] **공공데이터 주기 동기화**: EventBridge Scheduler → ECS RunTask(월1회 등). 멱등 upsert 재실행 + **스냅샷에서 사라진 행 soft-delete 비활성화**(폐쇄 반영) + **오픈API serviceKey로 다운로드까지 무인화**(현재 수동 다운로드 병목 제거).
-- [ ] **쉼터 전국 전체 데이터** 확보(행안부 safetydata) 후 재적재. 화장실 실패 7,193건 재시도.
-
-### P4 · 심화 (간판 보강)
-- [x] ~~**k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN 성능 실증)~~ — **완료(ADR-0010, 브랜치 `feat/k6-load-explain-p4`).** 로컬 docker-compose PostGIS에 합성 30만 places + 21만 reports 시드 → EXPLAIN으로 반경(`ST_DWithin` geography GiST)·kNN(`<->` GiST)·bounds(geometry GiST) 인덱스 사용 확증 + k6 4엔드포인트 부하 실측(green, kNN p95 213ms·반경 p95 1.4s·실패율 0%). **Flyway V8** `idx_reports_expires`로 `place_report_signals` 뷰의 만료 제보 누적 전체스캔 튜닝(뷰빌드 256→133ms). `perf/*`(k6·seed·explain·RESULTS). ⚠️ 로컬 PostGIS가 amd64 emulated라 절대 지연은 부풀려짐(실행계획·before/after 비율·처리량 상한만 유효, 프로덕션 RDS 미측정).
-- [ ] **ECS Service Auto Scaling**(=HPA 상당) 부하와 함께.
-- [x] ~~관측성(OTel/Grafana)~~ — **PR 대기(ADR-0014, 브랜치 `feat/observability-otel-p4`).** Micrometer/Prometheus(pull, `/actuator/prometheus` 옵트인 — 착수 전 실측으로 이미 인증 없이 공개돼 있던 걸 발견해 기본 미노출로 전환, TS-022) + Boot 4.0 공식 OTel 스타터(push 트레이싱, OTLP) + 커스텀 latency Timer 2개(반경 ST_DWithin·kNN `<->`) + 로컬 Prometheus/Grafana/Tempo(docker-compose `observability` 프로필, 실기동 검증 완료). 프로덕션 ECS/SSM은 무변경.
-- [ ] 실시간 이벤트(제보 급증 알림 — Redis Streams/LISTEN·NOTIFY), 캐시 전략, ADR 계속.
+### ⏳ 남은 것 (다음 세션 — 우선순위순)
+- [ ] **AI 데모 출력 살리기**(가장 쉬움): 유효 OpenRouter 키/모델 1개를 `/geuneul/openrouter_api_key` SSM에 넣고 rev 재등록(코드변경 0). 현재 무료모델 rate-limit(429)라 aiSummary=null. `OPENROUTER_MODEL` env로 모델 교체도 가능.
+- [ ] **EventBridge 스케줄 활성화**: Universal Target input 실트리거 1회 검증(TS-020 PascalCase 반영됨) → `ingest_schedule_enabled=true` apply.
+- [ ] **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
+- [ ] **상권정보 STUDY_CAFE/CAFE** 실적재 — 상권정보 오픈API 403(승인 대기). 승인 후 파서 계약 재검증(스캐폴드는 `domain/ingest/storeapi`에 있음).
+- [ ] **실시간 이벤트**(제보 급증 알림 — Redis Streams/LISTEN·NOTIFY), 캐시 전략 심화, ADR 계속.
 
 ### 인프라/프론트 백로그
 - [ ] **ALB HTTPS**(ACM 인증서 + 도메인 + 443 리스너) — 프론트가 서버 프록시를 안 쓰고 직접 붙거나, 공유 링크 신뢰도 위해.
