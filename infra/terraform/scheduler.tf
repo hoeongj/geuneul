@@ -86,26 +86,28 @@ resource "aws_scheduler_schedule" "public_data_sync" {
     arn      = "arn:aws:scheduler:::aws-sdk:ecs:runTask"
     role_arn = aws_iam_role.ingest_scheduler.arn
 
+    # EventBridge Scheduler Universal Target(aws-sdk:ecs:runTask)의 input은 AWS API 모델 그대로 **PascalCase**를
+    # 요구한다(camelCase면 CreateSchedule이 "missing field TaskDefinition"으로 400 — 실측으로 확인, TS-020).
     input = jsonencode({
-      cluster        = aws_ecs_cluster.main.arn
-      taskDefinition = aws_ecs_task_definition.app.family # family만 지정 = 항상 최신 ACTIVE 리비전(prod-ingest.sh와 동일 관례)
-      launchType     = "FARGATE"
-      count          = 1
-      networkConfiguration = {
-        awsvpcConfiguration = {
-          subnets        = aws_subnet.public[*].id
-          securityGroups = [aws_security_group.ecs.id]
-          assignPublicIp = "ENABLED" # NAT 없음 — 서비스 태스크와 동일 이유(network.tf 주석)
+      Cluster        = aws_ecs_cluster.main.arn
+      TaskDefinition = aws_ecs_task_definition.app.family # family만 지정 = 항상 최신 ACTIVE 리비전(prod-ingest.sh와 동일 관례)
+      LaunchType     = "FARGATE"
+      Count          = 1
+      NetworkConfiguration = {
+        AwsvpcConfiguration = {
+          Subnets        = aws_subnet.public[*].id
+          SecurityGroups = [aws_security_group.ecs.id]
+          AssignPublicIp = "ENABLED" # NAT 없음 — 서비스 태스크와 동일 이유(network.tf 주석)
         }
       }
-      overrides = {
-        containerOverrides = [{
-          name = var.project
+      Overrides = {
+        ContainerOverrides = [{
+          Name = var.project
           # IngestionRunner CLI 계약(도메인 클래스 주석 참고): library=오픈API 페이지네이션 전량 수집이라
           # 파일/URL 불필요 — serviceKey(DATA_GO_KR_SERVICE_KEY, ecs.tf secrets)만으로 다운로드까지 자족.
           # deactivate-stale=true: 전량 스냅샷 소스라 안전(IngestionService 안전장치, ADR-0006).
           # server.port=8081: 서비스 태스크(8080, ALB 대상)와 겹치지 않는 one-off 전용 포트(prod-ingest.sh 관례).
-          command = [
+          Command = [
             "--ingest.source=library",
             "--ingest.deactivate-stale=true",
             "--ingest.exit-after=true",
