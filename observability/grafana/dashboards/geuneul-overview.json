@@ -1,0 +1,104 @@
+{
+  "id": null,
+  "uid": "geuneul-overview",
+  "title": "그늘(Geuneul) — 백엔드 개요",
+  "description": "간판(PostGIS 반경/kNN 지리검색) latency + HTTP 처리량 + JVM 상태. ADR-0014(관측성) 로컬 스택 산출물.",
+  "tags": ["geuneul", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "간판 — 반경검색(ST_DWithin, GiST) p95 latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(geuneul_place_search_radius_seconds_bucket[5m])) by (le, category))",
+          "legendFormat": "{{category}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "간판 — kNN 최근접(<->) p95 latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(geuneul_place_search_nearest_seconds_bucket[5m])) by (le, category))",
+          "legendFormat": "{{category}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HTTP 요청 처리율 (uri, status)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count[5m])) by (uri, status)",
+          "legendFormat": "{{uri}} [{{status}}]"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "HTTP p95 latency (uri)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))",
+          "legendFormat": "{{uri}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "JVM 힙 사용량",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+          "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+          "legendFormat": "{{id}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "프로세스 CPU 사용률",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+          "expr": "process_cpu_usage",
+          "legendFormat": "process"
+        }
+      ]
+    }
+  ]
+}

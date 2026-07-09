@@ -1,0 +1,21 @@
+# 로컬 전용 Prometheus 스크레이프 설정(ADR-0014). 프로덕션에는 없음 — docker-compose observability
+# 프로필로만 기동된다. 백엔드는 이 컨테이너 밖(호스트)에서 `./gradlew bootRun`으로 돈다(README 참고).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 백엔드는 docker-compose 서비스가 아니라 호스트에서 bootRun으로 뜬다(그늘 로컬 개발 관례,
+  # docker-compose.yml 상단 주석 참고) — host.docker.internal로 호스트 루프백에 접근한다.
+  # 백엔드 기동 시 MANAGEMENT_EXPOSURE=health,info,prometheus 를 반드시 줘야 이 스크레이프가 200을 받는다
+  # (application.yml 기본값은 prometheus 미노출 — ADR-0014 §1, 프로덕션 안전 기본값).
+  - job_name: 'geuneul-backend'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels:
+          service: geuneul-backend
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
