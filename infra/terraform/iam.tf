@@ -30,7 +30,7 @@ resource "aws_iam_role_policy" "ecs_exec_ssm" {
   })
 }
 
-# --- 태스크 롤 (앱이 쓰는 AWS 권한; 지금은 최소, 향후 S3 등 추가) ---
+# --- 태스크 롤 (앱이 쓰는 AWS 권한 — 최소 권한 원칙) ---
 resource "aws_iam_role" "ecs_task" {
   name = "${var.project}-ecs-task"
   assume_role_policy = jsonencode({
@@ -39,6 +39,21 @@ resource "aws_iam_role" "ecs_task" {
       Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
       Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+# PhotoService(S3Presigner)가 이 롤로 PUT/GET을 서명한다 — 정적 액세스키 없이 태스크 롤만으로 presign
+# (규칙 D와 정합: 자격증명이 코드/env에 남지 않는다). 버킷 ARN 한정 + PutObject/GetObject만(Delete/List 없음).
+resource "aws_iam_role_policy" "ecs_task_s3_photos" {
+  name = "${var.project}-task-s3-photos"
+  role = aws_iam_role.ecs_task.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:PutObject", "s3:GetObject"]
+      Resource = "${aws_s3_bucket.photos.arn}/*"
     }]
   })
 }

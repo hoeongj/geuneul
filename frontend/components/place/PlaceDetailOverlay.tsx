@@ -58,6 +58,10 @@ function RecentReports({ placeId }: { placeId: number }) {
                 </div>
                 {r.comment && <p className="truncate text-[12.5px] text-ink-3">{r.comment}</p>}
               </div>
+              {r.photoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- 제보 첨부 사진(S3 오브젝트, 원격 도메인)
+                <img src={r.photoUrl} alt="" className="h-[42px] w-[42px] shrink-0 rounded-[8px] object-cover" />
+              )}
             </li>
           ))}
         </ul>

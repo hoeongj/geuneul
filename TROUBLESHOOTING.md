@@ -190,3 +190,9 @@
 - **결과:** 정정된 설계로 완료. 상권정보(STUDY_CAFE/CAFE) API도 같은 방식으로 먼저 실호출해봤고, 이쪽은 **403(활용신청 미승인)** 임을 확인해 "계약 미검증"으로 명시 플래그 처리(추측 코드를 실측인 것처럼 포장하지 않음, ADR-0006 "구현 정정" 섹션).
 - **핵심 학습 포인트:** ① **문서화된 과거 조사도 유효기간이 있다** — 데이터 소스가 살아있는 외부 API라면, 코드를 쓰기 전에 실제로 한 번 호출해보는 것이 웹 검색보다 싸고 확실하다(이번엔 curl 몇 번으로 몇 시간의 잘못된 방향을 피할 수 있었다). ② 실측이 불가능하면(승인 대기 등) **"검증됨"과 "리서치 기반 추정"을 코드 주석·ADR에 명확히 구분 표시**해 다음 사람이 신뢰 수준을 오인하지 않게 한다. ③ 되돌린 작업이 아깝다고 원래 설계를 억지로 맞추지 않고, 새로 확인된 사실(seatCo 필드 존재)에 맞춰 설계를 더 정밀하게 다시 짜는 게 결과적으로 이득이었다.
 - **관련:** `domain.ingest.openapi.PublicLibraryIngestionService`, ADR-0006 "구현 정정" 섹션, `domain.ingest.storeapi`(계약 미검증 플래그). CLAUDE.md §B.
+### TS-018 · 2026-07-09 — `terraform validate` 경고: `aws_s3_bucket_lifecycle_configuration`의 `rule`에 filter/prefix 필수
+- **상황/증상:** S3 사진 버킷(`s3.tf`, 미완료 멀티파트 업로드 정리용)을 추가하고 `terraform validate`를 돌리니 에러는 아니지만 경고: `No attribute specified when one (and only one) of [rule[0].filter,rule[0].prefix] is required` + `This will be an error in a future version of the provider`. 리소스 자체는 `id`·`status`·`abort_incomplete_multipart_upload`만 있고 필터링 조건이 필요 없는 규칙(버킷 전체 대상)이었다.
+- **원인 분석:** S3 라이프사이클 API는 규칙이 "무엇에 적용되는지"(filter 또는 구식 prefix)를 명시하도록 강제하는 방향으로 바뀌었는데(AWS 문서/`aws_s3_bucket_lifecycle_configuration` 스키마), 대상 provider(hashicorp/aws v5.100.0)는 아직 완전 강제(하드 에러)는 아니고 경고만 낸다 — "버킷 전체"라는 의도를 표현하는 관용구가 빈 `filter {}` 블록이라는 게 문서만 봐서는 바로 안 와닿았다(직관적으로는 filter를 아예 생략하면 "무조건"일 거라 생각하기 쉬움).
+- **해결:** `filter {}`(빈 블록, 프리픽스/태그 조건 없음 = 버킷 전체)를 명시 추가. `terraform validate` 경고 0.
+- **핵심 학습 포인트:** ① Terraform 경고("This will be an error in a future version")는 무시하지 말고 그 자리에서 고친다 — 다음 프로바이더 메이저 업그레이드에서 조용히 `apply` 실패로 바뀔 수 있다. ② "조건 없음"을 표현하는 관용구가 "생략"이 아니라 "빈 블록"인 리소스가 있다 — 스키마 경고 메시지가 정확한 힌트(`filter` 또는 `prefix` 둘 중 하나)를 주므로 그대로 따르면 된다.
+- **관련:** `infra/terraform/s3.tf`(`aws_s3_bucket_lifecycle_configuration.photos`), P2 사진 presign 인프라.

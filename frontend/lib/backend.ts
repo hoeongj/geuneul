@@ -99,6 +99,48 @@ export async function proxyAuthedPost(path: string, request: NextRequest): Promi
   }
 }
 
+// 사진 presign 전용 프록시: purpose=report는 익명 허용(proxyPost처럼 XFF/클라이언트IP를 보존해 백엔드
+// 레이트리밋이 유저별로 동작하게 함), purpose=review는 세션 쿠키가 있으면 Bearer로 함께 실어 보낸다
+// (proxyAuthedPost와 달리 쿠키가 없다고 즉시 401을 내지 않는다 — report 용도의 익명 요청까지 막아버리므로.
+// 없으면 그대로 진행하고, 백엔드가 review 용도에서 미인증이면 401을 낸다).
+export async function proxyPhotoPresign(request: NextRequest): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  try {
+    const body = await request.text();
+    const xff = request.headers.get("x-forwarded-for") ?? "";
+    const clientIp = request.headers.get("x-real-ip") ?? xff.split(",")[0].trim();
+    const proxySecret = process.env.GEUNEUL_PROXY_SECRET ?? "";
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
+    const res = await fetch(`${BASE}/photos/presign`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        ...(xff ? { "x-forwarded-for": xff } : {}),
+        ...(clientIp ? { "x-client-ip": clientIp } : {}),
+        ...(proxySecret ? { "x-proxy-auth": proxySecret } : {}),
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      body,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    const resBody = await res.text();
+    return new NextResponse(resBody, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
 // path 예: "/places", "/places/nearest", "/places/12"
 export async function proxy(path: string, search: string): Promise<NextResponse> {
   if (!BASE) {

@@ -15,6 +15,7 @@ public record ReportResponse(
         @Schema(description = "제보 타입", example = "COOL") String reportType,
         @Schema(description = "제보 타입 한글명", example = "시원해요") String reportTypeLabel,
         @Schema(description = "한 줄 코멘트", example = "에어컨 빵빵해요", nullable = true) String comment,
+        @Schema(description = "사진 URL", nullable = true) String photoUrl,
         @Schema(description = "익명 여부", example = "true") boolean anonymous,
         @Schema(description = "제보 시각") OffsetDateTime createdAt,
         @Schema(description = "만료 시각 — 지나면 조회에서 제외") OffsetDateTime expiresAt
@@ -27,6 +28,7 @@ public record ReportResponse(
                 r.getReportType().name(),
                 r.getReportType().label(),
                 r.getComment(),
+                r.getPhotoUrl(),
                 r.isAnonymous(),
                 r.getCreatedAt(),
                 r.getExpiresAt()

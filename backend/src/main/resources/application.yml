@@ -58,6 +58,13 @@ geuneul:
   # 미설정(현재)이면 기존 호환(최좌측 XFF). 활성화는 Vercel env + 백엔드 env 동일값 주입. 값은 SSM으로만.
   proxy-secret: ${GEUNEUL_PROXY_SECRET:}
 
+aws:
+  s3:
+    # 제보/후기 사진 버킷(P2 presign). 비면 PhotoService가 호출 시점에 명확히 실패(JwtService와 동일한
+    # 지연 검증 패턴 — 값 주입 전 배포돼도 앱 자체는 뜬다). 값은 terraform output(s3_photos_bucket)로 확정.
+    bucket: ${S3_BUCKET_NAME:}
+    region: ${AWS_REGION:ap-northeast-2}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

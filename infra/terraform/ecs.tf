@@ -32,7 +32,9 @@ resource "aws_ecs_task_definition" "app" {
       { name = "DB_USERNAME", value = var.db_username },
       { name = "PORT", value = "8080" },
       { name = "REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "S3_BUCKET_NAME", value = aws_s3_bucket.photos.bucket }, # P2 사진 presign(PhotoService)
+      { name = "AWS_REGION", value = var.aws_region }                   # S3Presigner 리전 — ECS가 자동 주입 안 함
     ]
     secrets = [
       { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn },

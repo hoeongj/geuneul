@@ -25,6 +25,11 @@ output "redis_endpoint" {
   value       = aws_elasticache_cluster.redis.cache_nodes[0].address
 }
 
+output "s3_photos_bucket" {
+  description = "ECS 태스크데프 S3_BUCKET_NAME 으로 주입할 사진 버킷명 (P2 presign)"
+  value       = aws_s3_bucket.photos.bucket
+}
+
 output "github_actions_role_arn" {
   description = "GitHub 레포 Secrets에 AWS_ROLE_ARN 으로 등록"
   value       = aws_iam_role.github_actions.arn

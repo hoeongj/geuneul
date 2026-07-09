@@ -1,5 +1,6 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
+import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
 import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
 import type { User } from "@/types/user";
 import { boundsParam } from "./geo";
@@ -124,4 +125,32 @@ export async function createReview(payload: ReviewCreatePayload): Promise<Review
   });
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<Review>;
+}
+
+// 사진 업로드 presign 발급 — S3로 직접 PUT할 URL을 받는다. purpose=review는 로그인 필요(401은 호출부가 처리).
+export async function presignPhoto(params: {
+  contentType: string;
+  contentLength: number;
+  purpose: PhotoPurpose;
+}): Promise<PhotoPresignResult> {
+  const res = await fetch(`/api/photos/presign`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(params),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<PhotoPresignResult>;
+}
+
+// presign으로 받은 URL에 파일을 직접 PUT — 서명 시 실은 Content-Type/Content-Length와 정확히 일치해야
+// S3가 받아준다(PhotoService 주석 참고). 이 요청은 동일 오리진 프록시를 거치지 않고 S3로 바로 나간다
+// (presigned URL 자체가 인가 수단이라 BFF를 거칠 이유가 없다 — 오히려 대용량 바이너리가 Vercel 함수를 왕복하지 않아 유리).
+export async function uploadPhotoToS3(presigned: PhotoPresignResult, file: File): Promise<void> {
+  const res = await fetch(presigned.uploadUrl, {
+    method: "PUT",
+    headers: { "content-type": file.type },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`사진 업로드에 실패했어요 (${res.status})`);
 }
