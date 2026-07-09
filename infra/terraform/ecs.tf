@@ -49,7 +49,8 @@ resource "aws_ecs_task_definition" "app" {
       # RunTask 컨테이너에도 이 값이 있어야 한다(사람이 매번 셸 환경변수로 주입하던 prod-ingest.sh 방식과 달리
       # 스케줄 트리거는 사람이 없다). container_definitions는 ignore_changes라 기존 라이브 태스크데프에는
       # 다음 수동 rev 등록(describe→env/secret 추가→register→update-service, HANDOFF 패턴) 때 반영된다.
-      { name = "DATA_GO_KR_SERVICE_KEY", valueFrom = aws_ssm_parameter.datago_service_key.arn }
+      { name = "DATA_GO_KR_SERVICE_KEY", valueFrom = aws_ssm_parameter.datago_service_key.arn },
+      { name = "OPENROUTER_API_KEY", valueFrom = aws_ssm_parameter.openrouter_api_key.arn } # P3 AI 요약(곁다리, ADR-0010)
     ]
     logConfiguration = {
       logDriver = "awslogs"

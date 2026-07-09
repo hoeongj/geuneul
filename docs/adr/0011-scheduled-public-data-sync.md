@@ -1,4 +1,4 @@
-# ADR-0010. 공공데이터 주기 동기화 무인화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock
+# ADR-0011. 공공데이터 주기 동기화 무인화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock
 
 - 상태: 승인(구현 반영, 2026-07-10) — **Terraform은 스캐폴드만, `terraform apply`·스케줄 활성화는 미실행**(사람 검토 후 `var.ingest_schedule_enabled=true`로 재적용 필요).
 - 관련: `IngestBatchLock`(신규), `IngestionRunner`(dispatch 분리 + 락 배선), `infra/terraform/scheduler.tf`(신규),
