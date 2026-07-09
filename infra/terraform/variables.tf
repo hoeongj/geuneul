@@ -72,6 +72,18 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
+variable "datago_service_key" {
+  description = "data.go.kr 계정 공통 serviceKey(디코딩 키, KMA_SERVICE_KEY와 같은 값). P3 공공데이터 오픈API 인제스천(전국도서관표준데이터 등)이 다운로드까지 무인화하는 데 쓴다(DataGoKrPublicLibraryClient). terraform.tfvars(gitignore) 또는 TF_VAR_datago_service_key로 주입. 절대 커밋 금지. (SSM은 빈 값을 거부하므로 default 없이 필수.)"
+  type        = string
+  sensitive   = true
+}
+
+variable "ingest_schedule_enabled" {
+  description = "EventBridge Scheduler(월1회 공공데이터 동기화 RunTask)를 실제로 켤지 여부. 기본 false(스캐줄 리소스는 생성되지만 DISABLED 상태 — apply해도 자동 실행되지 않는다). 사람이 검토 후 true로 바꿔 재적용해야 실행 시작(운영 안전장치, CLAUDE.md §0.2)."
+  type        = bool
+  default     = false
+}
+
 variable "container_image" {
   description = "ECS 태스크 이미지. 비우면 ECR:latest. 실제 배포 태그는 GitHub Actions(deploy.yml)가 갱신하며, TF는 ignore_changes로 되돌리지 않음."
   type        = string

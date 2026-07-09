@@ -14,3 +14,4 @@
 | [0007](./0007-survival-score-sql-signals-java-compose.md) | `survival_score` — 시공간 신호는 SQL 뷰, 가중치 조립은 순수 함수 | 승인 |
 | [0008](./0008-recommendations-scenario-weighted-ranking.md) | 추천(`/recommendations`) — survival_score에 시나리오 가중을 얹은 2단 랭킹 | 승인 |
 | [0009](./0009-weather-comfort-additive-restore.md) | survival_score comfort — 기온(체감) 신호를 comfort_score에 additive 복원 | 승인 |
+| [0010](./0010-scheduled-public-data-sync.md) | 공공데이터 주기 동기화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock | 승인(스캐폴드, 미활성) |

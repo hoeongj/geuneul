@@ -82,7 +82,7 @@
 4. 상권정보 STUDY_CAFE → CAFE 적재 코드 — ✅ **코드 완료, ⚠️계약 미검증**(활용신청 미승인 403). 승인 후 재검증 필요.
 5. 공공시설개방(CIVIC) 화이트리스트 필터 적재. — ❌ **미착수**(이번 범위 밖, 후속 확장).
 6. 명소 시드(노들서가 등) 개별 등록 + 지오코딩. — ❌ **미착수**(이번 범위 밖, 후속 확장).
-7. P3 무인화(serviceKey 오픈API 주기 동기화 + 여러 반경 호출을 합친 전국 soft-delete diff). — ❌ **미착수**(로드맵 P3, 이번 범위 밖).
+7. P3 무인화(serviceKey 오픈API 주기 동기화 + 여러 반경 호출을 합친 전국 soft-delete diff). — 🟡 **library 소스는 스캐폴드 완료**([ADR-0010](./0010-scheduled-public-data-sync.md), EventBridge Scheduler→ECS RunTask + `IngestBatchLock` 동시 실행 방지, 기본 DISABLED·미활성). 상권정보(STUDY_CAFE/CAFE)는 계약 미검증 상태라 여전히 스코프 밖.
 
 ## 근거(References)
 - 리서치: 전국도서관표준데이터(15013109)·전국공공시설개방정보표준데이터(15013117)·소상공인 상가(상권)정보(15083033/15012005)·노들섬 노들서가(nodeul.org)·서울열린데이터(OA-15480/OA-21062)
