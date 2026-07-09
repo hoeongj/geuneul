@@ -52,8 +52,10 @@ public class WeatherClient {
      * 격자(nx,ny)의 발표시각(baseDate yyyyMMdd, baseTime HHmm) 실황을 조회한다.
      * 네 인자가 모두 캐시 키 — 발표시각이 바뀌면(매시각) 키가 달라져 자연히 새로 조회된다.
      */
+    // 빈 결과(일시 장애)는 캐시하지 않는다. Spring은 Optional 반환값을 언랩하므로 #result는 Weather(또는
+    // 빈 Optional일 때 null) — Optional.isEmpty()가 아니라 null 검사로 판정해야 한다(TS-011).
     @Cacheable(cacheNames = "weather", key = "#nx + ':' + #ny + ':' + #baseDate + ':' + #baseTime",
-            unless = "#result == null || #result.isEmpty()")
+            unless = "#result == null")
     public Optional<Weather> fetchNowcast(int nx, int ny, String baseDate, String baseTime) {
         if (!keyPresent) {
             log.warn("[weather] KMA_SERVICE_KEY 미설정 — 날씨 조회를 건너뜁니다(규칙 D: .env/SSM으로만).");
