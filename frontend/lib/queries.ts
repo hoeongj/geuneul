@@ -2,14 +2,17 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MapBounds, ReportCreatePayload, Scenario } from "@/types/place";
+import type { ReviewCreatePayload } from "@/types/review";
 import {
   createReport,
+  createReview,
   fetchByBounds,
   fetchByRadius,
   fetchMe,
   fetchNearestAny,
   fetchPlace,
   fetchPlaceReports,
+  fetchPlaceReviews,
   fetchUrgent,
   logout,
 } from "./api";
@@ -72,6 +75,27 @@ export function usePlaceReports(placeId: number | null) {
     queryFn: () => fetchPlaceReports(placeId!),
     enabled: placeId != null,
     staleTime: 10_000,
+  });
+}
+
+// 장소 상세 "후기" — 영구 평판(survival_score와 분리, §5). 제보와 달리 휘발성이 아니라 staleTime을 길게 둔다.
+export function usePlaceReviews(placeId: number | null) {
+  return useQuery({
+    queryKey: ["reviews", placeId],
+    queryFn: () => fetchPlaceReviews(placeId!),
+    enabled: placeId != null,
+    staleTime: 60_000,
+  });
+}
+
+// 후기 작성/수정(로그인 필요, 장소당 1건 upsert) — 성공 시 해당 장소의 후기 목록을 즉시 갱신.
+export function useCreateReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ReviewCreatePayload) => createReview(payload),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", created.placeId] });
+    },
   });
 }
 
