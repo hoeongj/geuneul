@@ -47,16 +47,17 @@ weather:
   service-key: ${KMA_SERVICE_KEY:}
 
 ai:
-  openrouter:
-    # 장소 AI 한줄 요약(P3, 곁다리) — OpenRouter(OpenAI 호환) 프라이머리. Anthropic 키가 없어 CLAUDE.md §8
-    # "Claude API 기본"에서 이탈(근거는 WORKLOG·ADR-0010). 지연검증(값 주입 전 배포돼도 앱은 뜬다,
-    # OpenRouterClient가 호출 시점에 미설정을 감지해 empty로 폴백) — 규칙 D: 값은 .env/SSM으로만.
-    api-key: ${OPENROUTER_API_KEY:}
-    base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
-    # 2026-07 확인: OpenRouter 무료 모델 중 Qwen3 계열이 한국어 등 다국어(119개 언어) 성능이 좋다고
-    # 평가됨(WORKLOG 근거). 요금이 붙지 않는 ":free" 접미사 모델을 기본값으로 — 곁다리 기능에 유료 모델을
-    # 기본값으로 두지 않는다. 모델 교체는 이 값만 바꾸면 된다(코드 변경 불필요).
-    model: ${OPENROUTER_MODEL:qwen/qwen3-next-80b-a3b-instruct:free}
+  summary:
+    # 장소 AI 한줄 요약(P3, 곁다리) — 프로바이더 중립 OpenAI 호환 Chat Completions 클라이언트(현재 Mistral).
+    # Anthropic 키가 없어 CLAUDE.md §8 "Claude API 기본"에서 이탈(근거는 WORKLOG·ADR-0010). 지연검증(값
+    # 주입 전 배포돼도 앱은 뜬다, ChatCompletionClient가 호출 시점에 미설정을 감지해 empty로 폴백) —
+    # 규칙 D: 값은 .env/SSM으로만.
+    api-key: ${AI_SUMMARY_API_KEY:}
+    base-url: ${AI_SUMMARY_BASE_URL:https://api.mistral.ai/v1}
+    # 2026-07 확인: 기존 프로바이더 무료티어 플랫폼 전반 429, Groq 키 무효, Gemini 429, DeepInfra 잔액부족을
+    # 차례로 확인 후 Mistral만 생존(WORKLOG 근거) — mistral-small-latest가 한국어 요약 품질 양호,
+    # 침수 위험 순화 표현도 우수. 모델 교체는 이 값만 바꾸면 된다(코드 변경 불필요, base-url·key도 동일).
+    model: ${AI_SUMMARY_MODEL:mistral-small-latest}
 
 datago:
   # 공부공간 커버리지 확장(ADR-0006) — 도서관/상권정보 오픈API 공용 인증키.
