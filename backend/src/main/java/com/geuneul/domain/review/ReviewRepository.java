@@ -29,10 +29,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
                    r.created_at AS createdAt, r.updated_at AS updatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
-            WHERE r.place_id = :placeId
+            WHERE r.place_id = :placeId AND NOT r.hidden
             ORDER BY r.created_at DESC
             """,
-            countQuery = "SELECT count(*) FROM reviews r WHERE r.place_id = :placeId",
+            countQuery = "SELECT count(*) FROM reviews r WHERE r.place_id = :placeId AND NOT r.hidden",
             nativeQuery = true)
     Page<ReviewWithAuthorView> findByPlaceIdWithAuthor(@Param("placeId") long placeId, Pageable pageable);
 }

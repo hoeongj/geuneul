@@ -67,7 +67,7 @@ public class ReportService {
     public List<ReportResponse> recentByPlace(long placeId) {
         requirePlace(placeId);
         return reportRepository
-                .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock))
+                .findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock))
                 .stream()
                 .map(ReportResponse::of)
                 .toList();

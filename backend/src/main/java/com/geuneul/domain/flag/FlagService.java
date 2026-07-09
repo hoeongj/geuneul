@@ -71,13 +71,25 @@ public class FlagService {
 
     /** 관리자 검수 큐 — 대기중(PENDING) 신고를 오래된 순으로, 대상 요약을 함께 조립. */
     public FlagPendingListResponse pending(int page, int size) {
+        return byStatus(FlagStatus.PENDING, page, size);
+    }
+
+    /**
+     * 관리자 신고 목록 — 상태별(PENDING/RESOLVED/DISMISSED) 오래된 순 + 대상 요약. 처리 이력 조회에 쓴다.
+     * PENDING은 검수 큐(FIFO), RESOLVED/DISMISSED는 처리 이력.
+     */
+    public FlagPendingListResponse byStatus(FlagStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Flag> found = flagRepository.findByStatusOrderByCreatedAtAsc(FlagStatus.PENDING, pageable);
+        Page<Flag> found = flagRepository.findByStatusOrderByCreatedAtAsc(status, pageable);
         Page<FlagPendingItemResponse> mapped = found.map(this::withTargetSummary);
         return FlagPendingListResponse.of(mapped);
     }
 
-    /** 관리자 처리 — PENDING에서만 RESOLVED/DISMISSED로 전이. 이미 처리된 신고 재처리는 409. */
+    /**
+     * 관리자 처리 — PENDING에서만 RESOLVED/DISMISSED로 전이. 이미 처리된 신고 재처리는 409.
+     * <b>RESOLVED(신고 타당)면 대상 콘텐츠를 숨긴다</b>(V12 hidden) — 모더레이션에 실효를 준다.
+     * DISMISSED(오신고)면 콘텐츠는 그대로 둔다. 숨김은 멱등이라 같은 대상에 여러 신고가 RESOLVED돼도 안전.
+     */
     @Transactional
     public FlagResponse resolve(long flagId, FlagResolveRequest request) {
         Flag flag = flagRepository.findById(flagId)
@@ -89,7 +101,18 @@ public class FlagService {
             throw new ResponseStatusException(CONFLICT, "PENDING으로는 되돌릴 수 없습니다");
         }
         flag.resolve(request.status(), OffsetDateTime.now(clock));
+        if (request.status() == FlagStatus.RESOLVED) {
+            hideTarget(flag.getTargetType(), flag.getTargetId());
+        }
         return FlagResponse.of(flagRepository.save(flag));
+    }
+
+    /** 신고 타당 처리 시 대상(제보/후기)을 숨긴다. 대상이 이미 지워졌으면 no-op(멱등). */
+    private void hideTarget(FlagTargetType targetType, long targetId) {
+        switch (targetType) {
+            case REPORT -> reportRepository.findById(targetId).ifPresent(Report::hide);
+            case REVIEW -> reviewRepository.findById(targetId).ifPresent(Review::hide);
+        }
     }
 
     private void requireTargetExists(FlagTargetType targetType, long targetId) {
