@@ -25,7 +25,7 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 익명(비로그인) 제보는 null. P2 인증 붙으면 채워진다. */
+    /** 비로그인 제보는 null. 로그인 제보는 is_anonymous 표시 여부와 무관하게 채워진다(TrustScoreService 근거). */
     @Column(name = "user_id")
     private Long userId;
 
@@ -55,9 +55,22 @@ public class Report {
     protected Report() {
     }
 
+    /** 비로그인(익명) 제보 — userId 없이 생성. 기존 호출부·테스트 호환을 위해 유지({@link #of} 위임). */
     public static Report anonymous(long placeId, ReportType type, String comment,
                                     boolean anonymousFlag, OffsetDateTime expiresAt) {
+        return of(null, placeId, type, comment, anonymousFlag, expiresAt);
+    }
+
+    /**
+     * 로그인 여부와 무관한 공통 생성 진입점. userId가 있으면 trust_score 가중 대상이 된다
+     * (V4 place_report_signals 뷰가 user_id로 users.trust_score를 조인) — is_anonymous(표시 여부)와는
+     * 별개다: 로그인 유저가 "익명으로 제보"를 선택해도(CLAUDE.md §6 "익명 여부") userId는 그대로 기록해
+     * 신뢰도 가중은 유지하고, 화면 표시만 감춘다.
+     */
+    public static Report of(Long userId, long placeId, ReportType type, String comment,
+                            boolean anonymousFlag, OffsetDateTime expiresAt) {
         Report r = new Report();
+        r.userId = userId;
         r.placeId = placeId;
         r.reportType = type;
         r.comment = comment;

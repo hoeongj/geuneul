@@ -1,5 +1,7 @@
 package com.geuneul.domain.report;
 
+import com.geuneul.domain.auth.JwtService;
+import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.report.dto.ReportCreateRequest;
 import com.geuneul.domain.report.dto.ReportResponse;
@@ -19,22 +21,36 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final PlaceRepository placeRepository;
+    private final TrustScoreService trustScoreService;
     private final Clock clock;
 
-    public ReportService(ReportRepository reportRepository, PlaceRepository placeRepository, Clock clock) {
+    public ReportService(ReportRepository reportRepository, PlaceRepository placeRepository,
+                         TrustScoreService trustScoreService, Clock clock) {
         this.reportRepository = reportRepository;
         this.placeRepository = placeRepository;
+        this.trustScoreService = trustScoreService;
         this.clock = clock;
     }
 
+    /**
+     * @param principal 로그인 시 JWT에서 뽑은 주체(비로그인이면 null — POST /reports는 permitAll이라
+     *                  SecurityConfig가 강제하지 않는다, ReviewService.create의 "요청 바디로 안 받는다"와 동일 원칙).
+     */
     @Transactional
-    public ReportResponse create(ReportCreateRequest request) {
+    public ReportResponse create(JwtService.AuthPrincipal principal, ReportCreateRequest request) {
         requirePlace(request.placeId());
+        Long userId = principal == null ? null : principal.userId();
+        // 비로그인이면 무조건 익명(신원 자체가 없음). 로그인 유저는 "익명으로 표시" 선택과 무관하게
+        // userId는 기록해 trust_score 가중을 유지한다(CLAUDE.md §6, Report.of 주석 참고).
+        boolean anonymousFlag = userId == null || request.anonymousOrDefault();
         // expires_at = 타입별 TTL(ReportType 주석 참고) — 만료된 제보는 조회·스코어에서 빠진다.
         OffsetDateTime expiresAt = OffsetDateTime.now(clock).plus(request.reportType().ttl());
-        Report saved = reportRepository.save(Report.anonymous(
-                request.placeId(), request.reportType(), normalize(request.comment()),
-                request.anonymousOrDefault(), expiresAt));
+        Report saved = reportRepository.save(Report.of(
+                userId, request.placeId(), request.reportType(), normalize(request.comment()),
+                anonymousFlag, expiresAt));
+        if (userId != null) {
+            trustScoreService.recalculate(userId);
+        }
         return ReportResponse.of(saved);
     }
 

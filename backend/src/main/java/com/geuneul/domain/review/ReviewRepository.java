@@ -14,6 +14,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Optional<Review> findByUserIdAndPlaceId(long userId, long placeId);
 
     /**
+     * 유저의 총 후기 수(=리뷰한 장소 수, 장소당 1건 upsert 정책) — trust_score 활동량 신호
+     * ({@link com.geuneul.domain.auth.TrustScore}). idx_reviews_user(V6) 경로.
+     */
+    long countByUserId(long userId);
+
+    /**
      * 장소의 후기 목록(작성자 조인) 최신순 페이지네이션. 네이티브 쿼리라 countQuery를 별도로 명시해야
      * Spring Data가 total count를 낼 수 있다(복잡한 JOIN 쿼리에서 COUNT 자동 유도가 불가능하므로).
      */
