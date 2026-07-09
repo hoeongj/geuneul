@@ -1,0 +1,128 @@
+package com.geuneul.domain.flag;
+
+import com.geuneul.domain.flag.dto.FlagCreateRequest;
+import com.geuneul.domain.flag.dto.FlagPendingItemResponse;
+import com.geuneul.domain.flag.dto.FlagPendingListResponse;
+import com.geuneul.domain.flag.dto.FlagResolveRequest;
+import com.geuneul.domain.flag.dto.FlagResponse;
+import com.geuneul.domain.report.Report;
+import com.geuneul.domain.report.ReportRepository;
+import com.geuneul.domain.review.Review;
+import com.geuneul.domain.review.ReviewRepository;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Clock;
+import java.time.OffsetDateTime;
+
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
+/**
+ * 신고/모더레이션 큐 오케스트레이션 (CLAUDE.md §0-7, §9 POST /flags·GET /admin/flags/pending).
+ * target은 REPORT|REVIEW 다형 참조라 존재 검증·요약 조립에 ReportRepository/ReviewRepository를
+ * 함께 참조한다(ReviewService가 PlaceRepository/UserRepository를 참조하는 것과 같은 크로스 도메인
+ * 의존 패턴 — 모더레이션은 원래 여러 도메인을 가로지르는 관심사).
+ */
+@Service
+@Transactional(readOnly = true)
+public class FlagService {
+
+    private final FlagRepository flagRepository;
+    private final ReportRepository reportRepository;
+    private final ReviewRepository reviewRepository;
+    private final Clock clock;
+
+    public FlagService(FlagRepository flagRepository, ReportRepository reportRepository,
+                       ReviewRepository reviewRepository, Clock clock) {
+        this.flagRepository = flagRepository;
+        this.reportRepository = reportRepository;
+        this.reviewRepository = reviewRepository;
+        this.clock = clock;
+    }
+
+    /**
+     * 신고 접수. 같은 유저가 같은 대상을 다시 신고하면 409(스팸 신고 억제, CLAUDE.md 작업 지시).
+     * 대상(report/review)이 존재하지 않으면 404 — 유령 대상에 큐가 쌓이지 않게.
+     */
+    @Transactional
+    public FlagResponse create(long reporterId, FlagCreateRequest request) {
+        requireTargetExists(request.targetType(), request.targetId());
+
+        if (flagRepository.existsByTargetTypeAndTargetIdAndReporterId(
+                request.targetType(), request.targetId(), reporterId)) {
+            throw new ResponseStatusException(CONFLICT, "이미 신고한 대상입니다");
+        }
+
+        try {
+            Flag saved = flagRepository.save(Flag.create(
+                    request.targetType(), request.targetId(), reporterId, request.reason(), normalize(request.detail())));
+            return FlagResponse.of(saved);
+        } catch (DataIntegrityViolationException e) {
+            // 동시 이중 제출 레이스(사전 체크와 save 사이) — DB 유니크 제약(V7)이 최종 방어선.
+            throw new ResponseStatusException(CONFLICT, "이미 신고한 대상입니다");
+        }
+    }
+
+    /** 관리자 검수 큐 — 대기중(PENDING) 신고를 오래된 순으로, 대상 요약을 함께 조립. */
+    public FlagPendingListResponse pending(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Flag> found = flagRepository.findByStatusOrderByCreatedAtAsc(FlagStatus.PENDING, pageable);
+        Page<FlagPendingItemResponse> mapped = found.map(this::withTargetSummary);
+        return FlagPendingListResponse.of(mapped);
+    }
+
+    /** 관리자 처리 — PENDING에서만 RESOLVED/DISMISSED로 전이. 이미 처리된 신고 재처리는 409. */
+    @Transactional
+    public FlagResponse resolve(long flagId, FlagResolveRequest request) {
+        Flag flag = flagRepository.findById(flagId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "flag not found: " + flagId));
+        if (flag.getStatus() != FlagStatus.PENDING) {
+            throw new ResponseStatusException(CONFLICT, "이미 처리된 신고입니다: " + flag.getStatus());
+        }
+        if (request.status() == FlagStatus.PENDING) {
+            throw new ResponseStatusException(CONFLICT, "PENDING으로는 되돌릴 수 없습니다");
+        }
+        flag.resolve(request.status(), OffsetDateTime.now(clock));
+        return FlagResponse.of(flagRepository.save(flag));
+    }
+
+    private void requireTargetExists(FlagTargetType targetType, long targetId) {
+        boolean exists = switch (targetType) {
+            case REPORT -> reportRepository.existsById(targetId);
+            case REVIEW -> reviewRepository.existsById(targetId);
+        };
+        if (!exists) {
+            throw new ResponseStatusException(NOT_FOUND, targetType + " not found: " + targetId);
+        }
+    }
+
+    private FlagPendingItemResponse withTargetSummary(Flag flag) {
+        String summary = switch (flag.getTargetType()) {
+            case REPORT -> reportRepository.findById(flag.getTargetId()).map(this::summarize).orElse(null);
+            case REVIEW -> reviewRepository.findById(flag.getTargetId()).map(this::summarize).orElse(null);
+        };
+        return FlagPendingItemResponse.of(flag, summary != null, summary);
+    }
+
+    private String summarize(Report r) {
+        String comment = r.getComment() == null ? "" : " · " + r.getComment();
+        return "[제보] placeId=" + r.getPlaceId() + " · " + r.getReportType().label() + comment;
+    }
+
+    private String summarize(Review r) {
+        String comment = r.getComment() == null ? "" : " · " + r.getComment();
+        return "[후기] placeId=" + r.getPlaceId() + " · ★" + r.getRating() + comment;
+    }
+
+    private static String normalize(String detail) {
+        if (detail == null) return null;
+        String trimmed = detail.strip();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}

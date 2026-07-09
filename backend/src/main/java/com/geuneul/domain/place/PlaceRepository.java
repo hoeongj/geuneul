@@ -24,6 +24,10 @@ import java.util.List;
  * LEFT JOIN 해 survival_score 시공간 신호를 함께 반환한다(ScoredPlaceView). 제보 없는 장소는
  * COALESCE(...,0)으로 신호 0(등급 UNKNOWN). 공간 인덱스 경로는 스코어드에서도 동일하게 유지된다.
  * 최근접(nearest)은 "화장실 급할 때" 팬아웃 경로라 점수 없이 거리만 반환한다(PlaceDistanceView).
+ *
+ * <p>모든 쿼리는 {@code p.deleted_at IS NULL}을 함께 건다(ADR-0006) — 스냅샷 재적재로 soft-delete된
+ * 장소(폐업 회전)는 검색·상세에서 즉시 사라진다. GiST 인덱스 선필터(ST_DWithin/&&) 뒤에 붙는 평범한
+ * 술어라 인덱스 경로에는 영향이 없다.
  */
 public interface PlaceRepository extends JpaRepository<Place, Long> {
 
@@ -38,7 +42,8 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.risk_score, 0)     AS "riskScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
-            WHERE ST_DWithin(
+            WHERE p.deleted_at IS NULL
+              AND ST_DWithin(
                     geography(p.geom),
                     geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)),
                     :radiusMeters)
@@ -70,7 +75,8 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.risk_score, 0)     AS "riskScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
-            WHERE ST_DWithin(
+            WHERE p.deleted_at IS NULL
+              AND ST_DWithin(
                     geography(p.geom),
                     geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)),
                     :radiusMeters)
@@ -90,7 +96,8 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    ST_Y(p.geom) AS "lat", ST_X(p.geom) AS "lng", p.source AS "source",
                    ST_Distance(geography(p.geom), geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))) AS "distanceM"
             FROM places p
-            WHERE (CAST(:category AS text) IS NULL OR p.category = CAST(:category AS text))
+            WHERE p.deleted_at IS NULL
+              AND (CAST(:category AS text) IS NULL OR p.category = CAST(:category AS text))
             ORDER BY geography(p.geom) <-> geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
             LIMIT :limit
             """, nativeQuery = true)
@@ -110,7 +117,8 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.risk_score, 0)     AS "riskScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
-            WHERE p.geom && ST_MakeEnvelope(:west, :south, :east, :north, 4326)
+            WHERE p.deleted_at IS NULL
+              AND p.geom && ST_MakeEnvelope(:west, :south, :east, :north, 4326)
               AND (CAST(:category AS text) IS NULL OR p.category = CAST(:category AS text))
             LIMIT :limit
             """, nativeQuery = true)
@@ -132,7 +140,7 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.risk_score, 0)     AS "riskScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
-            WHERE p.id = :id
+            WHERE p.id = :id AND p.deleted_at IS NULL
             """, nativeQuery = true)
     java.util.Optional<ScoredPlaceView> findByIdScored(@Param("id") long id);
 

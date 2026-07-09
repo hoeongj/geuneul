@@ -95,6 +95,7 @@ tasks.named('test') {
 // --- 커버리지 측정 + 회귀 ratchet (mp 철학과 동일) ---
 // floor는 "측정치 바로 아래"로 잡아 회귀만 차단한다(숫자 추격 금지).
 // P1 실측: 로컬(단위 테스트만, IT skip) LINE 38.1% → floor 0.35.
+// ADR-0006(공부공간 커버리지) 실측: 로컬(단위 테스트만, IT skip) LINE 65.7% → floor 0.60(측정치 바로 아래).
 // 로컬이 하한선이므로 IT까지 도는 CI는 항상 그 이상. 다음 측정 때 상향.
 jacoco {
     toolVersion = '0.8.13'
@@ -121,7 +122,7 @@ tasks.named('jacocoTestCoverageVerification') {
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
-                minimum = 0.35
+                minimum = 0.60
             }
         }
     }
