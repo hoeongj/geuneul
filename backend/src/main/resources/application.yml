@@ -70,6 +70,14 @@ geuneul:
   # 실 클라이언트 IP(X-Client-Ip, X-Proxy-Auth로 증명)를 신뢰 → XFF 위조 우회 차단(ProxyClientResolver).
   # 미설정(현재)이면 기존 호환(최좌측 XFF). 활성화는 Vercel env + 백엔드 env 동일값 주입. 값은 SSM으로만.
   proxy-secret: ${GEUNEUL_PROXY_SECRET:}
+  realtime:
+    # 실시간 제보 급증 알림(ADR-0016). enabled=false면 LISTEN 백그라운드 리스너를 등록하지 않는다
+    # (테스트/로컬에서 끔 — CI가 백그라운드 스레드에 의존하지 않게). 감지 SQL·폴백 폴링은 항상 동작.
+    enabled: ${GEUNEUL_REALTIME_ENABLED:true}
+    # 급증 판정 임계: 최근 surge-window-minutes 분 안에 유효 제보 ≥ surge-min-reports 건.
+    # 현장 시딩 밀도에 맞춰 조정(P5, 동작구 필드테스트).
+    surge-window-minutes: ${GEUNEUL_SURGE_WINDOW_MINUTES:10}
+    surge-min-reports: ${GEUNEUL_SURGE_MIN_REPORTS:3}
 
 aws:
   s3:

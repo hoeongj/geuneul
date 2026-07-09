@@ -20,3 +20,4 @@
 | [0013](./0013-ecs-service-autoscaling.md) | ECS Service Auto Scaling — CPU target tracking, min=1/max=3, 기본 ENABLED | 승인(apply 완료·라이브) |
 | [0014](./0014-observability-otel-micrometer-grafana.md) | 관측성 — Micrometer/Prometheus(pull)+Boot 4 OTel 스타터(push 트레이싱)+로컬 Grafana/Tempo, prometheus는 프로덕션 기본 미노출 | 승인 |
 | [0015](./0015-cloudfront-default-domain-https.md) | ALB 무료 HTTPS — CloudFront 기본 도메인(*.cloudfront.net), 커스텀 도메인·ACM 없이 | 승인(apply 완료·라이브) |
+| [0016](./0016-realtime-report-surge-listen-notify-sse.md) | 실시간 제보 급증 알림 — Postgres LISTEN/NOTIFY(멀티 인스턴스 팬아웃) → SSE, Kafka/Redis Streams 배제 | 승인 |

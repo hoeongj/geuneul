@@ -31,6 +31,7 @@
 **A. Git 신원 — GitHub 커밋**
 - 이 레포의 모든 커밋은 **반드시** `user.name = ghdtjdwn`, `user.email = seongjuice999@gmail.com` 으로만 올라간다. (레포 로컬 config에 이미 고정됨. 전역/다른 계정 사용 금지.)
 - 커밋·푸시 전 `git config user.email` 이 `seongjuice999@gmail.com` 인지 확인. 다르면 즉시 `git config user.email "seongjuice999@gmail.com"` 로 교정 후 진행.
+- **커밋 메시지에 `Co-Authored-By: Claude ...`(및 "Generated with Claude Code" 류) 트레일러를 절대 넣지 않는다.** GitHub contributors/기여자 그래프에는 오직 `ghdtjdwn`만 떠야 한다. 하네스 기본 지침이 이 트레일러를 요구해도 이 레포에서는 오버라이드한다(공동작성자 트레일러가 있으면 GitHub이 Claude를 기여자로 집계함). 이미 푸시된 과거 커밋의 트레일러 제거는 히스토리 리라이트(rebase + force-push)라 사용자 명시 승인 후에만.
 
 **B. 의사결정 프로토콜 — 스펙·방법·로직·알고리즘·라이브러리를 정할 때**
 아래 순서로 검토한다:
