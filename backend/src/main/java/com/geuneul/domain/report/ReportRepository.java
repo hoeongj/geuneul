@@ -12,4 +12,10 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
      * 상세 화면 "최근 제보"용 — 20개면 충분(P3 freshness 스코어도 최근분만 본다).
      */
     List<Report> findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(long placeId, OffsetDateTime now);
+
+    /**
+     * 유저의 총 제보 수(만료 여부 무관) — trust_score 활동량 신호({@link com.geuneul.domain.auth.TrustScore}).
+     * idx_reports_user(V6) 경로.
+     */
+    long countByUserId(Long userId);
 }

@@ -1,12 +1,18 @@
 package com.geuneul.domain.report;
 
+import com.geuneul.domain.auth.JwtService;
+import com.geuneul.domain.auth.Role;
 import com.geuneul.domain.report.dto.ReportResponse;
+import com.geuneul.global.security.SecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,11 +33,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 컨트롤러 검증·리밋 분기 단위 테스트 (MockMvc, DB 불필요) —
+ * 컨트롤러 검증·리밋·선택적 인증 분기 단위 테스트 (MockMvc, DB 불필요) —
  * 저장·만료 필터링의 실제 동작은 ReportFlowIT에서 실 PostGIS로 검증한다.
+ * SecurityConfig를 Import해 POST /reports가 permitAll이면서도 토큰이 있으면 principal이
+ * 채워지는 것(ReviewControllerTest와 동일한 Boot 4 @WebMvcTest 패턴)을 실제로 검증한다.
  */
 @WebMvcTest(ReportController.class)
-@org.springframework.context.annotation.Import(ProxyClientResolver.class) // 실 리졸버로 XFF→키 유도까지 검증(시크릿 미설정)
+@Import({ProxyClientResolver.class, // 실 리졸버로 XFF→키 유도까지 검증(시크릿 미설정)
+        SecurityConfig.class, ServletWebSecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class ReportControllerTest {
 
     @Autowired
@@ -41,6 +51,9 @@ class ReportControllerTest {
 
     @MockitoBean
     ReportRateLimiter rateLimiter;
+
+    @MockitoBean
+    JwtService jwtService;
 
     @BeforeEach
     void allowByDefault() {
@@ -53,15 +66,49 @@ class ReportControllerTest {
     }
 
     @Test
-    @DisplayName("정상 제보는 201 Created + 본문을 돌려준다")
+    @DisplayName("정상 제보는 201 Created + 본문을 돌려준다 (비로그인 — principal null)")
     void createReturns201() throws Exception {
-        given(reportService.create(any())).willReturn(sample());
+        given(reportService.create(any(), any())).willReturn(sample());
 
         mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"placeId\":1,\"reportType\":\"COOL\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.reportType").value("COOL"))
                 .andExpect(jsonPath("$.reportTypeLabel").value("시원해요"));
+
+        then(reportService).should().create(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("Authorization 헤더가 있으면 principal이 채워져 서비스로 전달된다 (선택적 인증, trust_score 가중 대상)")
+    void createWithAuthAttachesPrincipal() throws Exception {
+        given(jwtService.parse("valid-token")).willReturn(new JwtService.AuthPrincipal(10L, Role.USER));
+        given(reportService.create(any(), any())).willReturn(sample());
+
+        mvc.perform(post("/reports")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placeId\":1,\"reportType\":\"COOL\"}"))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<JwtService.AuthPrincipal> principal = ArgumentCaptor.forClass(JwtService.AuthPrincipal.class);
+        then(reportService).should().create(principal.capture(), any());
+        assertThat(principal.getValue().userId()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("무효한 토큰이어도 POST /reports는 permitAll이라 401이 아니라 익명(principal null)으로 통과한다")
+    void invalidTokenFallsBackToAnonymous() throws Exception {
+        given(jwtService.parse("bad-token")).willThrow(new io.jsonwebtoken.security.SignatureException("bad"));
+        given(reportService.create(any(), any())).willReturn(sample());
+
+        mvc.perform(post("/reports")
+                        .header("Authorization", "Bearer bad-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placeId\":1,\"reportType\":\"COOL\"}"))
+                .andExpect(status().isCreated());
+
+        then(reportService).should().create(isNull(), any());
     }
 
     @Test
@@ -104,7 +151,7 @@ class ReportControllerTest {
     @Test
     @DisplayName("시크릿 미설정 시 X-Forwarded-For 최좌측이 리밋 키(x: 네임스페이스)로 전달된다")
     void xffLeftmostIsClientKey() throws Exception {
-        given(reportService.create(any())).willReturn(sample());
+        given(reportService.create(any(), any())).willReturn(sample());
 
         mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
                         .header("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
