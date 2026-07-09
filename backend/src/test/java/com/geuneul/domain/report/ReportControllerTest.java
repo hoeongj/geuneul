@@ -147,7 +147,7 @@ class ReportControllerTest {
     @Test
     @DisplayName("photoUrl 미지정이면 정상 통과(선택 필드)")
     void missingPhotoUrlIsOptional() throws Exception {
-        given(reportService.create(any())).willReturn(sample());
+        given(reportService.create(any(), any())).willReturn(sample());
 
         mvc.perform(post("/reports").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"placeId\":1,\"reportType\":\"COOL\"}"))
