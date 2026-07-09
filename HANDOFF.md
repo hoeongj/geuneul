@@ -1,17 +1,22 @@
 # 그늘(Geuneul) — 프로젝트 현황과 다음 작업
 
 > 현재 상태·완료분·다음 작업을 정리한 진행 문서. 전체 스펙·규칙은 [`CLAUDE.md`](./CLAUDE.md), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
-> 최종 갱신: 2026-07-09.
+> 최종 갱신: 2026-07-10.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(App·API). **날씨(P3)·소셜 로그인(P2) 신규 라이브·실사용 검증 완료**(2026-07-09). 간판(survival_score·추천)은 기존대로 라이브. **현재 라이브 태스크데프 rev26**(ElastiCache+SSM 6종 배선 + 캐시 핫픽스 2건 + 카카오 client_secret).
+- **상태**: 라이브 정상(App·API). **2026-07-10 대규모 세션: P2 UGC 완결 + P3 간판강화 6개 PR 머지·배포·실측 완료.** 현재 **라이브 태스크데프 rev34**(사진 이미지 d95f37d + S3 env + SSM secret 8종 보존). Flyway **V5/V6/V7** 프로덕션 무사 적용.
+- **이번 세션 라이브(6 PR, 전부 실측 검증)**: #30 날씨 comfort 복원(survival_score 기온 additive, ADR-0009) · #31 후기(review) 풀스택(영구 평판, 로그인) · #32 공부공간 데이터 확장(CAFE/STUDY_CAFE·is_commercial·deleted_at soft-delete, V5, ADR-0006) · #34 trust_score 실배선(제보 user_id 부착+가중, V6) · #33 모더레이션 flags(신고+ADMIN 검수큐, V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989 + 태스크롤 IAM). 실측: `/weather` 24°C·`/flags` 401·`/photos/presign` S3 URL·`/places` 정상.
+- **인프라 신규(이번 세션)**: terraform S3 버킷+IAM 7리소스 apply 완료. 태스크데프 rev34 수동 등록(rev32 사진 이미지 + S3_BUCKET_NAME·AWS_REGION env). ⚠️교훈: 라이브 rev를 조립할 땐 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 flags 이미지로 조립돼 presign 404 → rev32 재조립으로 해결).
+- **AI 키 확보**: `.local/ai.env`(gitignore)에 멀티프로바이더 폴백 키체인 15종(로컬 mp/myInfo + prod k3s ssuai-backend-secrets: OpenRouter·Groq·Gemini·Cerebras 등). Anthropic 키만 부재 → 곁다리 AI는 OpenRouter 프라이머리.
+- **Wave 3 진행 중(2026-07-10 세션)**: C2 AI 한줄요약(OpenRouter, feat/ai-summary-p3) · C3 주기동기화(EventBridge→ECS RunTask, feat/scheduled-sync-p3) · D1 k6 부하테스트+EXPLAIN(feat/k6-load-explain-p4). **미착수**: D2 ECS 오토스케일링 · D3 관측성(OTel/Grafana). C2/C3 머지 후 SSM 키 배선(OpenRouter·serviceKey) apply 필요.
 - **P3 날씨 라이브(PR #26 + 핫픽스 #28·#29)**: `GET /weather?lat=&lng=` — 기상청 초단기실황(getUltraSrtNcst) + 격자변환 + **ElastiCache Redis TTL 캐시(30분) 실동작**. 프로덕션 실측: 광화문 `지금 23°C, 비`, 부산 `31°C`, 캐시 히트 정상. serviceKey는 `.local/datago.env`(data.go.kr 계정 공통 키). **하드닝: 두 캐시 버그 배포 중 발견·수정 — TS-011(@Cacheable Optional 언랩 SpEL), TS-012(무타이핑 직렬화 캐시히트 500). 회귀 테스트 2건 추가.**
 - **P2 소셜 로그인 라이브·검증 완료(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. **브라우저 실사용 성공 — 구글·카카오 둘 다 프로필까지 표시**(홍성주/카카오·구글). 카카오는 콘솔 설정 3건으로 지연됐다(TS-013): Redirect URI를 로그아웃 칸에 잘못 등록·호출허용IP 127.0.0.1·Client Secret ON 배선. 키는 `.local/oauth.env`·SSM·Vercel env(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
 - **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 6종(kma/kakao_rest/kakao_secret/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
-- **콘솔 없이 바로 가능한 다음**:
-  1. **날씨 2부** — survival_score 기온(comfort) 성분 additive 복원(SurvivalScore.Weights 확장 + ADR + IT). 날씨 소스는 이미 라이브.
-  2. **후기(review) 백엔드** — `POST /reviews`·`GET /places/{id}/reviews`(영구 평판, 로그인 필요). 로그인이 라이브라 바로 착수 가능. trust_score 계산(로그인 제보 가중, V4 뷰가 이미 준비됨).
-  3. **AI 한줄 요약**(Claude, 곁다리) — Anthropic API 키 필요.
+- **콘솔 없이 바로 가능한 다음** (~~날씨 2부 #30·후기 #31·trust #34 완료~~):
+  1. **D2 ECS 오토스케일링** — Service Auto Scaling(=HPA 상당), D1 k6 부하와 함께(P4). terraform.
+  2. **D3 관측성** — OTel/Grafana(P4).
+  3. **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
+  4. **ALB HTTPS**(ACM+도메인+443) — 공유 링크 신뢰도.
 - **§⑤ 공부공간 데이터 확장([ADR-0006])**: data.go.kr 키 확보됨(`.local/datago.env`). 전국도서관표준데이터는 **CSV 다운로드**로 적재(오픈API는 경기도만) / 상권정보(카페·스터디카페)는 오픈API. `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·파서·실적재를 실데이터로 한 번에.
 - **배포 접근(확인됨)**: 로컬에 AWS CLI(`geuneul-admin`)·Vercel CLI(`akftjdwn-9388`) 모두 인증돼 있어 Claude가 직접 배포 가능. 태스크데프 config는 `ignore_changes`라 라이브 rev는 수동 등록(describe→env/secret 추가→register→update-service). deploy.yml은 이미지만 교체(describe 기반)라 config 보존.
 - **작업 규칙 리마인더**: 커밋 신원 `ghdtjdwn`/`seongjuice999@gmail.com`, 푸시 전 비밀 스캔, 비밀은 `.local`·`.env`만, 결정은 WORKLOG에 why/대안 기록(CLAUDE.md §A~D).
