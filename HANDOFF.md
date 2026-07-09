@@ -1,14 +1,19 @@
 # 그늘(Geuneul) — 프로젝트 현황과 다음 작업
 
 > 현재 상태·완료분·다음 작업을 정리한 진행 문서. 전체 스펙·규칙은 [`CLAUDE.md`](./CLAUDE.md), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
-> 최종 갱신: 2026-07-05.
+> 최종 갱신: 2026-07-09.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(App·API). **간판 완성 — survival_score(P3) 풀스택 라이브**(PR #23, ADR-0007) + **추천(/recommendations, P3) 완성·라이브**(PR #24, ADR-0008 — survival_score에 시나리오 가중을 얹은 2단 랭킹, "급해요"를 nearest 팬아웃 근사 → 정식 랭킹으로 승격). 미추적 `design_handoff_geuneul/`는 원본 디자인 소스라 커밋 안 함(의도).
-- **콘솔 없이 바로 가능한 다음 = 날씨 API(기상청 초단기예보 + Redis TTL 캐시)** — open_now/기온 결측 성분을 복원해 survival_score·추천의 재정규화를 additive하게 되돌린다(Redis 헬스체크 재활성 포함). 또는 AI 한줄 요약(Claude, 곁다리).
-- **사용자 결정 대기 2건(둘 다 사용자 콘솔·자격증명 필요)**:
-  1. **§② OAuth 콘솔**(카카오 로그인 ON+Redirect URI / 구글 OAuth 클라이언트) → 로그인·후기·trust_score. **survival_score 뷰에 신뢰도 가중이 이미 심겨 있어 로그인 붙으면 코드 변경 없이 점수에 반영**된다.
-  2. **§⑤ 공부공간 데이터 확장([ADR-0006])** — **공공데이터포털 오픈API serviceKey(무료)** 또는 CSV. 받으면 `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·상권정보 파서·실적재·테스트를 **실데이터로 한 번에** + P3 무인화까지. (지금은 계획만, 코드 미착수 — 헤더값 미확정이라 선착수 시 재작업.)
+- **상태**: 라이브 정상(App·API). **날씨(P3)·소셜 로그인(P2) 신규 라이브**(2026-07-09). 간판(survival_score·추천)은 기존대로 라이브. **현재 라이브 태스크데프 rev25**(ElastiCache+SSM 5종 배선 + 캐시 핫픽스 2건 반영).
+- **P3 날씨 라이브(PR #26 + 핫픽스 #28·#29)**: `GET /weather?lat=&lng=` — 기상청 초단기실황(getUltraSrtNcst) + 격자변환 + **ElastiCache Redis TTL 캐시(30분) 실동작**. 프로덕션 실측: 광화문 `지금 23°C, 비`, 부산 `31°C`, 캐시 히트 정상. serviceKey는 `.local/datago.env`(data.go.kr 계정 공통 키). **하드닝: 두 캐시 버그 배포 중 발견·수정 — TS-011(@Cacheable Optional 언랩 SpEL), TS-012(무타이핑 직렬화 캐시히트 500). 회귀 테스트 2건 추가.**
+- **P2 소셜 로그인 라이브(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. 실측: authorize 리다이렉트·`/me` 401 정상. 실제 로그인 왕복은 사용자가 동의창에서 로그인 시 완결(Redirect URI 콘솔 등록 일치 확인). 키는 `.local/oauth.env`·SSM·Vercel env.
+- **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 5종(kma/kakao/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
+- **콘솔 없이 바로 가능한 다음**:
+  1. **날씨 2부** — survival_score 기온(comfort) 성분 additive 복원(SurvivalScore.Weights 확장 + ADR + IT). 날씨 소스는 이미 라이브.
+  2. **후기(review) 백엔드** — `POST /reviews`·`GET /places/{id}/reviews`(영구 평판, 로그인 필요). 로그인이 라이브라 바로 착수 가능. trust_score 계산(로그인 제보 가중, V4 뷰가 이미 준비됨).
+  3. **AI 한줄 요약**(Claude, 곁다리) — Anthropic API 키 필요.
+- **§⑤ 공부공간 데이터 확장([ADR-0006])**: data.go.kr 키 확보됨(`.local/datago.env`). 전국도서관표준데이터는 **CSV 다운로드**로 적재(오픈API는 경기도만) / 상권정보(카페·스터디카페)는 오픈API. `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·파서·실적재를 실데이터로 한 번에.
+- **배포 접근(확인됨)**: 로컬에 AWS CLI(`geuneul-admin`)·Vercel CLI(`akftjdwn-9388`) 모두 인증돼 있어 Claude가 직접 배포 가능. 태스크데프 config는 `ignore_changes`라 라이브 rev는 수동 등록(describe→env/secret 추가→register→update-service). deploy.yml은 이미지만 교체(describe 기반)라 config 보존.
 - **작업 규칙 리마인더**: 커밋 신원 `ghdtjdwn`/`seongjuice999@gmail.com`, 푸시 전 비밀 스캔, 비밀은 `.local`·`.env`만, 결정은 WORKLOG에 why/대안 기록(CLAUDE.md §A~D).
 
 ## 최근 완료 · 다음 작업
