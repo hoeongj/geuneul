@@ -40,8 +40,18 @@ public class AdminFlagController {
         return flagService.pending(Math.max(page, 0), ApiRequests.clampLimit(size, MAX_PAGE_SIZE));
     }
 
+    @Operation(summary = "신고 목록 상태별 조회 (ADMIN 전용)",
+            description = "status(PENDING|RESOLVED|DISMISSED)별 목록 — 처리 이력 확인용. 기본 PENDING.")
+    @GetMapping("/admin/flags")
+    public FlagPendingListResponse byStatus(
+            @RequestParam(defaultValue = "PENDING") FlagStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return flagService.byStatus(status, Math.max(page, 0), ApiRequests.clampLimit(size, MAX_PAGE_SIZE));
+    }
+
     @Operation(summary = "신고 처리 (ADMIN 전용)",
-            description = "PENDING 신고를 RESOLVED/DISMISSED로 전이. 이미 처리된 신고는 409.")
+            description = "PENDING 신고를 RESOLVED/DISMISSED로 전이. RESOLVED면 대상 콘텐츠를 숨긴다. 이미 처리된 신고는 409.")
     @PostMapping("/admin/flags/{id}/resolve")
     public FlagResponse resolve(@PathVariable long id, @Valid @RequestBody FlagResolveRequest request) {
         return flagService.resolve(id, request);

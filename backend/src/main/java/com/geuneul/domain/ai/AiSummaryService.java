@@ -68,7 +68,7 @@ public class AiSummaryService {
     @Cacheable(cacheNames = "aiSummary", key = "#placeId", unless = "#result == null")
     public Optional<String> summarize(long placeId) {
         List<Report> reports = reportRepository
-                .findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock));
+                .findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock));
         if (reports.isEmpty()) {
             return Optional.empty();
         }

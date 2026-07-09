@@ -50,6 +50,10 @@ public class Report {
     @Column(name = "verified", nullable = false)
     private boolean verified;
 
+    /** 모더레이션 숨김(V12): 신고 RESOLVED 시 true. 공개 조회·스코어·급증·혼잡에서 제외. */
+    @Column(name = "hidden", nullable = false)
+    private boolean hidden;
+
     // created_at은 Hibernate @CreationTimestamp(JVM 클록), expires_at은 서비스가 주입 Clock으로 산정,
     // freshness/만료 판정은 place_report_signals 뷰가 DB now()로 한다. 세 클록이 프로덕션에선 모두 UTC라
     // 실질 오차는 sub-second. (테스트의 fake Clock은 @CreationTimestamp까진 못 바꾸므로 IT는 "방금 생성" 기준으로 검증.)
@@ -120,6 +124,15 @@ public class Report {
 
     public boolean isVerified() {
         return verified;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    /** 모더레이션 숨김 처리(신고 RESOLVED) — 되돌리기 경로는 이번 스코프 밖(관리자 수동). */
+    public void hide() {
+        this.hidden = true;
     }
 
     public OffsetDateTime getCreatedAt() {

@@ -10,10 +10,11 @@ import java.util.List;
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
     /**
-     * 장소의 유효(미만료) 제보 최신순. idx_reports_place_created 경로.
+     * 장소의 유효(미만료·미숨김) 제보 최신순. idx_reports_place_created 경로.
      * 상세 화면 "최근 제보"용 — 20개면 충분(P3 freshness 스코어도 최근분만 본다).
+     * HiddenFalse: 모더레이션 숨김 제보(V12)는 공개 목록에서 제외.
      */
-    List<Report> findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc(long placeId, OffsetDateTime now);
+    List<Report> findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(long placeId, OffsetDateTime now);
 
     /**
      * 유저의 총 제보 수(만료 여부 무관) — trust_score 활동량 신호({@link com.geuneul.domain.auth.TrustScore}).
@@ -36,6 +37,7 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
                    COUNT(*) FILTER (WHERE report_type = 'SEAT_OK')              AS "seatOkCount"
             FROM reports
             WHERE place_id = :placeId
+              AND NOT hidden
             GROUP BY 1, 2
             ORDER BY 1, 2
             """, nativeQuery = true)

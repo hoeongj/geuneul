@@ -57,6 +57,10 @@ public class Review {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    /** 모더레이션 숨김(V12): 신고 RESOLVED 시 true. 공개 후기 목록에서 제외. */
+    @Column(name = "hidden", nullable = false)
+    private boolean hidden;
+
     protected Review() {
     }
 
@@ -75,6 +79,15 @@ public class Review {
         this.rating = rating;
         this.comment = comment;
         this.photosJson = photosJson;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    /** 모더레이션 숨김 처리(신고 RESOLVED). */
+    public void hide() {
+        this.hidden = true;
     }
 
     public Long getId() {
