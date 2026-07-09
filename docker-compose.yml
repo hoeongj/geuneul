@@ -1,5 +1,13 @@
 # 그늘 로컬 개발 인프라 (PostGIS + Redis). 프로덕션은 AWS ECS Fargate + RDS(PostGIS) — infra/(Terraform)·DEPLOY.md 참고.
 # 사용: `docker compose up -d` → 백엔드는 backend/에서 `./gradlew bootRun`.
+#
+# 관측성(P4, ADR-0014) — 로컬 전용 Prometheus + Grafana + Tempo는 기본 `docker compose up`에 안 딸려온다
+# (postgres/redis만 쓰는 기존 개발 흐름을 그대로 보존). observability 프로필로 옵트인:
+#   docker compose --profile observability up -d prometheus grafana tempo
+#   MANAGEMENT_EXPOSURE=health,info,prometheus OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+#     OTEL_TRACING_EXPORT_ENABLED=true ./gradlew bootRun   # backend/에서
+#   → Grafana http://localhost:3000 (익명 Admin, 로컬 전용) · Prometheus http://localhost:9090
+#     · Tempo API http://localhost:3200. 대시보드는 "그늘(Geuneul) — 백엔드 개요" 자동 프로비저닝.
 services:
   postgres:
     image: postgis/postgis:16-3.4        # 순정 postgres 아님 — PostGIS 확장 포함 이미지
@@ -27,5 +35,44 @@ services:
       timeout: 3s
       retries: 10
 
+  # --- 관측성(P4, ADR-0014) — profile: observability, 옵트인만 기동 ---
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    profiles: ["observability"]
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # 백엔드는 컨테이너가 아니라 호스트(bootRun)에서 돈다 — Linux Docker Engine 호환용(Docker Desktop은 기본 지원)
+
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["observability"]
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempodata:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo API(Grafana 데이터소스가 조회)
+      - "4317:4317"   # OTLP gRPC(백엔드가 push, 선택)
+      - "4318:4318"   # OTLP HTTP(백엔드가 push — 기본 권장)
+
+  grafana:
+    image: grafana/grafana:12.2.1
+    profiles: ["observability"]
+    depends_on: [prometheus, tempo]
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      # 로컬 전용 익명 관리자 — 포트폴리오 데모 편의(비밀번호 관리 불필요). 절대 프로덕션에 노출하지 않는다.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    ports:
+      - "3000:3000"
+
 volumes:
   pgdata:
+  tempodata:

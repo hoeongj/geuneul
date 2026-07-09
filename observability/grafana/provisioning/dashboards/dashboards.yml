@@ -1,0 +1,13 @@
+# Grafana 대시보드 프로비저닝 — /var/lib/grafana/dashboards(= ./observability/grafana/dashboards 마운트)
+# 아래 JSON 파일을 자동으로 불러온다(ADR-0014).
+apiVersion: 1
+
+providers:
+  - name: geuneul
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
