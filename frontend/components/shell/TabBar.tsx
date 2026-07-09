@@ -9,6 +9,7 @@ const TABS = [
   { href: "/", label: "지도", icon: "mapicon" },
   { href: "/urgent", label: "급해요", icon: "bolt" },
   { href: "/report", label: "제보", icon: "pen" },
+  { href: "/mypage", label: "내 정보", icon: "user" },
 ] as const;
 
 export function TabBar() {

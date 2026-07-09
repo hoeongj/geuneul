@@ -6,10 +6,12 @@ import {
   createReport,
   fetchByBounds,
   fetchByRadius,
+  fetchMe,
   fetchNearestAny,
   fetchPlace,
   fetchPlaceReports,
   fetchUrgent,
+  logout,
 } from "./api";
 
 // 뷰포트 이동(bounds) 시 마커 재조회. keepPreviousData 로 패닝 중 깜빡임 방지 → 과호출/리렌더 최소화.
@@ -70,6 +72,27 @@ export function usePlaceReports(placeId: number | null) {
     queryFn: () => fetchPlaceReports(placeId!),
     enabled: placeId != null,
     staleTime: 10_000,
+  });
+}
+
+// 로그인 사용자 — null이면 로그아웃 상태. 세션은 httpOnly 쿠키라 클라는 /api/me로만 확인 가능.
+export function useMe() {
+  return useQuery({
+    queryKey: ["me"],
+    queryFn: fetchMe,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+// 로그아웃 — 쿠키 삭제 후 me 캐시를 null로.
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      queryClient.setQueryData(["me"], null);
+    },
   });
 }
 

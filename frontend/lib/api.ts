@@ -1,5 +1,6 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
+import type { User } from "@/types/user";
 import { boundsParam } from "./geo";
 
 export class ApiError extends Error {
@@ -79,6 +80,19 @@ export function fetchNearestAny(params: { lat: number; lng: number; limit?: numb
 // 장소의 최근 유효 제보(미만료, 최신순 top20).
 export function fetchPlaceReports(placeId: number): Promise<Report[]> {
   return getJson<Report[]>(`/api/places/${placeId}/reports`);
+}
+
+// 내 프로필 — 미로그인(401)이면 null. 그 외 오류는 throw(호출부에서 구분).
+export async function fetchMe(): Promise<User | null> {
+  const res = await fetch(`/api/me`, { signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
+  if (res.status === 401) return null;
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<User>;
+}
+
+// 로그아웃 — 세션 쿠키 삭제(서버 무상태).
+export async function logout(): Promise<void> {
+  await fetch(`/api/auth/logout`, { method: "POST", signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
 }
 
 // 휘발성 제보 생성(익명 허용). 429 = 레이트리밋 — 메시지로 안내.
