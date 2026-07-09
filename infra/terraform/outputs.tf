@@ -34,3 +34,13 @@ output "github_actions_role_arn" {
   description = "GitHub 레포 Secrets에 AWS_ROLE_ARN 으로 등록"
   value       = aws_iam_role.github_actions.arn
 }
+
+output "ingest_schedule_name" {
+  description = "P3 공공데이터 무인 동기화 EventBridge Scheduler 이름 — 상태 확인: aws scheduler get-schedule --name <값> --group-name default"
+  value       = aws_scheduler_schedule.public_data_sync.name
+}
+
+output "ingest_schedule_state" {
+  description = "현재 ENABLED/DISABLED. var.ingest_schedule_enabled=true로 재적용해야 ENABLED(운영 안전장치)."
+  value       = aws_scheduler_schedule.public_data_sync.state
+}
