@@ -1,4 +1,4 @@
-# ADR-0012. ECS Service Auto Scaling — CPU target tracking, min=1/max=3, 기본 ENABLED
+# ADR-0013. ECS Service Auto Scaling — CPU target tracking, min=1/max=3, 기본 ENABLED
 
 - 상태: 승인(구현 반영, 2026-07-10) — **Terraform 코드만, `terraform apply`는 미실행**(오케스트레이터 지시 —
   다음 세션에서 검토 후 apply).
