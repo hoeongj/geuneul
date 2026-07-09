@@ -5,8 +5,8 @@
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
 - **상태**: 라이브 정상(App·API). **2026-07-10 대규모 세션: 로드맵 P2~P4(A~D) 11개 PR 머지·배포·실측 완료 — 사실상 로드맵 완주.** 라이브 태스크데프 **rev41**(전 secret 보존: DB·proxy·KMA·kakao×2·google×2·jwt·**ai_summary·datago**·S3 env). Flyway **V5~V8** 프로덕션 무사 적용. **ECS 오토스케일링 라이브**(min1/max3, CPU60% target-tracking). **AI 한줄요약 라이브(#41, Mistral) — aiSummary 비-null 실측 완료.** **무료 HTTPS 라이브(#43, CloudFront 기본 도메인 `https://d2pedv974beobb.cloudfront.net`, ADR-0015).** **주기동기화 스케줄 ENABLED(#42, 실트리거 검증 후).** **화장실 좌표 52,334건(#42 세션 재적재로 46,897→+5,437).**
-- **이번 세션 라이브(11 PR, 전부 실측 검증)**: #30 날씨 comfort(ADR-0009) · #31 후기(review) · #32 공부공간 데이터확장(V5, ADR-0006) · #34 trust_score 실배선(V6) · #33 모더레이션 flags(V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989) · #36 AI 한줄요약(OpenRouter, ADR-0010) · #37 주기동기화(EventBridge→RunTask, ADR-0011) · #38 k6+EXPLAIN+V8 인덱스튜닝(ADR-0012) · #39 ECS 오토스케일링(ADR-0013) · #40 관측성 OTel/Micrometer(ADR-0014). 실측: `/weather`·`/flags` 401·`/photos/presign` S3 URL·`/places`·`/recommendations` 전부 정상.
-- **인프라 신규(이번 세션)**: terraform apply — S3 버킷+IAM(7) · SSM openrouter/datago + EventBridge 스케줄(DISABLED)+IAM(5) · 오토스케일링 target+policy(2). 태스크데프 수동 rev 여러 번(secret 누적). ⚠️교훈: 라이브 rev 조립 시 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 이미지로 조립돼 presign 404 → 재조립). EventBridge Universal Target input은 **PascalCase** 필수(TS-020).
+- **이번 세션 라이브(11 PR, 전부 실측 검증)**: #30 날씨 comfort(ADR-0009) · #31 후기(review) · #32 공부공간 데이터확장(V5, ADR-0006) · #34 trust_score 실배선(V6) · #33 모더레이션 flags(V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989) · #36 AI 한줄요약(ADR-0010; 이후 #41서 Mistral 전환) · #37 주기동기화(EventBridge→RunTask, ADR-0011; 이후 #42서 ENABLED) · #38 k6+EXPLAIN+V8 인덱스튜닝(ADR-0012) · #39 ECS 오토스케일링(ADR-0013) · #40 관측성 OTel/Micrometer(ADR-0014). 실측: `/weather`·`/flags` 401·`/photos/presign` S3 URL·`/places`·`/recommendations` 전부 정상.
+- **인프라 신규(이번 세션)**: terraform apply — S3 버킷+IAM(7) · SSM openrouter(→이후 ai_summary로 rename, #41)/datago + EventBridge 스케줄(당시 DISABLED→#42서 ENABLED)+IAM(5) · 오토스케일링 target+policy(2). (후속 세션: CloudFront 배포 1건 추가, #43.) 태스크데프 수동 rev 여러 번(secret 누적). ⚠️교훈: 라이브 rev 조립 시 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 이미지로 조립돼 presign 404 → 재조립). EventBridge Universal Target input은 **PascalCase** 필수(TS-020).
 - **AI(곁다리) 상태 — 라이브(2026-07-10, PR #41)**: 프로바이더를 **OpenRouter → Mistral로 전환**하고 데모 출력을 살렸다. 클라이언트가 원래 OpenAI 호환 범용(`/chat/completions`, base-url·key·model 전부 설정값)이라 **코드 로직 변경 0**으로 config만 교체 — 겸사겸사 이름-실체 불일치를 없애려 `OpenRouterClient→ChatCompletionClient`·`ai.openrouter.*→ai.summary.*`·env `OPENROUTER_*→AI_SUMMARY_*`·SSM `openrouter_api_key→ai_summary_api_key`로 **프로바이더 중립 리네임**(ADR-0010 §4 갱신). 실측: `GET /places/185` → `aiSummary="시원하다는 제보가 최근에 있습니다."`(Mistral 생성, 비-null). 프로바이더 선정 경위: OpenRouter 429(계정단위)·Groq 키무효·Gemini 429·DeepInfra 잔액부족 → **Mistral·SambaNova만 생존**, Mistral이 침수 순화 품질 우위로 채택(`mistral-small-latest`, 무료티어). 프로바이더 교체는 `AI_SUMMARY_BASE_URL/MODEL` env + SSM 키만 바꾸면 끝(코드변경 0). 키체인 `.local/ai.env`(SambaNova가 백업).
 - **보안 수정(TS-022)**: `/actuator/prometheus`가 프로덕션에 **인증 없이 공개**돼 있던 것(정보노출) 발견 → `MANAGEMENT_EXPOSURE:health,info` 기본으로 닫음(#40 배포 반영). 로컬 관측성 스택 `docker-compose --profile observability`(Prometheus+Grafana+Tempo).
 - **미착수/후속 — 남은 건 전부 "사용자 콘솔 승인 대기" 블로커 2개**: ① **쉼터 전국(safetydata)** — 전국무더위쉼터 표준데이터 API가 `resultCode 12`(미승인/폐기), safetydata 전용 키도 없음. 풀려면 data.go.kr에서 무더위쉼터 표준데이터 **활용신청 승인**받거나 포털에서 전국 파일 수동 다운로드(로그인 필요). ② **상권정보 STUDY_CAFE/CAFE** — 같은 datago 키로 library=정상(resultCode 00)인데 상가업소 API(B553077)만 **403 Forbidden** = **활용신청 미승인**. data.go.kr에서 그 API 활용신청 승인 후 가능. (~~EventBridge 스케줄~~ #42 ENABLED · ~~ALB HTTPS~~ #43 CloudFront · ~~화장실 재적재~~ +5,437 · ~~AI 유효키~~ #41 Mistral — 전부 완료.)
@@ -116,20 +116,40 @@ docs/       adr/0001~0014 · design-brief.md
 
 ### ✅ 완료·라이브 (로드맵 P2~P4 — 2026-07-10 세션 반영)
 - **P2 UGC+인증**: 제보(#15~17) · 소셜로그인 카카오/구글 OAuth+JWT(#27) · 후기 review(#31) · 사진 presign S3(#35) · trust_score 실배선(#34, V6) · 모더레이션 flags+ADMIN 큐(#33, V7) · 레이트리밋 proxy-secret(TS-008). **프론트 예약슬롯 중 후기·사진 업로드까지 라이브.**
-- **P3 스코어·추천·AI·데이터**: survival_score(#23, ADR-0007) · 추천(#24, ADR-0008) · 날씨+Redis캐시(#26) · 날씨 comfort 복원(#30, ADR-0009) · AI 한줄요약(#36, ADR-0010 — 배선완료·무료티어 대기) · 공부공간 데이터확장(#32, V5, ADR-0006) · 주기동기화 EventBridge→RunTask(#37, ADR-0011 — DISABLED).
-- **P4 심화(간판)**: k6+EXPLAIN+V8 인덱스튜닝(#38, ADR-0012) · ECS 오토스케일링(#39, ADR-0013, apply 완료) · 관측성 OTel/Micrometer(#40, ADR-0014, `/actuator/prometheus` 노출 닫음 실측 404).
+- **P3 스코어·추천·AI·데이터**: survival_score(#23, ADR-0007) · 추천(#24, ADR-0008) · 날씨+Redis캐시(#26) · 날씨 comfort 복원(#30, ADR-0009) · **AI 한줄요약 라이브(#36 배선→#41 Mistral 전환·중립 리네임, ADR-0010 §4 — aiSummary 비-null 실측 완료)** · 공부공간 데이터확장(#32, V5, ADR-0006) · **주기동기화 EventBridge→RunTask(#37 스캐폴드→#42 ENABLED, ADR-0011 — 실트리거 검증 후 활성화)**.
+- **P4 심화(간판)**: k6+EXPLAIN+V8 인덱스튜닝(#38, ADR-0012) · ECS 오토스케일링(#39, ADR-0013, apply 완료) · 관측성 OTel/Micrometer(#40, ADR-0014, `/actuator/prometheus` 노출 닫음 실측 404) · **무료 HTTPS CloudFront(#43, ADR-0015 — `https://d2pedv974beobb.cloudfront.net` 실측).**
 
-### ⏳ 남은 것 (다음 세션 — 우선순위순)
-- [ ] **AI 데모 출력 살리기**(가장 쉬움): 유효 OpenRouter 키/모델 1개를 `/geuneul/openrouter_api_key` SSM에 넣고 rev 재등록(코드변경 0). 현재 무료모델 rate-limit(429)라 aiSummary=null. `OPENROUTER_MODEL` env로 모델 교체도 가능.
-- [ ] **EventBridge 스케줄 활성화**: Universal Target input 실트리거 1회 검증(TS-020 PascalCase 반영됨) → `ingest_schedule_enabled=true` apply.
-- [ ] **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
-- [ ] **상권정보 STUDY_CAFE/CAFE** 실적재 — 상권정보 오픈API 403(승인 대기). 승인 후 파서 계약 재검증(스캐폴드는 `domain/ingest/storeapi`에 있음).
-- [ ] **실시간 이벤트**(제보 급증 알림 — Redis Streams/LISTEN·NOTIFY), 캐시 전략 심화, ADR 계속.
+### ✅ 최근 완료 (2026-07-10 후속 세션 — 외부 스위치 4건)
+- [x] ~~AI 데모 출력 살리기~~ — **#41 Mistral 전환·프로바이더 중립 리네임, aiSummary 비-null 라이브.**
+- [x] ~~EventBridge 스케줄 활성화~~ — **#42 실트리거 검증(exit 0) 후 ENABLED, default=true 승격.**
+- [x] ~~화장실 실패 7,193건 재시도~~ — **#42 재적재로 5,437건 회복(46,897→52,334), 잔여 1,756은 데이터 한계.**
+- [x] ~~ALB HTTPS~~ — **#43 CloudFront 기본 도메인(ADR-0015), `https://d2pedv974beobb.cloudfront.net` 실측.**
 
-### 인프라/프론트 백로그
-- [ ] **ALB HTTPS**(ACM 인증서 + 도메인 + 443 리스너) — 프론트가 서버 프록시를 안 쓰고 직접 붙거나, 공유 링크 신뢰도 위해.
-- [ ] 트래픽 붙으면 **Fargate task_cpu 512**로(부팅 93초 단축, TS-005 근본 해결).
-- [x] ~~프론트 Vercel 배포 + Kakao JavaScript 키~~ — **완료(2026-07-03).** https://geuneul.vercel.app 라이브, git 자동배포 연결. 도메인은 콘솔 [JavaScript SDK 도메인] 칸(TS-007·WORKLOG 참고).
+### ⏳ 외부 승인 대기 (다음 세션 대상 아님 — 사용자 콘솔 승인 후에만 가능)
+- [ ] **쉼터 전국(safetydata)** — 사용자가 safetydata.go.kr `DSSP-IF-10942`(무더위쉼터) 활용신청 **승인 대기 중**. 승인+전용 서비스키 받으면 → safetydata API 클라이언트를 **새 소스로** 붙여(library 패턴 재사용) 전국 쉼터 멱등 적재. 엔드포인트 `https://www.safetydata.go.kr/V2/api/DSSP-IF-10942`.
+- [ ] **상권정보 카페/스터디카페(B553077)** — data.go.kr 상가업소 API 활용신청 **승인 대기 중**(2026-07-10 재확인 403, 같은 키로 library는 00 정상 → API별 승인 문제 확정). 승인되면 → ① 반경조회 실호출로 **계약 검증**(파라미터/응답 필드, `SmallBusinessStoreApiClient`는 "계약 미검증") → ② 업종 소분류로 카페/스터디카페 코드 확정 → ③ 행정동 순회+수정일자기준 soft-delete로 전국 멱등 적재. 엔드포인트 `https://apis.data.go.kr/B553077/api/open/sdsc2`(오퍼레이션 `storeListInRadius` 등).
+
+### 🎯 다음 세션 — 외부 승인 불필요 작업 백로그 (우선순위순, 사용자 지시: "승인 불필요한 모든 것")
+> 규율: **간판(지리공간·스코어링)이 주인공**, 커뮤니티/2차가 주인공 되면 리뷰앱화(CLAUDE.md §0-9). 아래 순서는 간판 > 살 > 2차 > 품질. 각 항목은 착수 전 스코프 한 줄 제안 → 기능 브랜치 + PR + CI green.
+
+**간판 강화 (additive, 로드맵 P4 잔여 · ADR-0005 §④ 승인불필요분):**
+- [ ] **① 실시간 이벤트 — 제보 급증 알림** (P4 간판 미완): 특정 장소/지역의 단시간 제보 급증 감지 → 알림/배지. **Redis Streams 또는 Postgres LISTEN·NOTIFY**(Kafka 과설계 금지, CLAUDE.md §7). ADR 필요.
+- [ ] **② 시간대별 혼잡 파생 (자체 popular-times)** (ADR-0005 §④, 외부 API 0): `reports` 이력을 요일×시간 집계 → place별 혼잡 패턴. SQL 뷰/집계 중심(간판 정합).
+- [ ] **③ GPS 방문 인증** (ADR-0005 §④, 간판·차별점): 제보 시 `ST_DWithin(100m)`(+선택 사진 EXIF) → `verified` 플래그 → trust_score 가중(허위제보 억제). reports/reviews에 `verified` boolean 소폭 스키마 확장(Flyway 다음 V9).
+
+**살·즉효 (체감, 스키마 경량):**
+- [ ] **④ place_features.value 등급화** (ADR-0005 §④): 콘센트=개수/접근성, wifi=속도, `noise_level` 추가 → comfort_score 정밀화. 스키마 변경 최소.
+- [ ] **⑤ 추천 시나리오 `focus`/`longstay` 추가** (파라미터만, `SurvivalScore.Weights` 오버로드 재사용) + 정형 태그 리뷰.
+
+**2차 (커뮤니티·모더레이션 — CLAUDE.md 2차, 살 — 착수 전 "리뷰앱화 아님" 확인):**
+- [ ] **⑥ 후기 커뮤니티**: `review_comments`(댓글) · `reactions`("유용했어요") — ERD에 이미 설계됨(§8).
+- [ ] **⑦ 모더레이션 확장**: 신고 큐 관리 흐름·ADMIN UI 강화(#33 flags 기반).
+
+**품질·인프라 (승인 불필요):**
+- [ ] **⑧ 프론트**: CAFE/STUDY_CAFE 카테고리 필터·place_features 등급 UI(데이터는 승인 후지만 UI/필터는 선반영 가능) · 후기/제보 UX 폴리시.
+- [ ] **⑨ JaCoCo 커버리지 상향**(현재 floor 0.60) · 캐시 전략 심화(P4).
+- [ ] 트래픽 붙으면 **Fargate task_cpu 512**(부팅 93초 단축, TS-005 근본 해결).
+- [x] ~~프론트 Vercel 배포 + Kakao JavaScript 키~~ — **완료(2026-07-03).** https://geuneul.vercel.app 라이브. (TS-007·WORKLOG)
 
 ## 트러블슈팅 요약 (전부 `TROUBLESHOOTING.md`에 상세)
 - **TS-001** SG description ASCII 전용 → 영어. (`terraform validate`는 API 값제약 못 잡음)
