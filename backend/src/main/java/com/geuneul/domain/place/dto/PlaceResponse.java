@@ -61,15 +61,25 @@ public record PlaceResponse(
     }
 
     /**
-     * 스코어드 투영 매핑 — survival_score 조립까지 포함.
+     * 스코어드 투영 매핑 — survival_score 조립까지 포함. 날씨 신호 없음(기존 동작과 동일, 폴백).
      * @param radiusM 거리 정규화 기준 반경(반경 검색). bounds/단건은 null(거리 성분 제외).
      */
     public static PlaceResponse of(ScoredPlaceView v, Double radiusM) {
+        return of(v, radiusM, null);
+    }
+
+    /**
+     * 스코어드 투영 매핑 — survival_score 조립 + 날씨 comfort 보정(ADR-0009).
+     * @param radiusM 거리 정규화 기준 반경(반경 검색). bounds/단건은 null(거리 성분 제외).
+     * @param weatherComfort 요청(쿼리) 1건당 1회 조회한 날씨 comfort 보정[0,1](WeatherService.getComfortScore).
+     *                       null이면 날씨 신호 없음 — 제보 comfort만으로 폴백.
+     */
+    public static PlaceResponse of(ScoredPlaceView v, Double radiusM, Double weatherComfort) {
         PlaceCategory category = PlaceCategory.valueOf(v.getCategory());
         Double distanceM = v.getDistanceM() == null ? null : Math.round(v.getDistanceM() * 10) / 10.0;
         SurvivalScore score = SurvivalScore.of(
                 v.getDistanceM(), radiusM, v.getReportCount(),
-                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore());
+                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore(), weatherComfort);
         return new PlaceResponse(
                 v.getId(),
                 v.getName(),
