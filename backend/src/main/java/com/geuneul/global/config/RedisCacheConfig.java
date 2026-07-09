@@ -9,10 +9,11 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.SimpleCacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.geuneul.domain.weather.Weather;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
@@ -21,8 +22,10 @@ import java.time.Duration;
  * Redis 캐시 구성 — P3 날씨 TTL 캐시(CLAUDE.md §7). 지금은 "weather" 캐시만 쓴다.
  *
  * 설계 결정(WORKLOG 기록):
- * - 값 직렬화는 JSON(GenericJackson2JsonRedisSerializer) — 키/값을 redis-cli로 눈으로 볼 수 있고,
- *   record(Weather) 스키마가 바뀌어도 JDK 직렬화처럼 깨지지 않는다.
+ * - 값 직렬화는 **타입 바인드 JSON**(JacksonJsonRedisSerializer&lt;Weather&gt;) — "weather" 캐시는 Weather만
+ *   담으므로 대상 타입을 못 박는다. GenericJackson(무타이핑)은 @class 없이 저장해 GET 시 LinkedHashMap으로
+ *   역직렬화 → 캐스트 실패(500)했다(TS-011). 타입 바인드면 @class 없이도 정확히 Weather로 복원되고
+ *   폴리모픽 default typing의 보안 우려도 없다. redis-cli로 값을 눈으로 볼 수 있는 것도 유지.
  * - null(빈 결과)은 캐시하지 않는다(disableCachingNullValues) — 클라이언트에서 실패는 unless로도 거르지만
  *   이중 방어. 일시 장애가 TTL 동안 굳는 걸 막는다.
  * - **캐시 장애를 삼킨다(CacheErrorHandler)**: Redis가 죽거나(ElastiCache 프로비저닝 전/네트워크 단절)
@@ -40,13 +43,18 @@ public class RedisCacheConfig implements CachingConfigurer {
     public static final String WEATHER_CACHE = "weather";
     private static final Duration WEATHER_TTL = Duration.ofMinutes(30);
 
+    /** "weather" 캐시 값 직렬화기 — 타입을 Weather로 바인드(테스트가 왕복을 검증할 수 있게 노출). */
+    public static JacksonJsonRedisSerializer<Weather> weatherValueSerializer() {
+        return new JacksonJsonRedisSerializer<>(Weather.class);
+    }
+
     @Bean
     RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration weather = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(WEATHER_TTL)
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(GenericJacksonJsonRedisSerializer.builder().build()));
+                        .fromSerializer(weatherValueSerializer()));
         return RedisCacheManager.builder(connectionFactory)
                 .withCacheConfiguration(WEATHER_CACHE, weather)
                 .build();
