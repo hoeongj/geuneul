@@ -40,6 +40,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reviews").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/reviews/*/comments").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/reactions").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/reactions").authenticated()
                         .requestMatchers(HttpMethod.POST, "/flags").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll())

@@ -647,3 +647,13 @@
 - 검증: `RecommendationScenarioTest`(8, +focus 혼잡 페널티·longstay comfort>distance·CSV STUDY_CAFE 포함·fromParam focus/longstay) green. compile green. 기존 시나리오 테스트 회귀 없음.
 - 산출물: `RecommendationScenario`(FOCUS/LONGSTAY enum + import)·`RecommendationController`(설명/파라미터 갱신) · `RecommendationScenarioTest`(+2 케이스).
 - 관련: 브랜치 `feat/recommend-focus-longstay-p4`, ADR-0008(시나리오 가중 랭킹)·ADR-0005 §④, CLAUDE.md §9.
+
+### 2026-07-10 — 후기 커뮤니티: 댓글 + 리액션 (브랜치 `feat/review-community-p4`, CLAUDE.md §8 2차·살)
+- 한 일: ERD(§8)에 설계돼 있던 `review_comments`·`reactions`를 백엔드로 구현했다(Flyway V11 + `domain.community` 신규 패키지). ① **후기 댓글**: `POST /reviews/{id}/comments`(로그인)·`GET /reviews/{id}/comments`(공개, 작성자 조인·오래된 순). ② **리액션("유용했어요")**: 다형 대상(REVIEW/REPORT/COMMENT) `POST /reactions`(멱등 추가)·`DELETE /reactions`(취소) — `uq_reaction`(target_type,target_id,user_id,type) 유니크로 중복 방지, 응답은 `{reacted, count}`. SecurityConfig에 두 write 경로 인증 요구 추가.
+- 왜(why): ① **왜 지금·왜 최소 표면인가** — 사용자가 "전부 포함하되 커뮤니티는 '살'로만, 프론트 UI는 최소화"를 명시. CLAUDE.md §0-9가 "커뮤니티가 주인공이 되면 리뷰앱화 → 차별점 소멸"을 반복 경고하므로, 백엔드 API + ERD 테이블만 열고 survival_score(간판)에는 **어떤 것도 연결하지 않았다**(리액션 수가 스코어에 안 들어감). ② **왜 reactions는 FK 없는 다형인가** — 후기·제보·댓글 어디에나 붙는 범용 신호라 단일 FK로 못 묶는다. 대신 대상 존재를 애플리케이션이 target_type별 리포지토리(existsById)로 검증해 유령 대상 리액션을 막는다. ③ **왜 멱등/유니크인가** — "유용했어요"는 유저당 1표라 중복 추가는 no-op(유니크 + 사전 exists 체크 + 동시성 대비 DataIntegrityViolation catch)이어야 카운트가 정확하다.
+- 검토한 대안: ① **댓글에 대댓글(스레드)·수정/삭제** — 2차 살의 과확장이라 제외(§0-2, 필요 입증 후). ② **리액션 종류 다양화(👍😍 등)** — 지금은 HELPFUL 하나(EnumType.STRING이라 값 추가만으로 확장). ③ **POST 토글(한 엔드포인트로 추가·취소)** — REST 의미가 흐려져 POST(추가)/DELETE(취소)로 분리(멱등·명시적).
+- 스코프 규율: 프론트 UI는 이번에 만들지 않는다(⑧에서 최소만 — 커뮤니티가 전면에 나오지 않게). survival_score·place_report_signals·SurvivalScore는 한 줄도 안 건드림(§0-9).
+- 검증: IT `CommunityFlowIT`(4: 댓글 작성→목록·비로그인 401·리액션 멱등(2회 눌러도 count=1)·취소 count=0·없는 대상 404)는 실 PostGIS+Security라 CI 게이트. `compileJava/compileTestJava` green.
+- 산출물: `db/migration/V11__review_comments_reactions.sql` · `domain/community/`(ReviewComment·Reaction 엔티티, ReactionTarget/Type enum, 2 리포지토리, 2 서비스, CommunityController, 4 DTO, 1 뷰) · `SecurityConfig`(인증 경로 +3) · 테스트 1 IT.
+- 다음: 프론트(⑧)에서 상세의 후기에 댓글·"유용했어요" 최소 UI(간판을 가리지 않게).
+- 관련: 브랜치 `feat/review-community-p4`, CLAUDE.md §8(ERD)·§0-9(커뮤니티=살, 리뷰앱화 경고)·§0-2(과설계 금지), ADR-0007(survival 분리 — 커뮤니티 무영향).
