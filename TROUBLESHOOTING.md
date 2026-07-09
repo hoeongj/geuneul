@@ -209,7 +209,7 @@
 - **원인 분석:** Universal Target(`arn:aws:scheduler:::aws-sdk:ecs:runTask`)의 `input` JSON은 AWS SDK camelCase(`taskDefinition`·`cluster`·`overrides.containerOverrides`)가 아니라 **AWS API 모델의 PascalCase**(`TaskDefinition`·`Cluster`·`Overrides.ContainerOverrides`)를 요구한다. camelCase면 필수 필드를 못 찾아 400. Terraform은 이 input을 타입체크하지 않아(임의 JSON 문자열) apply 시점에야 드러난다(C3가 PR에서 "input 미검증"으로 이미 리스크 플래그한 지점 — 실측이 그 리스크를 실현).
 - **해결:** input 블록 전체를 PascalCase로 교체(`Cluster`/`TaskDefinition`/`LaunchType`/`Count`/`NetworkConfiguration.AwsvpcConfiguration.{Subnets,SecurityGroups,AssignPublicIp}`/`Overrides.ContainerOverrides[].{Name,Command}`) → 재적용 시 스케줄이 `DISABLED` 상태로 정상 생성.
 - **핵심 학습 포인트:** ① IaC가 "임의 문자열/JSON"으로 넘기는 필드(Universal Target input, IAM 정책 문서 일부 등)는 `terraform validate`가 못 잡는다 — **apply(또는 실트리거)까지 가야 검증**된다. ② AWS Universal Target은 SDK가 아니라 **API 모델 네이밍(PascalCase)**을 따른다. 서브에이전트가 "미검증"으로 플래그한 지점은 통합자가 반드시 실검증할 것.
-- **관련:** `infra/terraform/scheduler.tf`, ADR-0011, TS-019(같은 브랜치의 advisory-lock 함정). 스케줄은 여전히 DISABLED(실트리거 검증 후 `ingest_schedule_enabled=true`).
+- **관련:** `infra/terraform/scheduler.tf`, ADR-0011, TS-019(같은 브랜치의 advisory-lock 함정). (2026-07-10 후속: 실트리거 1회 검증(수동 RunTask exit 0) 후 스케줄 **ENABLED**, default=true 승격 — PR #42.)
 ### TS-021 · 2026-07-10 — 부하테스트 준비 중 두 함정: ① LATERAL 서브쿼리의 random()이 전 행 동일값으로 캐시됨 ② bounds 대박스 Seq Scan을 "인덱스 미사용 버그"로 오독할 뻔
 - **상황:** P4 k6 부하테스트를 위해 합성 30만 places를 시드하려고 카테고리를 `CROSS JOIN LATERAL (SELECT (ARRAY[...])[1+floor(random()*10)] AS category)`로 뽑았다. 적재 후 분포를 확인하니 **30만 행 전부 단일 카테고리(WATER)**. 또 EXPLAIN에서 bounds 대박스(서울 도심)가 `Seq Scan on places`로 나와 "GiST 인덱스를 안 탄다"고 성급히 판단할 뻔했다.
 - **원인 분석:**
