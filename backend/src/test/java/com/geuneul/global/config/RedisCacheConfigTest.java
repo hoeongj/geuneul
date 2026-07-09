@@ -1,10 +1,13 @@
 package com.geuneul.global.config;
 
+import com.geuneul.domain.report.dto.PopularTimesSlot;
 import com.geuneul.domain.weather.PrecipitationType;
 import com.geuneul.domain.weather.Weather;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,5 +30,23 @@ class RedisCacheConfigTest {
         Weather restored = serializer.deserialize(bytes);
 
         assertThat(restored).isEqualTo(original); // record equals — LinkedHashMap이면 실패
+    }
+
+    @Test
+    @DisplayName("popularTimes 캐시 직렬화기는 List<PopularTimesSlot>를 원소 타입까지 정확히 복원한다 (TS-011/012)")
+    void popularTimesValueSerializerRoundTrips() {
+        JacksonJsonRedisSerializer<List<PopularTimesSlot>> serializer =
+                RedisCacheConfig.popularTimesValueSerializer();
+        List<PopularTimesSlot> original = List.of(
+                new PopularTimesSlot(6, 14, 12, 8, 2, "BUSY"),
+                new PopularTimesSlot(1, 9, 3, 0, 2, "QUIET"));
+
+        byte[] bytes = serializer.serialize(original);
+        List<PopularTimesSlot> restored = serializer.deserialize(bytes);
+
+        // 무타이핑이면 LinkedHashMap 리스트라 PopularTimesSlot equals가 실패한다.
+        assertThat(restored).isEqualTo(original);
+        assertThat(restored.get(0)).isInstanceOf(PopularTimesSlot.class);
+        assertThat(restored.get(0).level()).isEqualTo("BUSY");
     }
 }

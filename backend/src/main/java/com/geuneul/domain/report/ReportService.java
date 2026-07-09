@@ -76,7 +76,11 @@ public class ReportService {
     /**
      * 장소의 시간대별 혼잡 파생(자체 popular-times, ADR-0005 §④) — 제보 이력을 KST 요일×시간으로 집계.
      * 제보가 있는 슬롯만 반환한다(빈 슬롯은 클라이언트가 그리드에서 채움). 외부 API 0 — 우리 UGC만으로 유도.
+     *
+     * <p>느리게 변하는 과거 이력 집계라 장소별로 1시간 Redis 캐시(P4, RedisCacheConfig.POPULAR_TIMES_CACHE)
+     * — 상세 조회마다 group-by를 반복하지 않는다. Redis 장애 시 CacheErrorHandler가 우회해 원본 쿼리로 폴백.
      */
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "popularTimes", key = "#placeId")
     public List<PopularTimesSlot> popularTimes(long placeId) {
         requirePlace(placeId);
         return reportRepository.congestionByPlace(placeId).stream()

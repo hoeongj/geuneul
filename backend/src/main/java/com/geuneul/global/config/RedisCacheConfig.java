@@ -9,14 +9,18 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.SimpleCacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.geuneul.domain.report.dto.PopularTimesSlot;
 import com.geuneul.domain.weather.Weather;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.type.TypeFactory;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Redis 캐시 구성 — P3 날씨 TTL 캐시(CLAUDE.md §7) + AI 요약 캐시(P3, 곁다리).
@@ -45,8 +49,12 @@ public class RedisCacheConfig implements CachingConfigurer {
 
     public static final String WEATHER_CACHE = "weather";
     public static final String AI_SUMMARY_CACHE = "aiSummary";
+    public static final String POPULAR_TIMES_CACHE = "popularTimes";
     private static final Duration WEATHER_TTL = Duration.ofMinutes(30);
     private static final Duration AI_SUMMARY_TTL = Duration.ofHours(3);
+    // 시간대별 혼잡 파생(popular-times, ADR-0005 §④)은 "과거 이력의 요일×시간 분포"라 느리게 변한다 —
+    // 상세 조회마다 group-by를 돌리지 않게 장소별로 1시간 캐시(새 제보/숨김의 반영 지연은 최대 TTL, 허용).
+    private static final Duration POPULAR_TIMES_TTL = Duration.ofHours(1);
 
     /** "weather" 캐시 값 직렬화기 — 타입을 Weather로 바인드(테스트가 왕복을 검증할 수 있게 노출). */
     public static JacksonJsonRedisSerializer<Weather> weatherValueSerializer() {
@@ -56,6 +64,19 @@ public class RedisCacheConfig implements CachingConfigurer {
     /** "aiSummary" 캐시 값 직렬화기 — 타입을 String으로 바인드(TS-011과 동일 사유로 GenericJackson 배제). */
     public static JacksonJsonRedisSerializer<String> aiSummaryValueSerializer() {
         return new JacksonJsonRedisSerializer<>(String.class);
+    }
+
+    /**
+     * "popularTimes" 캐시 값 직렬화기 — {@code List<PopularTimesSlot>}를 정확한 JavaType으로 바인드한다.
+     * 제네릭 List라 GenericJackson(무타이핑)이면 GET 시 LinkedHashMap 리스트로 복원돼 캐스트 실패(TS-011/012)
+     * 하므로, TypeFactory로 원소 타입까지 못 박는다. 왕복은 RedisCacheConfigTest가 검증(Redis 없이).
+     */
+    @SuppressWarnings("unchecked")
+    public static JacksonJsonRedisSerializer<List<PopularTimesSlot>> popularTimesValueSerializer() {
+        JavaType type = TypeFactory.createDefaultInstance()
+                .constructCollectionType(List.class, PopularTimesSlot.class);
+        return (JacksonJsonRedisSerializer<List<PopularTimesSlot>>) (JacksonJsonRedisSerializer<?>)
+                new JacksonJsonRedisSerializer<>(type);
     }
 
     @Bean
@@ -70,9 +91,15 @@ public class RedisCacheConfig implements CachingConfigurer {
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(aiSummaryValueSerializer()));
+        RedisCacheConfiguration popularTimes = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(POPULAR_TIMES_TTL)
+                .disableCachingNullValues()
+                .serializeValuesWith(RedisSerializationContext.SerializationPair
+                        .fromSerializer(popularTimesValueSerializer()));
         return RedisCacheManager.builder(connectionFactory)
                 .withCacheConfiguration(WEATHER_CACHE, weather)
                 .withCacheConfiguration(AI_SUMMARY_CACHE, aiSummary)
+                .withCacheConfiguration(POPULAR_TIMES_CACHE, popularTimes)
                 .build();
     }
 
