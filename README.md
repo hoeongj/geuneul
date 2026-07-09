@@ -8,7 +8,7 @@
 [![Deploy (AWS ECS)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](./LICENSE)
 
-🟢 **App** — <https://geuneul.vercel.app> ·  🟢 **API** — [ALB `/actuator/health`](http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com/actuator/health) · [Swagger](http://geuneul-alb-1266310270.ap-northeast-2.elb.amazonaws.com/swagger-ui.html)
+🟢 **App** — <https://geuneul.vercel.app> ·  🟢 **API (HTTPS)** — [`/actuator/health`](https://d2pedv974beobb.cloudfront.net/actuator/health) · [Swagger](https://d2pedv974beobb.cloudfront.net/swagger-ui.html) (CloudFront 무료 HTTPS, ADR-0015)
 
 ---
 
@@ -18,7 +18,7 @@
 기존 공공지도는 "여기 화장실 있음"까지지만, 그늘은 **"지금 앉을 수 있는지, 시원한지, 붐비는지"** 를 실시간으로 답한다.
 
 **핵심 차별점**
-- **PostGIS 대용량 지리검색** — 반경(`ST_DWithin`)·최근접(kNN `<->`)·bounds를 GiST 인덱스로. 전국 공공데이터를 그대로 적재(공중화장실 46,897건 등).
+- **PostGIS 대용량 지리검색** — 반경(`ST_DWithin`)·최근접(kNN `<->`)·bounds를 GiST 인덱스로. 전국 공공데이터를 그대로 적재(공중화장실 52,334건·도서관 3,551건 등).
 - **실시간 UGC 시공간 스코어링(`survival_score`)** — 유효 제보를 최근성 × 신뢰도로 SQL 뷰에서 집계 → 마커 3색·"지금 갈만함" 점수.
 - **시나리오 추천** — survival_score에 시나리오 가중을 얹어 "화장실 급함 / 잠깐 쉬어갈 곳 / 비 피할 곳"을 2단(공간 선필터 → 재랭킹)으로 정렬.
 
