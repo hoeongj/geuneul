@@ -5,6 +5,7 @@ import com.geuneul.domain.review.ReviewWithAuthorView;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 /** 후기 응답. survival_score와 분리된 영구 평판 — rating/comment/photos + 작성자 표시정보. */
@@ -27,7 +28,9 @@ public record ReviewResponse(
     }
 
     public static ReviewResponse of(ReviewWithAuthorView v, List<String> photos) {
+        // 네이티브 쿼리 프로젝션은 Instant로 받는다(ReviewWithAuthorView 주석, TS-015) — 여기서 UTC로 부착.
         return new ReviewResponse(v.getId(), v.getPlaceId(), v.getNickname(), v.getProfileImage(),
-                v.getRating(), v.getComment(), photos, v.getCreatedAt(), v.getUpdatedAt());
+                v.getRating(), v.getComment(), photos,
+                v.getCreatedAt().atOffset(ZoneOffset.UTC), v.getUpdatedAt().atOffset(ZoneOffset.UTC));
     }
 }

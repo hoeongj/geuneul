@@ -17,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Field;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -146,8 +146,8 @@ class ReviewServiceTest {
         when(view.getPhotosJson()).thenReturn(null);
         when(view.getNickname()).thenReturn("그늘러버");
         when(view.getProfileImage()).thenReturn(null);
-        when(view.getCreatedAt()).thenReturn(OffsetDateTime.now());
-        when(view.getUpdatedAt()).thenReturn(OffsetDateTime.now());
+        when(view.getCreatedAt()).thenReturn(Instant.now());
+        when(view.getUpdatedAt()).thenReturn(Instant.now());
         Page<ReviewWithAuthorView> page = new PageImpl<>(List.of(view), PageRequest.of(0, 20), 1);
         when(reviewRepository.findByPlaceIdWithAuthor(eq(1L), any())).thenReturn(page);
 
