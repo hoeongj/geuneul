@@ -48,6 +48,8 @@ export const ICONS = {
     { circle: [12, 13.5, 3.4] },
   ],
   user: [{ circle: [12, 8, 3.6] }, { path: "M5.5 20a6.5 6.5 0 0 1 13 0" }],
+  // 후기 별점(P2) — Icon의 filled prop으로 채움 여부를 인스턴스별 제어(ICON_FILLED는 전역 고정이라 미사용).
+  star: [{ path: "M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 3.1 1-6.1-4.4-4.3 6.1-.9z" }],
 } satisfies Record<string, IconPrim[]>;
 
 /** 유효한 아이콘 이름(ICONS의 키) — 컴포넌트/마커가 오타를 컴파일 타임에 잡도록 이 타입을 쓴다. */
