@@ -31,9 +31,22 @@ public record ReportCreateRequest(
         String photoUrl,
 
         @Schema(description = "익명 여부 (기본 true)", example = "true", nullable = true)
-        Boolean anonymous
+        Boolean anonymous,
+
+        @Schema(description = "제보자 현재 위도 (선택) — 장소 100m 이내면 GPS 방문 인증(verified). lng과 함께 보낸다.",
+                example = "37.4986", nullable = true)
+        Double lat,
+
+        @Schema(description = "제보자 현재 경도 (선택) — GPS 방문 인증용. lat과 함께 보낸다.",
+                example = "126.9531", nullable = true)
+        Double lng
 ) {
     public boolean anonymousOrDefault() {
         return anonymous == null || anonymous;
+    }
+
+    /** 제보자 좌표가 둘 다 있을 때만 GPS 방문 인증을 시도한다(하나만 오면 무시 — 부분 좌표는 무의미). */
+    public boolean hasReporterLocation() {
+        return lat != null && lng != null;
     }
 }

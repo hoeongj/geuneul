@@ -50,7 +50,7 @@ class ReportServiceTest {
     }
 
     private static ReportCreateRequest request(Boolean anonymous) {
-        return new ReportCreateRequest(1L, ReportType.COOL, "에어컨 좋아요", null, anonymous);
+        return new ReportCreateRequest(1L, ReportType.COOL, "에어컨 좋아요", null, anonymous, null, null);
     }
 
     @Test
@@ -91,7 +91,7 @@ class ReportServiceTest {
         JwtService.AuthPrincipal principal = new JwtService.AuthPrincipal(10L, Role.USER);
 
         assertThatThrownBy(() -> reportService.create(principal,
-                new ReportCreateRequest(999L, ReportType.COOL, null, null, null)))
+                new ReportCreateRequest(999L, ReportType.COOL, null, null, null, null, null)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
 

@@ -20,6 +20,9 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional(readOnly = true)
 public class ReportService {
 
+    /** GPS 방문 인증 반경(ADR-0005 §④) — 제보자 좌표가 장소 이 거리 이내면 verified. */
+    static final double VISIT_VERIFY_METERS = 100;
+
     private final ReportRepository reportRepository;
     private final PlaceRepository placeRepository;
     private final TrustScoreService trustScoreService;
@@ -44,11 +47,16 @@ public class ReportService {
         // 비로그인이면 무조건 익명(신원 자체가 없음). 로그인 유저는 "익명으로 표시" 선택과 무관하게
         // userId는 기록해 trust_score 가중을 유지한다(CLAUDE.md §6, Report.of 주석 참고).
         boolean anonymousFlag = userId == null || request.anonymousOrDefault();
+        // GPS 방문 인증(ADR-0005 §④): 제보자 좌표가 왔고 장소 100m 이내면 verified — 허위제보 억제,
+        // V10 뷰에서 신뢰도 가중. 좌표 미제공이면 false(기존 동작과 동일, 스코어 불변).
+        boolean verified = request.hasReporterLocation()
+                && placeRepository.isWithinMeters(request.placeId(), request.lat(), request.lng(), VISIT_VERIFY_METERS)
+                        .orElse(false);
         // expires_at = 타입별 TTL(ReportType 주석 참고) — 만료된 제보는 조회·스코어에서 빠진다.
         OffsetDateTime expiresAt = OffsetDateTime.now(clock).plus(request.reportType().ttl());
         Report saved = reportRepository.save(Report.of(
                 userId, request.placeId(), request.reportType(), normalize(request.comment()),
-                request.photoUrl(), anonymousFlag, expiresAt));
+                request.photoUrl(), anonymousFlag, verified, expiresAt));
         if (userId != null) {
             trustScoreService.recalculate(userId);
         }

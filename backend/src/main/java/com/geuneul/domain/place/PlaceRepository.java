@@ -145,4 +145,22 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     java.util.Optional<ScoredPlaceView> findByIdScored(@Param("id") long id);
 
     long countBySource(String source);
+
+    /**
+     * GPS 방문 인증(ADR-0005 §④): 장소가 주어진 좌표의 meters 이내인가. 제보 생성 시 제보자 좌표가
+     * 장소 100m 이내면 verified=true로 남긴다(허위제보 억제). geography(geom) 함수식이라 V3 GIST 함수
+     * 인덱스 경로를 그대로 탄다(반경 검색과 동일 표기). 장소가 없으면 빈 Optional.
+     */
+    @Query(value = """
+            SELECT ST_DWithin(
+                     geography(p.geom),
+                     geography(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)),
+                     :meters)
+            FROM places p
+            WHERE p.id = :id AND p.deleted_at IS NULL
+            """, nativeQuery = true)
+    java.util.Optional<Boolean> isWithinMeters(@Param("id") long id,
+                                               @Param("lat") double lat,
+                                               @Param("lng") double lng,
+                                               @Param("meters") double meters);
 }
