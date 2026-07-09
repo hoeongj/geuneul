@@ -370,3 +370,34 @@
 - 산출물: 백엔드 `domain/weather/`(KmaGrid·PrecipitationType·Weather·WeatherClient·WeatherService·WeatherController + dto/WeatherResponse)·`global/config/RedisCacheConfig`·`application.yml`(weather.service-key). 인프라 `infra/terraform/elasticache.tf`·`ssm.tf`(kma_service_key)·`variables.tf`·`outputs.tf`·`ecs.tf`(REDIS_HOST env + KMA_SERVICE_KEY secret, 문서화용).
 - 다음(배포 절차): ① 사용자가 data.go.kr serviceKey 확보(기상청 15084084 활용신청) → `.local`. ② `TF_VAR_kma_service_key=… terraform apply`(ElastiCache+SSM, 비용 확인 후). ③ 라이브 태스크데프에 REDIS_HOST(=redis_endpoint output)+KMA_SERVICE_KEY(SSM) 심은 새 rev 등록 + `update-service --force-new-deployment`(proxy-secret rev13과 동일 패턴). ④ `/weather?lat=&lng=` 실측. 이후 **2부**: survival_score 기온 성분 additive 복원(SurvivalScore.Weights 확장, ADR + IT).
 - 관련: 브랜치 `feat/weather-kma-redis`, `domain/weather/*`, `RedisCacheConfig`, `elasticache.tf`, [TS-010](TROUBLESHOOTING.md) (Boot 4 Redis 직렬화·커스터마이저 이관).
+
+### 2026-07-09 — 소셜 로그인(카카오/구글 OAuth2) + JWT 세션 (P2, 백엔드)
+- 한 일: 후기·trust_score의 선행인 **소셜 로그인 백엔드**를 완성. 카카오/구글 인가코드 서버 교환 → 사용자 upsert → JWT 발급, `POST /auth/kakao`·`POST /auth/google`·`GET /me`. 사용자가 카카오(REST 키+Redirect URI)·구글(OAuth 웹 클라이언트+테스트유저) 콘솔을 준비해줘서 착수(키는 `.local`·SSM만).
+- 결정 & 이유(why):
+  - **BFF code 교환 방식(oauth2-client 스타터 미사용)**: 등록된 redirect URI가 프론트 BFF(Vercel `/api/auth/{provider}/callback`)라, 리다이렉트는 프론트가 받고 백엔드는 code만 받아 서버에서 토큰 교환(RestClient). 기존 BFF 아키텍처(ADR-0004)와 정합. Spring `oauth2-client`의 서버측 리다이렉트 흐름은 이 구조와 안 맞아 배제 — security 코어(필터체인·JWT 검증)만 씀. redirectUri는 로컬/프로덕션이 달라 프론트가 자기 콜백 URL을 요청 바디로 넘겨 토큰 교환 시 일치시킨다.
+  - **JWT(jjwt 0.13, HS256) 무상태 세션**: 서버가 세션 상태를 안 들고 서명으로 신원 증명. sub=userId, role 클레임, 기본 7일. mp 레퍼런스와 정렬. (트렌드 근거 2026-07: jjwt 0.13이 최신, Spring Security 6~7 호환. 출처: jwtk/jjwt GitHub, mvnrepository.)
+  - **시크릿 지연 검증(배포 안전성)**: JWT_SECRET이 없어도 컨텍스트는 뜨고, 발급/검증 시점에 없거나 <32바이트면 명확히 실패. 값 주입 전 배포되어도 앱이 안 죽음(날씨 CacheErrorHandler와 동일 원칙).
+  - **라이브 앱 보안 최소침습**: Spring Security 신규 도입이지만 SecurityConfig는 `/me`만 인증 요구, `anyRequest().permitAll()`. 기존 공개 엔드포인트(/places·/reports·/recommendations·/actuator·swagger)를 하나도 안 막는다(default-permit). 로그인 필요한 신규 기능(후기)은 그때 matcher 추가. 미인증 보호경로는 401(리다이렉트 아님 — API). CSRF off·STATELESS.
+  - **(provider, provider_id) upsert**: users 테이블은 V2에서 이미 생성됨 → 엔티티 매핑만(ddl-auto=validate, 마이그레이션 불필요). 재로그인 시 프로필(닉/이미지/이메일) 최신화, trust/role 불변. 카카오 이메일은 비즈인증 없으면 미제공이라 provider_id로 식별(email nullable). 신규 유저 trust_score=0(익명과 동일 기저에서 시작, V4 뷰 0.7+0.3*min(trust/100,1)).
+  - **응답 record는 Jackson 3 기준**(TS-004): 카카오/구글 응답을 타입 record로 역직렬화.
+- 검증: 유닛 11건 로컬 green — `JwtServiceTest`(4, 라운드트립·만료거부·서명불일치거부·무키예외), `KakaoOAuthClientTest`(2, code교환+id/닉/이미지 매핑·이메일null / 4xx→401), `GoogleOAuthClientTest`(1, sub/email/name/picture), `AuthServiceTest`(4, 신규생성/기존갱신 dirty checking/기본닉네임/미지원404). 전체 `*Test` 회귀 0(기존 컨트롤러 슬라이스 안 깨짐). 실 DB upsert·풀컨텍스트(시큐리티 배선)·`/me` 401/200은 CI IT + 배포 후 실측 대기(colima 로컬 IT skip).
+- 산출물: 백엔드 `domain/auth/`(User·UserRepository·AuthProvider·Role·JwtService·AuthService·AuthController + oauth/{OAuthClient·KakaoOAuthClient·GoogleOAuthClient·OAuthUserInfo} + dto/{LoginRequest·AuthResponse·UserResponse})·`global/security/`(SecurityConfig·JwtAuthenticationFilter)·`build.gradle`(security+jjwt)·`application.yml`(kakao.oauth·google.oauth·jwt).
+- 다음(배포 절차, 날씨 인프라와 함께 통합 apply — ecs.tf 충돌 방지로 코드 브랜치엔 tf 미포함):
+  1. SSM SecureString: `/geuneul/kakao_rest_api_key`(로그인 client_id), `/geuneul/google_client_id`, `/geuneul/google_client_secret`, `/geuneul/jwt_secret`(`.local/oauth.env`에 생성 완료). 카카오 client_secret은 미사용(빈값, SSM 생략).
+  2. 라이브 태스크데프에 위 4개 secret 추가한 새 rev 등록 + `update-service --force-new-deployment`(proxy-secret rev13 패턴).
+  3. 그다음 **프론트**: 로그인 버튼 → 제공자 authorize 리다이렉트 → BFF 콜백(`/api/auth/{provider}/callback`)이 code를 `/auth/{provider}`로 프록시 → JWT를 httpOnly 쿠키로 → `/me`.
+  4. 이후 **후기(review)**·trust_score(로그인 제보 가중, V4 뷰가 이미 준비됨).
+- 관련: 브랜치 `feat/oauth-jwt`, `domain/auth/*`, `global/security/*`, CLAUDE.md §9(인증 API), ERD §8(users). 스택 근거 jjwt 0.13(jwtk/jjwt).
+
+### 2026-07-09 — 프론트 로그인 플로우 (OAuth end-to-end, feat/oauth-jwt)
+- 한 일: 백엔드 OAuth에 이어 **프론트 로그인 UI + BFF 콜백**을 붙여 소셜 로그인을 end-to-end 완성. 로그인 버튼(카카오/구글) → 제공자 authorize 리다이렉트 → BFF 콜백이 code를 백엔드로 교환 → JWT를 httpOnly 쿠키로 → `/me`. MVP에 없던 **"내 정보" 탭 신설**.
+- 결정 & 이유(why):
+  - **"내 정보" 탭 신설(기존 3화면 무침습)**: 전역 헤더가 없어서 로그인 버튼 자리가 없었다. 지도/급해요/제보 화면을 건드리지 않고 TabBar에 4번째 탭 + `/mypage`를 추가 — 모바일 관용(당근/카카오식 "내정보" 탭)이고 로그인이 "살"이라 주 화면을 침범하지 않는다.
+  - **BFF에서만 쿠키 처리(기존 프록시는 쿠키 무시)**: authorize 시작(`GET /api/auth/{provider}`)은 CSRF state를 httpOnly 쿠키에 심고 302, 콜백(`/api/auth/{provider}/callback`)은 state 검증 후 백엔드 `/auth/{provider}`로 code 교환하고 **JWT를 httpOnly 쿠키(geuneul_session)로** 세팅. `/api/me`가 쿠키의 JWT를 Bearer로 백엔드에 전달(브라우저 JS는 httpOnly라 토큰을 못 봄 = XSS 토큰 탈취 방어). 기존 proxy/proxyPost는 Set-Cookie를 안 넘겨 재사용 불가라 콜백 전용 로직 신설.
+  - **client_secret은 프론트에 두지 않음**: authorize URL엔 client_id만 필요(서버 전용 env). 토큰 교환(secret)은 백엔드가 수행 → 시크릿이 프론트 번들·네트워크에 안 뜬다.
+  - **로그인 버튼은 `<a>`(next/link 아님)**: OAuth 시작은 브라우저 전체 이동이어야 하고 Link의 prefetch가 인가 라우트를 잘못 트리거하므로 의도적으로 `<a>` + eslint-disable(사유 주석).
+  - **CSRF state**: authorize→callback 왕복을 httpOnly state 쿠키(10분)로 검증(불일치/누락 시 로그인 거부).
+  - **redirectUri는 프론트가 자기 콜백 URL을 계산해 넘김**: 로컬(http://localhost:3000)·프로덕션(https://geuneul.vercel.app)이 달라 토큰 교환 시 정확히 일치해야 하므로 요청 host/proto로 도출.
+- 검증: 프론트 `typecheck`·`lint`·`build` 전부 green. 라우트 등록 확인(`/api/auth/[provider]`·`/callback`·`/logout`·`/api/me`·`/mypage`). 실제 로그인 왕복은 백엔드 배포(키 주입) 후 실측.
+- 산출물: 프론트 `lib/auth.ts`(provider·쿠키·authorize URL)·`app/api/auth/[provider]/route.ts`·`.../callback/route.ts`·`app/api/auth/logout/route.ts`·`app/api/me/route.ts`·`lib/api.ts`(fetchMe·logout)·`lib/queries.ts`(useMe·useLogout)·`components/shell/TabBar.tsx`(내정보 탭)·`lib/icon-paths.ts`(user 아이콘)·`app/(shell)/mypage/page.tsx`·`.env.example`(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
+- 배포 시 프론트 env(Vercel): `KAKAO_REST_API_KEY`(로그인 client_id)·`GOOGLE_CLIENT_ID` 추가(서버 전용). 콘솔 Redirect URI는 이미 `.../api/auth/{provider}/callback` 등록됨.

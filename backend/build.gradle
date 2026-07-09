@@ -39,6 +39,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
+    // 소셜 로그인(카카오/구글 OAuth2 code 교환은 RestClient로 직접 — BFF 패턴, ADR-0004) + JWT 세션.
+    // oauth2-client 스타터는 미사용(리다이렉트를 프론트 BFF가 처리) — 필터체인·JWT 검증만 필요해 security 코어만 쓴다.
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
+
     // PostGIS 공간 매핑: Hibernate Spatial (JTS geometry <-> PostGIS geometry). JTS는 전이 의존.
     // Boot BOM이 hibernate 버전을 관리하므로 버전 명시 불필요.
     implementation 'org.hibernate.orm:hibernate-spatial'
@@ -57,6 +64,7 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     // 프로덕션 동등 백킹서비스(PostGIS/Redis)로 통합테스트 — H2가 놓치는 dialect/타입 drift 포착.
     // Docker 없으면 자동 skip(disabledWithoutDocker) → 로컬 오프라인 `./gradlew test`도 green.
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
