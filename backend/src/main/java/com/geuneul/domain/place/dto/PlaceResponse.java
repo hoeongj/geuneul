@@ -7,6 +7,8 @@ import com.geuneul.domain.place.ScoredPlaceView;
 import com.geuneul.domain.place.SurvivalScore;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
+
 /**
  * 장소 응답 DTO. JTS Point를 직접 직렬화하지 않고 lat/lng로 평탄화한다(JTS: X=lng, Y=lat).
  * distanceM은 반경/최근접 검색에서만 채워진다(중심점이 있어야 의미가 있으므로).
@@ -29,7 +31,9 @@ public record PlaceResponse(
         SurvivalScoreResponse survival,
         @Schema(description = "최근 제보 기준 AI 한줄 요약(곁다리). 단건 상세에서만 제공, 유효 제보 없거나 AI 실패 시 null",
                 example = "최근 제보 기준 시원하지만 화장실은 별로예요", nullable = true)
-        String aiSummary
+        String aiSummary,
+        @Schema(description = "등급화된 시설 속성(콘센트·wifi·소음 등). 단건 상세에서만 제공, 없으면 빈 배열", nullable = true)
+        List<PlaceFeatureResponse> features
 ) {
 
     public static PlaceResponse of(Place p, Double distanceM) {
@@ -43,6 +47,7 @@ public record PlaceResponse(
                 p.getGeom().getX(),
                 p.getSource(),
                 distanceM,
+                null,
                 null,
                 null
         );
@@ -61,6 +66,7 @@ public record PlaceResponse(
                 v.getLng(),
                 v.getSource(),
                 Math.round(v.getDistanceM() * 10) / 10.0,
+                null,
                 null,
                 null
         );
@@ -82,16 +88,19 @@ public record PlaceResponse(
      *                       null이면 날씨 신호 없음 — 제보 comfort만으로 폴백.
      */
     public static PlaceResponse of(ScoredPlaceView v, Double radiusM, Double weatherComfort) {
-        return of(v, radiusM, weatherComfort, null);
+        return of(v, radiusM, weatherComfort, null, null);
     }
 
     /**
-     * 단건 상세 전용 투영 매핑 — survival_score 조립 + 날씨 comfort 보정 + AI 한줄 요약(ADR-0010).
+     * 단건 상세 전용 투영 매핑 — survival_score 조립 + 날씨 comfort 보정 + AI 한줄 요약(ADR-0010) +
+     * 등급화된 시설 속성(ADR-0005 §④, features).
      * @param radiusM 거리 정규화 기준 반경. 단건 상세는 항상 null(거리 성분 제외).
      * @param weatherComfort 이 장소 좌표 기준 1회 조회한 날씨 comfort 보정[0,1]. null이면 날씨 신호 없음.
      * @param aiSummary 최근 제보 기준 AI 한줄 요약. 유효 제보 없음·AI 미설정·실패 시 null(graceful degradation).
+     * @param features 등급화된 시설 속성 목록(present=false 제외). 목록/반경/bounds 경로는 null(상세 전용).
      */
-    public static PlaceResponse of(ScoredPlaceView v, Double radiusM, Double weatherComfort, String aiSummary) {
+    public static PlaceResponse of(ScoredPlaceView v, Double radiusM, Double weatherComfort, String aiSummary,
+                                   List<PlaceFeatureResponse> features) {
         PlaceCategory category = PlaceCategory.valueOf(v.getCategory());
         Double distanceM = v.getDistanceM() == null ? null : Math.round(v.getDistanceM() * 10) / 10.0;
         SurvivalScore score = SurvivalScore.of(
@@ -108,7 +117,8 @@ public record PlaceResponse(
                 v.getSource(),
                 distanceM,
                 SurvivalScoreResponse.of(score),
-                aiSummary
+                aiSummary,
+                features
         );
     }
 }

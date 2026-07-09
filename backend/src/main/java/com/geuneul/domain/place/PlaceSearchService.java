@@ -1,6 +1,7 @@
 package com.geuneul.domain.place;
 
 import com.geuneul.domain.ai.AiSummaryService;
+import com.geuneul.domain.place.dto.PlaceFeatureResponse;
 import com.geuneul.domain.place.dto.PlaceResponse;
 import com.geuneul.domain.weather.WeatherService;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,13 +25,16 @@ public class PlaceSearchService {
     private static final String METRIC_SEARCH_NEAREST = "geuneul.place.search.nearest";
 
     private final PlaceRepository placeRepository;
+    private final PlaceFeatureRepository placeFeatureRepository;
     private final WeatherService weatherService;
     private final AiSummaryService aiSummaryService;
     private final MeterRegistry meterRegistry;
 
-    public PlaceSearchService(PlaceRepository placeRepository, WeatherService weatherService,
-                              AiSummaryService aiSummaryService, MeterRegistry meterRegistry) {
+    public PlaceSearchService(PlaceRepository placeRepository, PlaceFeatureRepository placeFeatureRepository,
+                              WeatherService weatherService, AiSummaryService aiSummaryService,
+                              MeterRegistry meterRegistry) {
         this.placeRepository = placeRepository;
+        this.placeFeatureRepository = placeFeatureRepository;
         this.weatherService = weatherService;
         this.aiSummaryService = aiSummaryService;
         this.meterRegistry = meterRegistry;
@@ -75,7 +79,21 @@ public class PlaceSearchService {
         // AI 한줄 요약도 단건 상세에서만 조회한다(ADR-0010, 목록/반경/bounds는 비용 방어를 위해 미조회).
         Double weatherComfort = weatherComfort(v.getLat(), v.getLng());
         String aiSummary = aiSummaryService.summarize(id).orElse(null);
-        return PlaceResponse.of(v, null, weatherComfort, aiSummary);
+        return PlaceResponse.of(v, null, weatherComfort, aiSummary, gradedFeatures(id));
+    }
+
+    /**
+     * 장소 시설 속성을 등급화(FeatureGrade)해 상세 응답용 목록으로 만든다(ADR-0005 §④).
+     * present=false(부재 — 예: outlet=false)는 칩으로 그리지 않으므로 제외한다.
+     */
+    private List<PlaceFeatureResponse> gradedFeatures(long placeId) {
+        return placeFeatureRepository.findByPlaceIdOrderByFeatureType(placeId).stream()
+                .map(f -> {
+                    FeatureGrade grade = FeatureGrade.of(f.getFeatureType(), f.getValue());
+                    return grade.present() ? PlaceFeatureResponse.of(f, grade) : null;
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     /** 날씨 조회 실패(키 미설정·장애 등)는 null — 호출부는 comfort 성분 제외로 폴백한다(graceful degradation). */

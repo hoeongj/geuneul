@@ -39,16 +39,19 @@ import static org.mockito.Mockito.when;
 class PlaceSearchServiceTest {
 
     private final PlaceRepository placeRepository = mock(PlaceRepository.class);
+    private final PlaceFeatureRepository placeFeatureRepository = mock(PlaceFeatureRepository.class);
     private final WeatherService weatherService = mock(WeatherService.class);
     private final AiSummaryService aiSummaryService = mock(AiSummaryService.class);
     private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final PlaceSearchService service =
-            new PlaceSearchService(placeRepository, weatherService, aiSummaryService, meterRegistry);
+            new PlaceSearchService(placeRepository, placeFeatureRepository, weatherService, aiSummaryService,
+                    meterRegistry);
 
     @BeforeEach
     void stubWeatherAvailable() {
         when(weatherService.getComfortScore(anyDouble(), anyDouble())).thenReturn(Optional.of(0.8));
         when(aiSummaryService.summarize(anyLong())).thenReturn(Optional.empty());
+        when(placeFeatureRepository.findByPlaceIdOrderByFeatureType(anyLong())).thenReturn(List.of());
     }
 
     @Test
