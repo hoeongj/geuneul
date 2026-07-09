@@ -16,12 +16,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * OpenRouter(OpenAI 호환 Chat Completions) 클라이언트 — 장소 AI 한줄 요약 전용(P3, 곁다리).
+ * 프로바이더 중립 OpenAI 호환 Chat Completions 클라이언트 — 장소 AI 한줄 요약 전용(P3, 곁다리).
  *
- * <p><b>Anthropic(Claude API) 대신 OpenRouter를 쓰는 이유</b>(CLAUDE.md §8 "AI는 Claude API 기본" 이탈,
- * §0-B 의사결정 프로토콜에 따라 기록): 이 환경에 Anthropic API 키가 없다. 사용자가 보유한 멀티프로바이더
- * 무료/저가 폴백 키체인(OpenRouter — OpenAI 호환 단일 엔드포인트로 다수 모델을 라우팅) 중
- * {@code SSUAI_OPENROUTER_API_KEY}를 프라이머리로 쓴다. 근거는 WORKLOG·ADR-0010에 상세 기록.
+ * <p><b>Anthropic(Claude API) 대신 OpenAI 호환 REST 프로바이더를 쓰는 이유</b>(CLAUDE.md §8 "AI는 Claude API
+ * 기본" 이탈, §0-B 의사결정 프로토콜에 따라 기록): 이 환경에 Anthropic API 키가 없다. 사용자가 보유한
+ * 멀티프로바이더 무료/저가 폴백 키체인(base-url·key·model 전부 설정값이라 프로바이더 교체가 config만으로
+ * 가능) 중 현재는 Mistral을 프라이머리로 쓴다. 근거는 WORKLOG·ADR-0010에 상세 기록.
  *
  * <p>이 클래스는 domain/weather의 WeatherClient 회복탄력 패턴을 그대로 따른다:
  * <ul>
@@ -31,9 +31,9 @@ import java.util.Optional;
  * </ul>
  */
 @Component
-public class OpenRouterClient {
+public class ChatCompletionClient {
 
-    private static final Logger log = LoggerFactory.getLogger(OpenRouterClient.class);
+    private static final Logger log = LoggerFactory.getLogger(ChatCompletionClient.class);
     private static final int CONNECT_TIMEOUT_MS = 1_500;
     private static final int READ_TIMEOUT_MS = 2_500;
     private static final int MAX_TOKENS = 150;
@@ -45,15 +45,15 @@ public class OpenRouterClient {
     private final boolean keyPresent;
 
     @Autowired
-    public OpenRouterClient(
-            @Value("${ai.openrouter.api-key:}") String apiKey,
-            @Value("${ai.openrouter.base-url:https://openrouter.ai/api/v1}") String baseUrl,
-            @Value("${ai.openrouter.model:qwen/qwen3-next-80b-a3b-instruct:free}") String model) {
+    public ChatCompletionClient(
+            @Value("${ai.summary.api-key:}") String apiKey,
+            @Value("${ai.summary.base-url:https://api.mistral.ai/v1}") String baseUrl,
+            @Value("${ai.summary.model:mistral-small-latest}") String model) {
         this(apiKey, model, baseUrl, defaultBuilder());
     }
 
     /** 테스트용 — MockRestServiceServer를 바인딩한 builder를 주입해 실제 요청/파싱 계약을 검증한다(TS-004 교훈). */
-    OpenRouterClient(String apiKey, String model, String baseUrl, RestClient.Builder builder) {
+    ChatCompletionClient(String apiKey, String model, String baseUrl, RestClient.Builder builder) {
         this.apiKey = apiKey == null ? "" : apiKey;
         this.model = model;
         this.keyPresent = !this.apiKey.isBlank();
@@ -73,7 +73,7 @@ public class OpenRouterClient {
      */
     public Optional<String> complete(String systemPrompt, String userPrompt) {
         if (!keyPresent) {
-            log.warn("[ai] OPENROUTER_API_KEY 미설정 — AI 요약을 건너뜁니다(규칙 D: .env/SSM으로만).");
+            log.warn("[ai] AI_SUMMARY_API_KEY 미설정 — AI 요약을 건너뜁니다(규칙 D: .env/SSM으로만).");
             return Optional.empty();
         }
         try {
@@ -92,7 +92,7 @@ public class OpenRouterClient {
                     .body(body)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        throw new IllegalStateException("openrouter status=" + res.getStatusCode());
+                        throw new IllegalStateException("chat completion status=" + res.getStatusCode());
                     })
                     .body(ChatResponse.class);
 
@@ -102,7 +102,7 @@ public class OpenRouterClient {
             }
             return Optional.of(text.trim());
         } catch (Exception e) {
-            log.warn("[ai] OpenRouter 요약 실패: {}", e.getMessage());
+            log.warn("[ai] AI 요약 실패: {}", e.getMessage());
             return Optional.empty();
         }
     }
@@ -118,7 +118,7 @@ public class OpenRouterClient {
         return first.message().content();
     }
 
-    /** OpenAI 호환 Chat Completions 요청 바디(OpenRouter가 그대로 수용). */
+    /** OpenAI 호환 Chat Completions 요청 바디(대부분의 OpenAI 호환 프로바이더가 그대로 수용). */
     record ChatRequest(
             String model,
             List<Message> messages,

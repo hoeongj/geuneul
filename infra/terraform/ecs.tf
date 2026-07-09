@@ -34,7 +34,14 @@ resource "aws_ecs_task_definition" "app" {
       { name = "REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
       { name = "REDIS_PORT", value = "6379" },
       { name = "S3_BUCKET_NAME", value = aws_s3_bucket.photos.bucket }, # P2 사진 presign(PhotoService)
-      { name = "AWS_REGION", value = var.aws_region }                   # S3Presigner 리전 — ECS가 자동 주입 안 함
+      { name = "AWS_REGION", value = var.aws_region },                  # S3Presigner 리전 — ECS가 자동 주입 안 함
+      # AI 요약(P3, 곁다리 — ADR-0010) 비-시크릿 설정. base-url/model은 시크릿이 아니라 SSM이 아닌 평문
+      # environment로 둔다(application.yml의 ai.summary.base-url/model 기본값과 동일). 라이브 태스크데프
+      # 리비전은 container_definitions가 ignore_changes라 이 apply만으론 반영되지 않고(기존 값이 없으면
+      # application.yml 기본값으로 폴백해 동작에는 문제 없음) 수동 rev 등록이 필요하다 — 이 두 줄은
+      # fresh apply(신규 계정/재구축) 정합용으로 문서화해 둔다.
+      { name = "AI_SUMMARY_BASE_URL", value = "https://api.mistral.ai/v1" },
+      { name = "AI_SUMMARY_MODEL", value = "mistral-small-latest" }
     ]
     secrets = [
       { name = "DB_PASSWORD", valueFrom = aws_ssm_parameter.db_password.arn },
@@ -50,7 +57,7 @@ resource "aws_ecs_task_definition" "app" {
       # 스케줄 트리거는 사람이 없다). container_definitions는 ignore_changes라 기존 라이브 태스크데프에는
       # 다음 수동 rev 등록(describe→env/secret 추가→register→update-service, HANDOFF 패턴) 때 반영된다.
       { name = "DATA_GO_KR_SERVICE_KEY", valueFrom = aws_ssm_parameter.datago_service_key.arn },
-      { name = "OPENROUTER_API_KEY", valueFrom = aws_ssm_parameter.openrouter_api_key.arn } # P3 AI 요약(곁다리, ADR-0010)
+      { name = "AI_SUMMARY_API_KEY", valueFrom = aws_ssm_parameter.ai_summary_api_key.arn } # P3 AI 요약(곁다리, ADR-0010)
     ]
     logConfiguration = {
       logDriver = "awslogs"
