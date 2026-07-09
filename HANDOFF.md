@@ -4,17 +4,18 @@
 > 최종 갱신: 2026-07-10.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
-- **상태**: 라이브 정상(App·API). **2026-07-10 대규모 세션: P2 UGC 완결 + P3 간판강화 6개 PR 머지·배포·실측 완료.** 현재 **라이브 태스크데프 rev34**(사진 이미지 d95f37d + S3 env + SSM secret 8종 보존). Flyway **V5/V6/V7** 프로덕션 무사 적용.
-- **이번 세션 라이브(6 PR, 전부 실측 검증)**: #30 날씨 comfort 복원(survival_score 기온 additive, ADR-0009) · #31 후기(review) 풀스택(영구 평판, 로그인) · #32 공부공간 데이터 확장(CAFE/STUDY_CAFE·is_commercial·deleted_at soft-delete, V5, ADR-0006) · #34 trust_score 실배선(제보 user_id 부착+가중, V6) · #33 모더레이션 flags(신고+ADMIN 검수큐, V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989 + 태스크롤 IAM). 실측: `/weather` 24°C·`/flags` 401·`/photos/presign` S3 URL·`/places` 정상.
-- **인프라 신규(이번 세션)**: terraform S3 버킷+IAM 7리소스 apply 완료. 태스크데프 rev34 수동 등록(rev32 사진 이미지 + S3_BUCKET_NAME·AWS_REGION env). ⚠️교훈: 라이브 rev를 조립할 땐 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 flags 이미지로 조립돼 presign 404 → rev32 재조립으로 해결).
-- **AI 키 확보**: `.local/ai.env`(gitignore)에 멀티프로바이더 폴백 키체인 15종(로컬 mp/myInfo + prod k3s ssuai-backend-secrets: OpenRouter·Groq·Gemini·Cerebras 등). Anthropic 키만 부재 → 곁다리 AI는 OpenRouter 프라이머리.
-- **Wave 3 진행 중(2026-07-10 세션)**: C2 AI 한줄요약(OpenRouter, feat/ai-summary-p3) · C3 주기동기화(EventBridge→ECS RunTask, feat/scheduled-sync-p3) · D1 k6 부하테스트+EXPLAIN(feat/k6-load-explain-p4). **D3 관측성(OTel/Grafana, ADR-0014) PR 대기 — feat/observability-otel-p4, 머지 전.** 착수 전 실측으로 `/actuator/prometheus`가 이미 프로덕션에 인증 없이 공개돼 있던 걸 발견해 옵트인 기본값으로 전환(TS-022) — 머지되면 다음 배포부터 자동으로 닫힘(인프라 변경 불필요). 로컬 Prometheus+Grafana+Tempo(`docker-compose --profile observability`)도 실기동 검증 완료. **미착수**: D2 ECS 오토스케일링. C2/C3 머지 후 SSM 키 배선(OpenRouter·serviceKey) apply 필요.
+- **상태**: 라이브 정상(App·API). **2026-07-10 대규모 세션: 로드맵 P2~P4(A~D) 11개 PR 머지·배포·실측 완료 — 사실상 로드맵 완주.** 라이브 태스크데프 **rev38+**(전 secret 보존: DB·proxy·KMA·kakao×2·google×2·jwt·**openrouter·datago**·S3 env). Flyway **V5~V8** 프로덕션 무사 적용. **ECS 오토스케일링 라이브**(min1/max3, CPU60% target-tracking).
+- **이번 세션 라이브(11 PR, 전부 실측 검증)**: #30 날씨 comfort(ADR-0009) · #31 후기(review) · #32 공부공간 데이터확장(V5, ADR-0006) · #34 trust_score 실배선(V6) · #33 모더레이션 flags(V7) · #35 S3 사진 presign(버킷 geuneul-photos-691684280989) · #36 AI 한줄요약(OpenRouter, ADR-0010) · #37 주기동기화(EventBridge→RunTask, ADR-0011) · #38 k6+EXPLAIN+V8 인덱스튜닝(ADR-0012) · #39 ECS 오토스케일링(ADR-0013) · #40 관측성 OTel/Micrometer(ADR-0014). 실측: `/weather`·`/flags` 401·`/photos/presign` S3 URL·`/places`·`/recommendations` 전부 정상.
+- **인프라 신규(이번 세션)**: terraform apply — S3 버킷+IAM(7) · SSM openrouter/datago + EventBridge 스케줄(DISABLED)+IAM(5) · 오토스케일링 target+policy(2). 태스크데프 수동 rev 여러 번(secret 누적). ⚠️교훈: 라이브 rev 조립 시 **describe 대상이 최신 이미지 rev인지 확인**(rev33이 구 이미지로 조립돼 presign 404 → 재조립). EventBridge Universal Target input은 **PascalCase** 필수(TS-020).
+- **AI(곁다리) 상태**: 배선·graceful degradation 실증 완료(앱이 OpenRouter 호출→429시 null 폴백, 500 없음). 단 **OpenRouter 무료티어가 현재 플랫폼 전반 rate-limited(429)라 aiSummary는 null**. 모델은 config(`OPENROUTER_MODEL` env)라 코드변경 0으로 교체 가능. 데모 출력 원하면 **유효한 비-rate-limited 키/모델**(유료 or 여유 무료) 하나만 `/geuneul/openrouter_api_key` SSM에 넣고 rev 재등록. 키체인 `.local/ai.env`(15종, 일부 stale — Groq는 무효 확인).
+- **보안 수정(TS-022)**: `/actuator/prometheus`가 프로덕션에 **인증 없이 공개**돼 있던 것(정보노출) 발견 → `MANAGEMENT_EXPOSURE:health,info` 기본으로 닫음(#40 배포 반영). 로컬 관측성 스택 `docker-compose --profile observability`(Prometheus+Grafana+Tempo).
+- **미착수/후속**: EventBridge 스케줄은 DISABLED — 실트리거 검증 후 `ingest_schedule_enabled=true`. AI 유효키. ALB HTTPS. 쉼터 전국 데이터(safetydata)·화장실 실패 7,193건 재적재. 상권정보 STUDY_CAFE/CAFE(403 승인대기).
 - **P3 날씨 라이브(PR #26 + 핫픽스 #28·#29)**: `GET /weather?lat=&lng=` — 기상청 초단기실황(getUltraSrtNcst) + 격자변환 + **ElastiCache Redis TTL 캐시(30분) 실동작**. 프로덕션 실측: 광화문 `지금 23°C, 비`, 부산 `31°C`, 캐시 히트 정상. serviceKey는 `.local/datago.env`(data.go.kr 계정 공통 키). **하드닝: 두 캐시 버그 배포 중 발견·수정 — TS-011(@Cacheable Optional 언랩 SpEL), TS-012(무타이핑 직렬화 캐시히트 500). 회귀 테스트 2건 추가.**
 - **P2 소셜 로그인 라이브·검증 완료(PR #27)**: 카카오/구글 OAuth2(BFF code 서버교환) + JWT + `/me` + 프론트 "내 정보" 탭. **브라우저 실사용 성공 — 구글·카카오 둘 다 프로필까지 표시**(홍성주/카카오·구글). 카카오는 콘솔 설정 3건으로 지연됐다(TS-013): Redirect URI를 로그아웃 칸에 잘못 등록·호출허용IP 127.0.0.1·Client Secret ON 배선. 키는 `.local/oauth.env`·SSM·Vercel env(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
 - **인프라 신규**: ElastiCache Redis(`cache.t3.micro`, 프리티어 대상) + SSM 6종(kma/kakao_rest/kakao_secret/google×2/jwt). `elasticache.tf`·`ssm.tf`·`ecs.tf`. **참고: Redis를 지워도 CacheErrorHandler로 날씨는 기상청 직접호출로 계속 동작(무료화 시 코드변경 0).**
-- **콘솔 없이 바로 가능한 다음** (~~날씨 2부 #30·후기 #31·trust #34 완료~~):
-  1. **D2 ECS 오토스케일링** — Service Auto Scaling(=HPA 상당), D1 k6 부하와 함께(P4). terraform.
-  2. ~~**D3 관측성** — OTel/Grafana(P4).~~ **PR 대기(feat/observability-otel-p4, ADR-0014)** — 머지되면 CLAUDE.md 로드맵 P4의 이 항목 완료.
+- **콘솔 없이 바로 가능한 다음** (~~A~D 로드맵 전 항목 완료: 날씨2부·후기·trust·flags·공부공간·presign·AI·주기동기화·k6·오토스케일링·관측성~~):
+  1. **AI 데모 출력 살리기** — 유효 OpenRouter 키/모델 하나 `/geuneul/openrouter_api_key`에 넣고 rev 재등록(코드변경 0).
+  2. **EventBridge 스케줄 활성화** — 실트리거 1회 검증(Universal Target input) 후 `ingest_schedule_enabled=true` apply.
   3. **쉼터 전국 전체 데이터**(행안부 safetydata) 재적재 + 화장실 실패 7,193건 재시도.
   4. **ALB HTTPS**(ACM+도메인+443) — 공유 링크 신뢰도.
 - **§⑤ 공부공간 데이터 확장([ADR-0006])**: data.go.kr 키 확보됨(`.local/datago.env`). 전국도서관표준데이터는 **CSV 다운로드**로 적재(오픈API는 경기도만) / 상권정보(카페·스터디카페)는 오픈API. `PlaceCategory`+CAFE/STUDY_CAFE·스키마(is_commercial·deleted_at)·파서·실적재를 실데이터로 한 번에.
