@@ -373,3 +373,16 @@
   3. 그다음 **프론트**: 로그인 버튼 → 제공자 authorize 리다이렉트 → BFF 콜백(`/api/auth/{provider}/callback`)이 code를 `/auth/{provider}`로 프록시 → JWT를 httpOnly 쿠키로 → `/me`.
   4. 이후 **후기(review)**·trust_score(로그인 제보 가중, V4 뷰가 이미 준비됨).
 - 관련: 브랜치 `feat/oauth-jwt`, `domain/auth/*`, `global/security/*`, CLAUDE.md §9(인증 API), ERD §8(users). 스택 근거 jjwt 0.13(jwtk/jjwt).
+
+### 2026-07-09 — 프론트 로그인 플로우 (OAuth end-to-end, feat/oauth-jwt)
+- 한 일: 백엔드 OAuth에 이어 **프론트 로그인 UI + BFF 콜백**을 붙여 소셜 로그인을 end-to-end 완성. 로그인 버튼(카카오/구글) → 제공자 authorize 리다이렉트 → BFF 콜백이 code를 백엔드로 교환 → JWT를 httpOnly 쿠키로 → `/me`. MVP에 없던 **"내 정보" 탭 신설**.
+- 결정 & 이유(why):
+  - **"내 정보" 탭 신설(기존 3화면 무침습)**: 전역 헤더가 없어서 로그인 버튼 자리가 없었다. 지도/급해요/제보 화면을 건드리지 않고 TabBar에 4번째 탭 + `/mypage`를 추가 — 모바일 관용(당근/카카오식 "내정보" 탭)이고 로그인이 "살"이라 주 화면을 침범하지 않는다.
+  - **BFF에서만 쿠키 처리(기존 프록시는 쿠키 무시)**: authorize 시작(`GET /api/auth/{provider}`)은 CSRF state를 httpOnly 쿠키에 심고 302, 콜백(`/api/auth/{provider}/callback`)은 state 검증 후 백엔드 `/auth/{provider}`로 code 교환하고 **JWT를 httpOnly 쿠키(geuneul_session)로** 세팅. `/api/me`가 쿠키의 JWT를 Bearer로 백엔드에 전달(브라우저 JS는 httpOnly라 토큰을 못 봄 = XSS 토큰 탈취 방어). 기존 proxy/proxyPost는 Set-Cookie를 안 넘겨 재사용 불가라 콜백 전용 로직 신설.
+  - **client_secret은 프론트에 두지 않음**: authorize URL엔 client_id만 필요(서버 전용 env). 토큰 교환(secret)은 백엔드가 수행 → 시크릿이 프론트 번들·네트워크에 안 뜬다.
+  - **로그인 버튼은 `<a>`(next/link 아님)**: OAuth 시작은 브라우저 전체 이동이어야 하고 Link의 prefetch가 인가 라우트를 잘못 트리거하므로 의도적으로 `<a>` + eslint-disable(사유 주석).
+  - **CSRF state**: authorize→callback 왕복을 httpOnly state 쿠키(10분)로 검증(불일치/누락 시 로그인 거부).
+  - **redirectUri는 프론트가 자기 콜백 URL을 계산해 넘김**: 로컬(http://localhost:3000)·프로덕션(https://geuneul.vercel.app)이 달라 토큰 교환 시 정확히 일치해야 하므로 요청 host/proto로 도출.
+- 검증: 프론트 `typecheck`·`lint`·`build` 전부 green. 라우트 등록 확인(`/api/auth/[provider]`·`/callback`·`/logout`·`/api/me`·`/mypage`). 실제 로그인 왕복은 백엔드 배포(키 주입) 후 실측.
+- 산출물: 프론트 `lib/auth.ts`(provider·쿠키·authorize URL)·`app/api/auth/[provider]/route.ts`·`.../callback/route.ts`·`app/api/auth/logout/route.ts`·`app/api/me/route.ts`·`lib/api.ts`(fetchMe·logout)·`lib/queries.ts`(useMe·useLogout)·`components/shell/TabBar.tsx`(내정보 탭)·`lib/icon-paths.ts`(user 아이콘)·`app/(shell)/mypage/page.tsx`·`.env.example`(KAKAO_REST_API_KEY·GOOGLE_CLIENT_ID).
+- 배포 시 프론트 env(Vercel): `KAKAO_REST_API_KEY`(로그인 client_id)·`GOOGLE_CLIENT_ID` 추가(서버 전용). 콘솔 Redirect URI는 이미 `.../api/auth/{provider}/callback` 등록됨.
