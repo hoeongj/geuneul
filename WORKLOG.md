@@ -355,3 +355,18 @@
   - **문서 톤 중립화** — CLAUDE.md/WORKLOG/TROUBLESHOOTING의 노골적 "면접·포트폴리오" 메타 문구를 중립 개발 문서 톤으로(의사결정 근거·트렌드 확인·why 기록 규율은 유지). 회사/전략 메모는 이미 `.local/PORTFOLIO-CONTEXT.md`(gitignore).
 - 결정 & 이유(why): 리뷰 지적을 그대로 반영하지 않고 "실제 개선인가/리스크 없는가"로 취사선택(라이브 프로덕션이라 위험한 리팩터는 배제). 문서 톤 중립화·LICENSE·다이어그램·로컬 실행법은 처음 보는 사람의 이해·신뢰를 높이는 표준 정비. 코드 변경은 백엔드 test+coverage·프론트 typecheck/lint/build green + CI 실 PostGIS IT 통과 후 머지(PR #25), 프로덕션 배포 확인.
 - 관련: PR #25, 리뷰 에이전트 3축, `docs/adr/README.md`·`LICENSE`·`.editorconfig`, 사용자 결정(LICENSE=MIT·문서 중립화)
+
+### 2026-07-09 — 날씨 API(기상청 초단기실황) + Redis TTL 캐시 (P3, 1부: 백엔드+인프라)
+- 한 일: HANDOFF ▶세션 인계가 지목한 "콘솔 없이 바로 가능한 다음"인 **날씨**를 착수. 좌표→기상청 격자 변환, 초단기실황 조회 클라이언트, Redis TTL 캐시, `GET /weather?lat=&lng=` 엔드포인트, ElastiCache Terraform까지. (survival_score 기온 성분 복원은 2부에서 additive하게 — 이 커밋은 데이터 소스+캐시+노출.)
+- 결정 & 이유(why):
+  - **소스 = 초단기실황(getUltraSrtNcst), 예보(Fcst) 아님**: 앱 테제가 "지금 상태"라 **관측 기온·습도·강수(T1H/REH/RN1/PTY)** 가 survival_score 기온 성분에 더 정확하다. 예보는 향후 "곧 비 옴" 알림(P4/심화)용으로 남긴다. CLAUDE.md §4/§7 문구는 "초단기예보"였으나, 목적(=지금 체감 기온 복원)엔 실황이 맞아 정제 선택(범위 확장 아님).
+  - **캐시 백엔드 = ElastiCache Redis (사용자 결정)**: 인프로세스(Caffeine) 대신. CLAUDE.md §7 스펙 정합 + "캐시 전략" 포트폴리오 포인트 실증 + 분산 캐시(다중 태스크 공유). `cache.t3.micro`(신규계정 프리티어 750h/월·12개월 대상), 사설 서브넷 + SG로 ECS만 6379 접근.
+  - **캐시 경계 = 외부 HTTP 호출(@Cacheable "weather")**: 키=`nx:ny:baseDate:baseTime`. 발표시각이 매시각 바뀌어 키가 자연 회전하고, 같은 슬롯 재조회를 막아 기상청 rate limit을 아낀다. TTL 30분. 빈 결과(장애)는 `unless`+`disableCachingNullValues`로 미캐시(일시 장애가 굳지 않게).
+  - **가용성을 캐시에 결합하지 않음(CacheErrorHandler)**: Redis 장애·미프로비저닝이어도 캐시 오류를 삼키고 기상청을 직접 호출. 나아가 **ALB 헬스체크에 Redis를 넣지 않는다**(`management.health.redis.enabled: false` 유지) — 캐시는 non-critical 부가 계층이라 Redis 블립이 태스크를 죽이면 안 됨. (HANDOFF의 "헬스체크 재활성" 메모를 이 근거로 대체: 재활성은 가용성 저하 위험이라 의도적으로 하지 않음.)
+  - **격자 변환은 순수 함수 + 기준값 테스트**: 기상청 DFS_XY_CONV 공식을 그대로. 서울(60,127)·부산(98,76)·상도(59,125)로 못 박음(조용한 오답 방지).
+  - **data.go.kr 이중 인코딩 함정 회피**: serviceKey는 **디코딩 키**를 주입받아 UriBuilder가 한 번만 인코딩. (참고: 날씨 API도 data.go.kr serviceKey가 필요 — HANDOFF "콘솔 불필요"는 정정. §⑤ 공부공간 데이터와 같은 계정 키로 커버.)
+  - **트렌드 근거(2026-07 웹 확인)**: KMA getUltraSrtNcst 엔드포인트·요청변수(serviceKey/base_date/base_time/nx/ny) 현행 확인. Spring Boot 4(Framework 7) 캐시 추상화는 Redis 스타터+Lettuce 유지, `RedisCacheManager` 빈 직접 정의 + JSON 직렬화가 표준. (출처: data.go.kr 15084084, Spring Data Redis Cache 레퍼런스, Baeldung Redis Cache.)
+- 검증: 유닛 12건 로컬 green — `KmaGridTest`(3, 기준 좌표), `WeatherClientTest`(5, 실 기상청 JSON 파싱·RN1 "강수없음"→0·PTY·오류코드/HTTP오류/무키 empty), `WeatherServiceTest`(2, KST −40분 정시 내림 + 날짜 롤오버). 전체 `*Test` 회귀 0. `terraform validate` green. **엔드투엔드(실 기상청 호출)·Redis 왕복은 serviceKey 확보 + ElastiCache apply 후 실측**(대기).
+- 산출물: 백엔드 `domain/weather/`(KmaGrid·PrecipitationType·Weather·WeatherClient·WeatherService·WeatherController + dto/WeatherResponse)·`global/config/RedisCacheConfig`·`application.yml`(weather.service-key). 인프라 `infra/terraform/elasticache.tf`·`ssm.tf`(kma_service_key)·`variables.tf`·`outputs.tf`·`ecs.tf`(REDIS_HOST env + KMA_SERVICE_KEY secret, 문서화용).
+- 다음(배포 절차): ① 사용자가 data.go.kr serviceKey 확보(기상청 15084084 활용신청) → `.local`. ② `TF_VAR_kma_service_key=… terraform apply`(ElastiCache+SSM, 비용 확인 후). ③ 라이브 태스크데프에 REDIS_HOST(=redis_endpoint output)+KMA_SERVICE_KEY(SSM) 심은 새 rev 등록 + `update-service --force-new-deployment`(proxy-secret rev13과 동일 패턴). ④ `/weather?lat=&lng=` 실측. 이후 **2부**: survival_score 기온 성분 additive 복원(SurvivalScore.Weights 확장, ADR + IT).
+- 관련: 브랜치 `feat/weather-kma-redis`, `domain/weather/*`, `RedisCacheConfig`, `elasticache.tf`, [TS-010](TROUBLESHOOTING.md) (Boot 4 Redis 직렬화·커스터마이저 이관).

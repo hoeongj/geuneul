@@ -20,6 +20,11 @@ output "rds_endpoint" {
   value = aws_db_instance.postgres.address
 }
 
+output "redis_endpoint" {
+  description = "ECS 태스크데프 REDIS_HOST 로 주입할 ElastiCache 엔드포인트"
+  value       = aws_elasticache_cluster.redis.cache_nodes[0].address
+}
+
 output "github_actions_role_arn" {
   description = "GitHub 레포 Secrets에 AWS_ROLE_ARN 으로 등록"
   value       = aws_iam_role.github_actions.arn

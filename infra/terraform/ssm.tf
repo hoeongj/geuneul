@@ -13,3 +13,10 @@ resource "aws_ssm_parameter" "proxy_secret" {
   type  = "SecureString"
   value = var.proxy_secret
 }
+
+# 기상청 serviceKey (P3 날씨 캐시). 값은 var.kma_service_key(tfvars)로만. 실행 롤 SSM 정책은 와일드카드.
+resource "aws_ssm_parameter" "kma_service_key" {
+  name  = "/${var.project}/kma_service_key"
+  type  = "SecureString"
+  value = var.kma_service_key
+}

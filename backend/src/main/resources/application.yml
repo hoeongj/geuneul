@@ -30,6 +30,11 @@ spring:
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표). 규칙 D: 값은 .env/SSM으로만.
 
+weather:
+  # 기상청 초단기실황(getUltraSrtNcst). 공공데이터포털 serviceKey. 규칙 D: 값은 .env/SSM으로만.
+  # data.go.kr의 이중 인코딩 함정 회피를 위해 **디코딩 키**를 넣는다(UriBuilder가 한 번만 인코딩).
+  service-key: ${KMA_SERVICE_KEY:}
+
 geuneul:
   # BFF(Vercel 서버 프록시) ↔ 백엔드 공유 시크릿. 설정되면 익명 제보 레이트리밋이 BFF가 준
   # 실 클라이언트 IP(X-Client-Ip, X-Proxy-Auth로 증명)를 신뢰 → XFF 위조 우회 차단(ProxyClientResolver).
