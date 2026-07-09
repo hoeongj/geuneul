@@ -59,6 +59,14 @@ public class Place {
     @Column(nullable = false)
     private boolean geocoded;
 
+    // ADR-0006: 상업(카페) vs 커먼스(도서관/공공시설 등) 분리 — "공개 커먼스" 정체성을 지도 필터에서 방어.
+    @Column(name = "is_commercial", nullable = false)
+    private boolean commercial;
+
+    // ADR-0006: 스냅샷에서 사라진 행 soft-delete(폐업 회전 대응). NULL=활성.
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -80,6 +88,7 @@ public class Place {
         p.source = source;
         p.sourceExternalId = sourceExternalId;
         p.geocoded = false;
+        p.commercial = category != null && category.commercial();
         return p;
     }
 
@@ -121,6 +130,14 @@ public class Place {
 
     public boolean isGeocoded() {
         return geocoded;
+    }
+
+    public boolean isCommercial() {
+        return commercial;
+    }
+
+    public OffsetDateTime getDeletedAt() {
+        return deletedAt;
     }
 
     public OffsetDateTime getCreatedAt() {

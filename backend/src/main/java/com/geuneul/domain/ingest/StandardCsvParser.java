@@ -8,14 +8,10 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -153,15 +149,8 @@ public class StandardCsvParser {
         }
     }
 
-    /** 고유번호 없는 행의 대체 자연키 — 같은 (이름|주소)는 재적재 시 같은 키로 수렴한다. */
+    /** 고유번호 없는 행의 대체 자연키 — 같은 (이름|주소)는 재적재 시 같은 키로 수렴한다. {@link IngestIds}에 위임. */
     static String fallbackId(String name, String address) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest((name + "|" + (address == null ? "" : address))
-                    .getBytes(StandardCharsets.UTF_8));
-            return "h:" + HexFormat.of().formatHex(hash, 0, 16);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+        return IngestIds.fallbackId(name, address);
     }
 }
