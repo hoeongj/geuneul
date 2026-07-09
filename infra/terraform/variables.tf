@@ -72,6 +72,12 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
+variable "openrouter_api_key" {
+  description = "OpenRouter(OpenAI 호환) API 키 — P3 AI 한줄 요약(곁다리, ADR-0010). Anthropic 키가 없어 OpenRouter로 이탈(WORKLOG 기록). terraform.tfvars(gitignore) 또는 TF_VAR_openrouter_api_key로 주입. 절대 커밋 금지. (SSM은 빈 값을 거부하므로 default 없이 필수 — 값을 아직 못 넣으면 이 변수를 빈 문자열로 채운 tfvars 항목을 추가하지 말고 apply를 보류할 것.)"
+  type        = string
+  sensitive   = true
+}
+
 variable "container_image" {
   description = "ECS 태스크 이미지. 비우면 ECR:latest. 실제 배포 태그는 GitHub Actions(deploy.yml)가 갱신하며, TF는 ignore_changes로 되돌리지 않음."
   type        = string
