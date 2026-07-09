@@ -14,7 +14,7 @@ public record SurvivalScoreResponse(
         String grade,
         @Schema(description = "거리 점수 0~1. 반경 검색에서만 non-null", example = "0.7", nullable = true)
         Double distanceScore,
-        @Schema(description = "편의 점수 0~1(긍정 제보 가중)", example = "0.8") double comfortScore,
+        @Schema(description = "편의 점수 0~1(긍정 제보 가중 + 날씨 comfort 보정 additive, ADR-0009)", example = "0.8") double comfortScore,
         @Schema(description = "최근성 점수 0~1", example = "1.0") double freshnessScore,
         @Schema(description = "리스크 점수 0~1(부정 제보 가중)", example = "0.0") double riskScore,
         @Schema(description = "집계에 쓰인 유효(미만료) 제보 수", example = "3") long reportCount

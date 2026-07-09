@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -48,5 +49,32 @@ class WeatherServiceTest {
         new WeatherService(client, clock).getWeather(LAT, LON);
 
         verify(client).fetchNowcast(60, 127, "20260708", "2300");
+    }
+
+    // --- getComfortScore: HeatComfort로 위임(ADR-0009) ---
+
+    @Test
+    @DisplayName("날씨 조회 성공 시 HeatComfort 매핑값을 담은 Optional을 반환한다")
+    void comfortScoreDelegatesToHeatComfortWhenWeatherPresent() {
+        WeatherClient client = mock(WeatherClient.class);
+        Weather pleasant = new Weather(23.0, 55, 0.0, PrecipitationType.NONE, "202607091300");
+        when(client.fetchNowcast(anyInt(), anyInt(), anyString(), anyString())).thenReturn(Optional.of(pleasant));
+        Clock clock = Clock.fixed(Instant.parse("2026-07-09T05:20:00Z"), ZoneOffset.UTC);
+
+        Optional<Double> comfort = new WeatherService(client, clock).getComfortScore(LAT, LON);
+
+        assertThat(comfort).contains(HeatComfort.comfortScore(pleasant));
+    }
+
+    @Test
+    @DisplayName("날씨 조회 실패(빈 Optional)면 comfort도 빈 Optional — graceful degradation")
+    void comfortScoreEmptyWhenWeatherUnavailable() {
+        WeatherClient client = mock(WeatherClient.class);
+        when(client.fetchNowcast(anyInt(), anyInt(), anyString(), anyString())).thenReturn(Optional.empty());
+        Clock clock = Clock.fixed(Instant.parse("2026-07-09T05:20:00Z"), ZoneOffset.UTC);
+
+        Optional<Double> comfort = new WeatherService(client, clock).getComfortScore(LAT, LON);
+
+        assertThat(comfort).isEmpty();
     }
 }
