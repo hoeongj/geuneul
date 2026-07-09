@@ -28,6 +28,12 @@ resource "aws_ssm_parameter" "kakao_rest_api_key" {
   value = var.kakao_rest_api_key
 }
 
+resource "aws_ssm_parameter" "kakao_client_secret" {
+  name  = "/${var.project}/kakao_client_secret"
+  type  = "SecureString"
+  value = var.kakao_client_secret
+}
+
 resource "aws_ssm_parameter" "google_client_id" {
   name  = "/${var.project}/google_client_id"
   type  = "SecureString"
