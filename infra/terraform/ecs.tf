@@ -44,7 +44,8 @@ resource "aws_ecs_task_definition" "app" {
       { name = "KAKAO_CLIENT_SECRET", valueFrom = aws_ssm_parameter.kakao_client_secret.arn },
       { name = "GOOGLE_CLIENT_ID", valueFrom = aws_ssm_parameter.google_client_id.arn },
       { name = "GOOGLE_CLIENT_SECRET", valueFrom = aws_ssm_parameter.google_client_secret.arn },
-      { name = "JWT_SECRET", valueFrom = aws_ssm_parameter.jwt_secret.arn }
+      { name = "JWT_SECRET", valueFrom = aws_ssm_parameter.jwt_secret.arn },
+      { name = "OPENROUTER_API_KEY", valueFrom = aws_ssm_parameter.openrouter_api_key.arn } # P3 AI 요약(곁다리, ADR-0010)
     ]
     logConfiguration = {
       logDriver = "awslogs"

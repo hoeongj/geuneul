@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * 장소 응답 DTO. JTS Point를 직접 직렬화하지 않고 lat/lng로 평탄화한다(JTS: X=lng, Y=lat).
  * distanceM은 반경/최근접 검색에서만 채워진다(중심점이 있어야 의미가 있으므로).
  * survival은 스코어드 검색(반경/bounds/단건)에서만 채워지고, nearest/urgent에서는 null.
+ * aiSummary는 단건 상세(GET /places/{id})에서만 채워진다(P3 곁다리, AI는 상세 조회 비용만 진다).
  */
 @Schema(description = "장소")
 public record PlaceResponse(
@@ -25,7 +26,10 @@ public record PlaceResponse(
         @Schema(description = "검색 중심점으로부터의 거리(m). 반경/최근접 검색에서만 제공", example = "241.5", nullable = true)
         Double distanceM,
         @Schema(description = "지금 갈만함 점수(survival_score). 스코어드 검색에서만 제공", nullable = true)
-        SurvivalScoreResponse survival
+        SurvivalScoreResponse survival,
+        @Schema(description = "최근 제보 기준 AI 한줄 요약(곁다리). 단건 상세에서만 제공, 유효 제보 없거나 AI 실패 시 null",
+                example = "최근 제보 기준 시원하지만 화장실은 별로예요", nullable = true)
+        String aiSummary
 ) {
 
     public static PlaceResponse of(Place p, Double distanceM) {
@@ -39,6 +43,7 @@ public record PlaceResponse(
                 p.getGeom().getX(),
                 p.getSource(),
                 distanceM,
+                null,
                 null
         );
     }
@@ -56,6 +61,7 @@ public record PlaceResponse(
                 v.getLng(),
                 v.getSource(),
                 Math.round(v.getDistanceM() * 10) / 10.0,
+                null,
                 null
         );
     }
@@ -69,12 +75,23 @@ public record PlaceResponse(
     }
 
     /**
-     * 스코어드 투영 매핑 — survival_score 조립 + 날씨 comfort 보정(ADR-0009).
+     * 스코어드 투영 매핑 — survival_score 조립 + 날씨 comfort 보정(ADR-0009). aiSummary는 없음(목록/반경/bounds
+     * 경로 — AI는 단건 상세에서만 조회한다, ADR-0010).
      * @param radiusM 거리 정규화 기준 반경(반경 검색). bounds/단건은 null(거리 성분 제외).
      * @param weatherComfort 요청(쿼리) 1건당 1회 조회한 날씨 comfort 보정[0,1](WeatherService.getComfortScore).
      *                       null이면 날씨 신호 없음 — 제보 comfort만으로 폴백.
      */
     public static PlaceResponse of(ScoredPlaceView v, Double radiusM, Double weatherComfort) {
+        return of(v, radiusM, weatherComfort, null);
+    }
+
+    /**
+     * 단건 상세 전용 투영 매핑 — survival_score 조립 + 날씨 comfort 보정 + AI 한줄 요약(ADR-0010).
+     * @param radiusM 거리 정규화 기준 반경. 단건 상세는 항상 null(거리 성분 제외).
+     * @param weatherComfort 이 장소 좌표 기준 1회 조회한 날씨 comfort 보정[0,1]. null이면 날씨 신호 없음.
+     * @param aiSummary 최근 제보 기준 AI 한줄 요약. 유효 제보 없음·AI 미설정·실패 시 null(graceful degradation).
+     */
+    public static PlaceResponse of(ScoredPlaceView v, Double radiusM, Double weatherComfort, String aiSummary) {
         PlaceCategory category = PlaceCategory.valueOf(v.getCategory());
         Double distanceM = v.getDistanceM() == null ? null : Math.round(v.getDistanceM() * 10) / 10.0;
         SurvivalScore score = SurvivalScore.of(
@@ -90,7 +107,8 @@ public record PlaceResponse(
                 v.getLng(),
                 v.getSource(),
                 distanceM,
-                SurvivalScoreResponse.of(score)
+                SurvivalScoreResponse.of(score),
+                aiSummary
         );
     }
 }
