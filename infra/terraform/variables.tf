@@ -48,6 +48,12 @@ variable "kakao_rest_api_key" {
   sensitive   = true
 }
 
+variable "kakao_client_secret" {
+  description = "카카오 로그인 Client Secret(콘솔 [플랫폼 키]에서 활성화 ON). terraform.tfvars(gitignore)로 주입, 커밋 금지."
+  type        = string
+  sensitive   = true
+}
+
 variable "google_client_id" {
   description = "구글 OAuth 웹 클라이언트 ID. terraform.tfvars(gitignore)로 주입, 커밋 금지."
   type        = string
