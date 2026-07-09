@@ -1,7 +1,9 @@
 // 서버 전용. 브라우저는 동일 오리진 /api/* 만 호출하고, 이 프록시가 ALB 로 대신 요청한다.
 // → ALB 가 http(TLS 없음)이고 CORS 미설정이어도 mixed-content/CORS 를 동시에 회피.
 // GEUNEUL_API_BASE 는 서버 전용 env(NEXT_PUBLIC 아님)라 ALB 호스트가 클라이언트 번들에 노출되지 않는다.
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { SESSION_COOKIE } from "@/lib/auth";
 
 const RAW_BASE = process.env.GEUNEUL_API_BASE ?? "";
 const BASE = RAW_BASE.replace(/\/$/, "");
@@ -43,6 +45,44 @@ export async function proxyPost(path: string, request: Request): Promise<NextRes
         ...(xff ? { "x-forwarded-for": xff } : {}),
         ...(clientIp ? { "x-client-ip": clientIp } : {}),
         ...(proxySecret ? { "x-proxy-auth": proxySecret } : {}),
+      },
+      body,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    const resBody = await res.text();
+    return new NextResponse(resBody, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
+// 로그인 필요 쓰기 프록시(후기 작성 등): 세션 쿠키(httpOnly JWT)를 Bearer로 백엔드에 전달한다.
+// 쿠키가 없으면 백엔드까지 가지 않고 즉시 401(불필요한 왕복 방지) — /api/me와 동일 판정 기준.
+// 백엔드가 돌려주는 401(토큰 만료 등)·400(검증 실패)은 그대로 통과시켜 클라이언트가 구분할 수 있게 한다.
+export async function proxyAuthedPost(path: string, request: NextRequest): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!token) {
+    return NextResponse.json({ error: "unauthenticated", message: "로그인이 필요해요." }, { status: 401 });
+  }
+  try {
+    const body = await request.text();
+    const res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        authorization: `Bearer ${token}`,
       },
       body,
       signal: AbortSignal.timeout(TIMEOUT_MS),

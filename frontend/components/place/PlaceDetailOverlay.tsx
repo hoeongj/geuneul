@@ -14,6 +14,7 @@ import { GRADE_META, gradeOf } from "@/lib/survival";
 import type { Place } from "@/types/place";
 import { DetailMiniMap } from "./DetailMiniMap";
 import { FeaturePills } from "./FeaturePills";
+import { ReviewsSection } from "./ReviewsSection";
 
 // 예약 섹션(P2/P3): 흐리게 자리만.
 function ReservedBlock({ title, badge, children }: { title: string; badge: string; children: React.ReactNode }) {
@@ -202,20 +203,7 @@ export function PlaceDetailOverlay() {
             <p className="text-[13px] italic text-muted">“최근 제보가 쌓이면 이곳의 지금 상태를 한 줄로 요약해 드려요.”</p>
           </ReservedBlock>
           {id != null && <RecentReports placeId={id} />}
-          <ReservedBlock title="후기" badge="P2">
-            <div className="mb-3 flex items-center gap-1 text-line-dashed">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Icon key={i} name="dots" size={14} />
-              ))}
-            </div>
-            <button
-              type="button"
-              disabled
-              className="w-full cursor-not-allowed rounded-[12px] border border-line-cream bg-white py-2.5 text-[13px] font-semibold text-muted"
-            >
-              후기 쓰기 · 로그인 필요
-            </button>
-          </ReservedBlock>
+          {id != null && <ReviewsSection placeId={id} />}
         </div>
       </div>
     </div>
