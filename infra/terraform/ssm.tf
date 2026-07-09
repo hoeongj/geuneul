@@ -20,3 +20,28 @@ resource "aws_ssm_parameter" "kma_service_key" {
   type  = "SecureString"
   value = var.kma_service_key
 }
+
+# 소셜 로그인(P2) 자격증명 + JWT 서명키. 전부 /${var.project}/* 와일드카드 SSM 정책 → IAM 무변경.
+resource "aws_ssm_parameter" "kakao_rest_api_key" {
+  name  = "/${var.project}/kakao_rest_api_key"
+  type  = "SecureString"
+  value = var.kakao_rest_api_key
+}
+
+resource "aws_ssm_parameter" "google_client_id" {
+  name  = "/${var.project}/google_client_id"
+  type  = "SecureString"
+  value = var.google_client_id
+}
+
+resource "aws_ssm_parameter" "google_client_secret" {
+  name  = "/${var.project}/google_client_secret"
+  type  = "SecureString"
+  value = var.google_client_secret
+}
+
+resource "aws_ssm_parameter" "jwt_secret" {
+  name  = "/${var.project}/jwt_secret"
+  type  = "SecureString"
+  value = var.jwt_secret
+}

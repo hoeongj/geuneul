@@ -42,6 +42,30 @@ variable "kma_service_key" {
   sensitive   = true
 }
 
+variable "kakao_rest_api_key" {
+  description = "카카오 앱 REST API 키. 지오코딩 + 카카오 로그인 client_id 겸용. terraform.tfvars(gitignore)로 주입, 커밋 금지."
+  type        = string
+  sensitive   = true
+}
+
+variable "google_client_id" {
+  description = "구글 OAuth 웹 클라이언트 ID. terraform.tfvars(gitignore)로 주입, 커밋 금지."
+  type        = string
+  sensitive   = true
+}
+
+variable "google_client_secret" {
+  description = "구글 OAuth 클라이언트 시크릿. terraform.tfvars(gitignore)로 주입, 커밋 금지."
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_secret" {
+  description = "JWT HS256 서명키(≥32바이트). terraform.tfvars(gitignore)로 주입, 커밋 금지."
+  type        = string
+  sensitive   = true
+}
+
 variable "container_image" {
   description = "ECS 태스크 이미지. 비우면 ECR:latest. 실제 배포 태그는 GitHub Actions(deploy.yml)가 갱신하며, TF는 ignore_changes로 되돌리지 않음."
   type        = string
