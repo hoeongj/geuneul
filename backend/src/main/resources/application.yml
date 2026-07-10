@@ -65,6 +65,11 @@ datago:
   # 규칙 D: 값은 .env/SSM으로만.
   service-key: ${DATA_GO_KR_SERVICE_KEY:}
 
+safetydata:
+  # 무더위쉼터(DSSP-IF-10942, 행정안전부) — safetydata.go.kr 전용 인증키.
+  # data.go.kr과 별개 포털·별개 키다(datago 키로 호출하면 resultCode 30). 규칙 D: 값은 .env/SSM으로만.
+  service-key: ${SAFETYDATA_SERVICE_KEY:}
+
 geuneul:
   # BFF(Vercel 서버 프록시) ↔ 백엔드 공유 시크릿. 설정되면 익명 제보 레이트리밋이 BFF가 준
   # 실 클라이언트 IP(X-Client-Ip, X-Proxy-Auth로 증명)를 신뢰 → XFF 위조 우회 차단(ProxyClientResolver).
