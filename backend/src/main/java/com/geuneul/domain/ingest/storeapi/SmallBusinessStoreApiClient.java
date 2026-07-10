@@ -10,10 +10,10 @@ import org.springframework.web.client.RestClient;
 /**
  * 소상공인시장진흥공단 상가(상권)정보 오픈API(반경 검색) 실 구현체.
  *
- * ⚠️ <b>계약 미검증(ADR-0006)</b> — 엔드포인트·파라미터명은 공식 매뉴얼(data.sbiz.or.kr)·서드파티
- * 가이드 리서치 기반이고, "상가업소정보" 활용신청이 아직 미승인(2026-07-09 실측 403)이라 실 호출로
- * 확증하지 못했다. 승인 후 반드시 재검증 — 파라미터/응답 필드가 다르면 이 클래스만 고치면 된다
- * (도메인 서비스는 {@link StoreApiClient}/{@link StorePage} 추상화만 의존).
+ * <p><b>계약 검증 완료(2026-07-10, TS-026)</b> — 활용신청 승인 후 실 호출로 확정했다. 응답은
+ * {@code response} 래퍼 없이 {@code header}·{@code body}가 최상위({@link StoreApiResponse}), 좌표·
+ * 페이지네이션은 숫자다. {@code indsSclsCd} 서버측 필터로 대상 업종만 받는다. 파라미터/응답이 또
+ * 바뀌면 이 클래스만 고치면 된다(도메인 서비스는 {@link StoreApiClient}/{@link StorePage} 추상화만 의존).
  */
 @Component
 public class SmallBusinessStoreApiClient implements StoreApiClient {
@@ -38,7 +38,7 @@ public class SmallBusinessStoreApiClient implements StoreApiClient {
     }
 
     @Override
-    public StorePage searchByRadius(double lat, double lng, int radiusMeters, String indsLclsCd,
+    public StorePage searchByRadius(double lat, double lng, int radiusMeters, String indsSclsCd,
                                     int pageNo, int numOfRows) {
         if (!keyPresent) {
             throw new IllegalStateException(
@@ -55,44 +55,34 @@ public class SmallBusinessStoreApiClient implements StoreApiClient {
                                 .queryParam("type", "json")
                                 .queryParam("numOfRows", numOfRows)
                                 .queryParam("pageNo", pageNo);
-                        if (indsLclsCd != null && !indsLclsCd.isBlank()) {
-                            b.queryParam("indsLclsCd", indsLclsCd);
+                        if (indsSclsCd != null && !indsSclsCd.isBlank()) {
+                            b.queryParam("indsSclsCd", indsSclsCd);
                         }
                         return b.build();
                     })
                     .retrieve()
                     .body(StoreApiResponse.class);
 
-            if (body == null || body.response() == null) {
+            if (body == null) {
                 return StorePage.empty();
             }
-            StoreApiResponse.Header header = body.response().header();
+            StoreApiResponse.Header header = body.header();
             if (header == null || !"00".equals(header.resultCode())) {
+                // "03" = NODATA(정상적 빈 결과)라 소음 로그를 남기지 않는다. 그 외만 warn.
                 if (header != null && !"03".equals(header.resultCode())) {
                     log.warn("[store-api] 비정상 응답 page={} resultCode={} msg={}",
                             pageNo, header.resultCode(), header.resultMsg());
                 }
                 return StorePage.empty();
             }
-            StoreApiResponse.Body data = body.response().body();
+            StoreApiResponse.Body data = body.body();
             if (data == null || data.items() == null) {
                 return StorePage.empty();
             }
-            return new StorePage(data.items(), parseIntSafe(data.totalCount()));
+            return new StorePage(data.items(), data.totalCount() == null ? 0 : data.totalCount());
         } catch (Exception e) {
             log.warn("[store-api] 호출 실패 page={}: {}", pageNo, e.getMessage());
             return StorePage.empty();
-        }
-    }
-
-    private static int parseIntSafe(String value) {
-        if (value == null || value.isBlank()) {
-            return 0;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return 0;
         }
     }
 }
