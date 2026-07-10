@@ -6,10 +6,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +30,19 @@ class RouteServiceTest {
     void setUp() {
         placeRepository = mock(PlaceRepository.class);
         service = new RouteService(placeRepository, new StraightLineDirectionsProvider());
+        // 기본: corridor 그늘/실내 없음(F4). shade를 검증하는 테스트는 개별로 재스텁한다.
+        when(placeRepository.findShadeAlongCorridor(anyString(), anyString(), anyDouble(), anyInt()))
+                .thenReturn(List.of());
+    }
+
+    private static RouteShadeView shade(long id, String name, String category, double lat, double lng) {
+        return new RouteShadeView() {
+            @Override public Long getId() { return id; }
+            @Override public String getName() { return name; }
+            @Override public String getCategory() { return category; }
+            @Override public Double getLat() { return lat; }
+            @Override public Double getLng() { return lng; }
+        };
     }
 
     private static RouteWaypointView view(double lat, double lng, long id, String name,
@@ -73,5 +89,23 @@ class RouteServiceTest {
         assertThat(res.routeDistanceM()).isEqualTo(res.directDistanceM());
         assertThat(res.origin().placeId()).isNull();
         assertThat(res.destination().placeId()).isNull();
+    }
+
+    @Test
+    @DisplayName("경로 corridor 안의 그늘/실내가 shadeSpots로 실린다(F4)")
+    void includesShadeSpots() {
+        when(placeRepository.findBestToiletWaypoint(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
+                anyDouble(), anyDouble(), anyDouble()))
+                .thenReturn(Optional.empty());
+        when(placeRepository.findShadeAlongCorridor(anyString(), anyString(), anyDouble(), anyInt()))
+                .thenReturn(List.of(shade(10L, "상도도서관", "LIBRARY", 37.505, 126.94)));
+
+        RouteResponse res = service.toiletRoute(37.50, 126.93, 37.52, 126.95);
+
+        assertThat(res.shadeSpots()).hasSize(1);
+        assertThat(res.shadeSpots().get(0).placeId()).isEqualTo(10L);
+        assertThat(res.shadeSpots().get(0).name()).isEqualTo("상도도서관");
+        assertThat(res.shadeSpots().get(0).category()).isEqualTo("LIBRARY");
+        assertThat(res.shadeSpots().get(0).lat()).isEqualTo(37.505);
     }
 }
