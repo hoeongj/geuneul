@@ -759,3 +759,12 @@
 - 검증: `npm run lint`·`typecheck`·`build` green. `/api/reactions`·`/api/reviews/[id]/comments` 라우트 빌드 확인.
 - 산출물: `types/community.ts`·`lib/api.ts`·`lib/backend.ts`(proxyAuthed)·`lib/queries.ts`·`components/place/ReviewsSection.tsx`·`app/api/reactions/route.ts`·`app/api/reviews/[id]/comments/route.ts`.
 - 관련: docs/BACKLOG.md A6, #49(커뮤니티 백엔드 V11), CLAUDE.md §8(커뮤니티=2차·살)·§0-9(간판 우선·리뷰앱화 금지).
+
+## 2026-07-10 — A7. 관심 장소(bookmarks) 테이블·API·UI (V14) (브랜치 `feat/a7-bookmarks`)
+- 배경(docs/BACKLOG.md A7): ERD `bookmarks(user_id, place_id, memo, created_at)`가 미구현이었다. 저장/해제 + 마이페이지 목록. **B1 알림의 "관심 장소 상태 변화"의 선행 테이블**이라 A에서 먼저.
+- 한 일(백엔드): ① Flyway **V14** `bookmarks`(uq_bookmarks user×place, idx_bookmarks_user 최신순). ② `domain.bookmark`(Bookmark 엔티티·Repository·Service·Controller·BookmarkView 프로젝션·DTO 3종). API `POST /bookmarks`(멱등 upsert)·`DELETE /bookmarks/{placeId}`(멱등)·`GET /me/bookmarks`(장소 조인·최신순·soft-delete 제외). ③ SecurityConfig에 세 경로 authenticated 추가.
+- 한 일(프론트): ④ `types/bookmark.ts`·api(fetch/add/remove)·queries(`useMyBookmarks`·`useToggleBookmark`)·BFF 라우트 3개(proxyAuthed 재사용, GET/POST/DELETE). ⑤ 상세 헤더에 `BookmarkButton`(★ 토글, 초기 상태=목록 멤버십). ⑥ 마이페이지 `BookmarksSection`(목록·항목 클릭 시 상세 오버레이 open — shell 레이아웃 공용).
+- 왜(why): ① **왜 upsert(멱등)인가** — 저장 토글은 중복 저장이 무의미. uq_bookmarks + findByUserIdAndPlaceId로 memo 갱신(Review 장소당 1건 정책과 동형, 저빈도 UGC라 레이스 허용). ② **왜 BookmarkView 네이티브 조인인가** — 목록에 장소명·좌표·카테고리가 필요한데 bookmarks만으론 부족 → places 조인, 좌표 ST_Y/ST_X 평탄화, created_at Instant→UTC(TS-016). soft-delete 장소 제외(폐업 회전, ADR-0006). ③ **왜 리액션과 달리 초기 상태를 아는가** — bookmarks는 `GET /me/bookmarks` 목록이 있어 useMyBookmarks 멤버십으로 별 채움을 정확히 표시(리액션은 GET이 없어 상호작용 기반이었던 것과 대비). ④ **왜 존재 안 하는 장소는 404인가** — FK 위반 500 대신 명확한 신호(existsById 선검사). ⑤ **왜 살(개인화)이고 간판 아님인가** — survival_score와 무연결(§0-9). B1 알림이 이 테이블을 재사용할 선행.
+- 검증: 단위 green — `BookmarkServiceTest` 4건(신규 save·재저장 upsert·404·해제 멱등). IT — `BookmarkFlowIT` 5건(저장→목록 조인·재저장 멱등·해제 후 사라짐·비로그인 401·없는 장소 404, 실 PostGIS + Security 필터체인·JWT). 프론트 lint/typecheck/build green(3 라우트 확인). 로컬 IT colima skip(TS-009) → **CI Backend(Gradle) pass 확인 후 머지**(TS-025). **V14 프로덕션 적용은 머지 후 자동 배포(Flyway).**
+- 산출물: `V14__bookmarks.sql` · `domain/bookmark/*`(8파일) · `SecurityConfig`(3매처) · 백엔드 테스트 2파일 · 프론트 `types/bookmark.ts`·`lib/api.ts`·`lib/queries.ts`·`components/place/BookmarkButton.tsx`·`PlaceDetailOverlay.tsx`·`mypage/page.tsx`·BFF 라우트 3개.
+- 관련: docs/BACKLOG.md A7, ERD §8, ADR-0006(soft-delete)·TS-016(Instant), CLAUDE.md §0-9(살). **B1 알림 "관심 장소 상태 변화"의 선행 완료.**

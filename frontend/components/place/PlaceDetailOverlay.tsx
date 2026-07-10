@@ -12,6 +12,7 @@ import { usePlace, usePlaceReports } from "@/lib/queries";
 import { formatRelativeTime, REPORT_META } from "@/lib/reports";
 import { GRADE_META, gradeOf } from "@/lib/survival";
 import type { Place } from "@/types/place";
+import { BookmarkButton } from "./BookmarkButton";
 import { DetailMiniMap } from "./DetailMiniMap";
 import { FeaturePills } from "./FeaturePills";
 import { PopularTimes } from "./PopularTimes";
@@ -117,9 +118,12 @@ export function PlaceDetailOverlay() {
           <Icon name="chevLeft" size={22} />
         </button>
         <h1 className="text-[15px] font-extrabold text-ink">장소 상세</h1>
-        <button type="button" onClick={onShare} aria-label="공유" className="flex h-[38px] w-[38px] items-center justify-center text-ink">
-          <Icon name="share" size={19} />
-        </button>
+        <div className="flex items-center">
+          {id != null && <BookmarkButton placeId={id} />}
+          <button type="button" onClick={onShare} aria-label="공유" className="flex h-[38px] w-[38px] items-center justify-center text-ink">
+            <Icon name="share" size={19} />
+          </button>
+        </div>
       </header>
 
       {/* 미니맵: 선택 장소 중심(키 있으면 실지도, 없으면 placeholder) */}

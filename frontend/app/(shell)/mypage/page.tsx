@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
-import { useLogout, useMe } from "@/lib/queries";
+import { useSelectedPlace } from "@/lib/context/selected";
+import { useLogout, useMe, useMyBookmarks } from "@/lib/queries";
 import type { User } from "@/types/user";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -108,6 +109,8 @@ function Profile({ user }: { user: User }) {
         <span className="text-[15px] font-bold text-teal">{Math.round(user.trustScore)}</span>
       </div>
 
+      <BookmarksSection />
+
       <button
         type="button"
         onClick={() => logout.mutate()}
@@ -116,6 +119,48 @@ function Profile({ user }: { user: User }) {
       >
         로그아웃
       </button>
+    </div>
+  );
+}
+
+// 관심 장소(A7) — Profile 안에서만 렌더(로그인 상태). 항목 클릭 시 상세 오버레이를 연다(shell 레이아웃 공용).
+function BookmarksSection() {
+  const selected = useSelectedPlace();
+  const { data, isLoading } = useMyBookmarks(true);
+  const bookmarks = data ?? [];
+
+  return (
+    <div className="overflow-hidden rounded-[14px] border border-line-cream bg-white">
+      <div className="flex items-center gap-2 border-b border-line-cream px-4 py-3">
+        <h2 className="text-[14px] font-extrabold text-ink-2">관심 장소</h2>
+        {!isLoading && <span className="text-[12px] text-muted">{bookmarks.length}</span>}
+      </div>
+      {isLoading ? (
+        <p className="px-4 py-4 text-[13px] text-muted">불러오는 중…</p>
+      ) : bookmarks.length === 0 ? (
+        <p className="px-4 py-4 text-[13px] text-muted">저장한 장소가 없어요 · 장소 상세에서 ★로 저장하세요</p>
+      ) : (
+        <ul>
+          {bookmarks.map((b) => (
+            <li key={b.placeId}>
+              <button
+                type="button"
+                onClick={() => selected.open(b.placeId)}
+                className="flex w-full items-center justify-between gap-2 border-b border-line-cream px-4 py-3 text-left last:border-none"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-[14px] font-bold text-ink">{b.name}</span>
+                  <span className="block truncate text-[12px] text-ink-3">
+                    {b.categoryLabel}
+                    {b.memo ? ` · ${b.memo}` : ""}
+                  </span>
+                </span>
+                <Icon name="chev" size={16} className="shrink-0 text-muted-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
