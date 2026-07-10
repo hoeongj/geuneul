@@ -20,12 +20,13 @@ import static org.mockito.Mockito.when;
 class PushServiceTest {
 
     private final PushSubscriptionRepository repository = mock(PushSubscriptionRepository.class);
+    private final PushSubscriptionCleaner cleaner = mock(PushSubscriptionCleaner.class);
 
     @SuppressWarnings("unchecked")
     private PushService serviceWith(VAPIDKeyPair keyPairOrNull) {
         ObjectProvider<VAPIDKeyPair> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(keyPairOrNull);
-        return new PushService(repository, provider, "mailto:test@geuneul.app");
+        return new PushService(repository, provider, cleaner, "mailto:test@geuneul.app");
     }
 
     @Test
