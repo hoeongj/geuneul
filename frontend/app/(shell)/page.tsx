@@ -6,12 +6,15 @@ import { CurrentLocationFab } from "@/components/map/CurrentLocationFab";
 import { FilterChips } from "@/components/map/FilterChips";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { SearchBar } from "@/components/map/SearchBar";
+import { SurgeBanner } from "@/components/map/SurgeBanner";
 import { useGeo } from "@/lib/context/geo";
 import { useSelectedPlace } from "@/lib/context/selected";
 import { useToast } from "@/lib/context/toast";
 import { DEFAULT_RADIUS, WIDENED_RADIUS } from "@/lib/geo";
 import { useDebouncedCallback } from "@/lib/hooks";
 import { useBoundsPlaces, useRadiusPlaces } from "@/lib/queries";
+import { useSurgeAlerts } from "@/lib/surge";
+import type { SurgeInfo } from "@/types/alert";
 import type { Category, MapBounds, Place } from "@/types/place";
 
 function byCategories(places: Place[], cats: Category[]): Place[] {
@@ -51,6 +54,10 @@ export default function MapPage() {
   const markers = useMemo(() => byCategories(boundsQuery.data ?? [], cats), [boundsQuery.data, cats]);
   const listPlaces = useMemo(() => byDistance(byCategories(radiusQuery.data ?? [], cats)), [radiusQuery.data, cats]);
 
+  // 실시간 제보 급증(A4) — 뷰포트 스냅샷 + SSE. 뷰포트 안의 새 급증이 오면 중립 토스트(§6).
+  const onSurge = (s: SurgeInfo) => show(s.message);
+  const { surges } = useSurgeAlerts(bounds, onSurge);
+
   const onBoundsChange = useDebouncedCallback((b: MapBounds) => setBounds(b), 250);
 
   const toggleCat = (cat: Category) =>
@@ -80,10 +87,15 @@ export default function MapPage() {
         recenterKey={recenterKey}
       />
 
-      {/* 상단 검색 + 필터 */}
-      <div className="absolute inset-x-0 top-3 z-20 space-y-2.5 px-3">
-        <SearchBar onClick={() => show("검색은 준비 중이에요 · 지도를 움직여 탐색하세요")} />
-        <FilterChips selected={cats} onToggle={toggleCat} onClear={() => setCats([])} />
+      {/* 상단 검색 + 필터 + 급증 배너(A4) */}
+      <div className="pointer-events-none absolute inset-x-0 top-3 z-20 space-y-2.5 px-3">
+        <div className="pointer-events-auto">
+          <SearchBar onClick={() => show("검색은 준비 중이에요 · 지도를 움직여 탐색하세요")} />
+        </div>
+        <div className="pointer-events-auto">
+          <FilterChips selected={cats} onToggle={toggleCat} onClear={() => setCats([])} />
+        </div>
+        <SurgeBanner surges={surges} onSelect={selected.open} />
       </div>
 
       <CurrentLocationFab hidden={snap === "full"} onClick={recenter} />
