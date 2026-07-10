@@ -868,3 +868,9 @@
 - **N3 제보 capture 제거(버그·1줄)**: `report/page.tsx` 사진 input의 `capture="environment"` 제거 → 리뷰 입력과 동일하게 네이티브 선택지(보관함/카메라/파일) 노출.
 - **검증**: 백엔드 `PhotoServiceTest`(presignGet 4케이스 추가: 자기버킷 서명·외부/null/빈 통과·버킷미설정 통과·List 매핑)·`ReviewServiceTest`·`ReportServiceTest`·`PopularTimesCacheProxyTest`(생성자 +PhotoService) 로컬 green. 프론트 tsc·eslint·build green. 마이그레이션 없음. IT는 CI 게이트(TS-009).
 - **관련**: CLAUDE.md §1/§5(제보/후기 분리)·§7(S3 presign)·§0-9(커뮤니티 최소 표면)·§D. BACKLOG N1·N2·N3. 버킷 퍼블릭 전환 금지 원칙 유지.
+
+## 2026-07-11 — N4: 지도 하단 시트 3단 스냅 + 드래그 (PR #82, 프론트 전용)
+- **무엇**: `BottomSheet.tsx` — 기존 half(46%)↔full(82%) 2단 토글에 **peek(96px 고정)** 단을 추가해 3단 스냅으로. 핸들에 pointer 드래그 제스처를 붙여 아래로 밀면 peek로 접혀 지도가 크게 보이고, 위로 밀거나 탭하면 다시 펼쳐진다. `page.tsx` snap 상태 타입을 `SheetSnap`("peek"|"half"|"full")로 확장, `onToggleSnap`→`onSnapChange(next)`.
+- **왜(why, 대안 검토)**: ① **왜 라이브러리 없이 pointer 이벤트인가** — react-spring/framer-motion/@use-gesture 도입은 이 한 컴포넌트에 번들·의존성 과투자(§0-2). Pointer Events는 2026 표준(마우스·터치·펜 통합, setPointerCapture로 요소 밖 이동도 추적)이라 순정으로 충분·가장 가볍다. ② **왜 peek를 px 고정인가** — 12%를 그대로 쓰면 작은 화면에서 두 줄 헤더("주변 N곳"+반경)가 잘린다 → 96px로 고정해 헤더 가시성 보장(half/full은 컨테이너 대비 %로 반응형 유지). ③ **왜 탭/드래그 분리인가** — 이동량 6px 임계로 드래그면 최근접 스냅, 탭이면 native click(펼침/접힘 토글)에 위임 → 키보드 접근성(Enter=click) 유지하면서 제스처 공존. `dragged` 플래그로 드래그 직후 click 억제. ④ **왜 상태를 부모(page)에 두나** — `CurrentLocationFab`가 full일 때 숨는 등 형제 컴포넌트가 snap을 참조 → 단일 소스.
+- **검증**: 프론트 tsc·eslint·build green. 백엔드 무변경(deploy 트리거 없음). 실기기 제스처는 배포 후 확인(수용 기준: 아래 스와이프→peek로 지도 크게, 위 스와이프/탭→복원).
+- **관련**: BACKLOG N4 · CLAUDE.md §0-2(범위·의존성 절제). Pointer Events(setPointerCapture, touch-action:none).

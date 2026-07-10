@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BottomSheet } from "@/components/map/BottomSheet";
+import { BottomSheet, type SheetSnap } from "@/components/map/BottomSheet";
 import { CurrentLocationFab } from "@/components/map/CurrentLocationFab";
 import { FilterChips } from "@/components/map/FilterChips";
 import { MapCanvas } from "@/components/map/MapCanvas";
@@ -34,7 +34,7 @@ export default function MapPage() {
   const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [cats, setCats] = useState<Category[]>([]);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
-  const [snap, setSnap] = useState<"half" | "full">("half");
+  const [snap, setSnap] = useState<SheetSnap>("half");
   const [recenterKey, setRecenterKey] = useState(0);
 
   const coords = { lat: geo.lat, lng: geo.lng };
@@ -102,7 +102,7 @@ export default function MapPage() {
 
       <BottomSheet
         snap={snap}
-        onToggleSnap={() => setSnap((s) => (s === "full" ? "half" : "full"))}
+        onSnapChange={setSnap}
         radius={radius}
         places={listPlaces}
         loading={radiusQuery.isLoading}
