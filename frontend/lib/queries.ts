@@ -18,6 +18,9 @@ import {
   markNotificationsRead,
   fetchByRadius,
   fetchMe,
+  fetchMyComments,
+  fetchMyReactions,
+  fetchMyReviews,
   fetchNearestAny,
   fetchPlace,
   fetchPlaceReports,
@@ -159,6 +162,19 @@ export function useMyBookmarks(enabled: boolean) {
     staleTime: 30_000,
     retry: false,
   });
+}
+
+// 내 글 관리(N6) — 내 후기/댓글/유용해요(로그인 시에만). 마이페이지 "내 활동" 탭.
+export function useMyReviews(enabled: boolean) {
+  return useQuery({ queryKey: ["me-reviews"], queryFn: fetchMyReviews, enabled, staleTime: 30_000, retry: false });
+}
+
+export function useMyComments(enabled: boolean) {
+  return useQuery({ queryKey: ["me-comments"], queryFn: fetchMyComments, enabled, staleTime: 30_000, retry: false });
+}
+
+export function useMyReactions(enabled: boolean) {
+  return useQuery({ queryKey: ["me-reactions"], queryFn: fetchMyReactions, enabled, staleTime: 30_000, retry: false });
 }
 
 // 관심 장소 저장/해제 토글 — 성공 시 목록 캐시 무효화(상세 버튼·마이페이지가 함께 갱신).
