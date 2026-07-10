@@ -9,6 +9,7 @@ import com.geuneul.domain.follow.dto.UserProfileResponse;
 import com.geuneul.domain.review.ReviewRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -50,8 +51,16 @@ public class FollowService {
         return UserProfileResponse.of(user, followerCount, following, reviews);
     }
 
-    /** 팔로우(멱등). 자기 자신·없는 유저는 거부. 동시 이중요청은 UNIQUE 제약으로 멱등 처리. */
-    @Transactional
+    /**
+     * 팔로우(멱등). 자기 자신·없는 유저는 거부. 동시 이중요청은 UNIQUE 제약으로 멱등 처리.
+     *
+     * <p>NOT_SUPPORTED로 각 리포 호출을 자기 트랜잭션에 둔다(TS-031) — 진짜 동시 이중 팔로우에서 두 요청이
+     * existsBy 가드를 함께 통과하면 뒤늦은 save가 uq_follow 충돌로 {@link DataIntegrityViolationException}을
+     * 던지는데, 하나의 @Transactional이면 그 INSERT 실패가 트랜잭션을 오염시켜(PG 25P02 "current transaction
+     * is aborted") 이어지는 countByFolloweeId SELECT가 500이 된다. 세 호출의 원자성은 필요 없으므로(멱등성은
+     * uq_follow가 보장) 트랜잭션을 분리해 실패한 INSERT의 롤백이 뒤 SELECT를 오염시키지 않게 한다.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public FollowResponse follow(long followerId, long followeeId) {
         if (followerId == followeeId) {
             throw new ResponseStatusException(BAD_REQUEST, "자기 자신은 팔로우할 수 없어요.");
