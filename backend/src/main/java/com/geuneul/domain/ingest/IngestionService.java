@@ -96,6 +96,14 @@ public class IngestionService {
         int featuresBackfilled = upsertRepository.backfillFeatures(
                 spec.sourceKey(), currentExternalIds, DefaultFeatureBackfill.forCategory(spec.category()));
 
+        // A3: 조건부 백필 — CSV에 조건 컬럼(냉방기 보유수 등)이 있고 값>0인 external_id에만 feature를 심는다.
+        // CSV에 컬럼이 없으면 conditionalFeatureIds가 비어 no-op(기존 별칭 헤더 스냅샷과 하위호환).
+        SourceSpec.ConditionalFeature conditional = spec.conditionalFeature();
+        if (conditional != null && !parsed.conditionalFeatureIds().isEmpty()) {
+            featuresBackfilled += upsertRepository.backfillFeatures(
+                    spec.sourceKey(), parsed.conditionalFeatureIds(), List.of(conditional.feature()));
+        }
+
         IngestSummary summary = new IngestSummary(spec.sourceKey(), parsed.totalRecords(),
                 upserted + outcome.upserted(), parsed.skipped(),
                 outcome.geocoded(), outcome.reused(), outcome.failed(),
