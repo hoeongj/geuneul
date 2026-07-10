@@ -5,7 +5,10 @@
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
 
-> 🎯 **다음 세션 실행 계획 = [`docs/BACKLOG.md`](./docs/BACKLOG.md)** — 사용자 지시(2026-07-10): "심화·additive **전부 하나도 빠짐없이**". 외부 블로커 0건, 남은 건 전부 그 백로그(A1~A9 additive + B1~B2 심화). `/geuneul-start` 명령이 이 백로그를 순서대로 구동한다.
+> 🎯 **2026-07-10 심화+additive 세션 완료** — `docs/BACKLOG.md`의 **A1~A7 additive + B1~B2 심화를 전부 구현·머지**(PR #61~#69, 9개). 각 기능 브랜치 → CI Backend(Gradle) pass 눈확인(TS-025) → squash 머지. Flyway **V13(시설 comfort)·V14(bookmarks)·V15(notifications)** 프로덕션 자동 적용. 라이브 실측: `/me/bookmarks`·`/notifications` 401(존재·보호), `/routes/toilet` 200(경유 화장실). ADR **0017~0019** 신규.
+> - **완료(코드)**: A1 시설 comfort SQL 통합(V13·ADR-0017) · A2 verified→trust · A3 쉼터 냉방 조건부 백필(코드) · A4 급증 SSE 프론트 · A5 popular-times 히트맵 · A6 커뮤니티 최소 UI · A7 bookmarks(V14) · B1 알림(V15·ADR-0018, 급증 재사용+인앱 센터) · B2 루트(ADR-0019, detour 최소 경유지+직선 MVP).
+> - **남은 것(데이터 op·외부 대기, 코드 아님)**: **A3 실 재적재**(냉방 컬럼 포함 shelters.csv 재생성 — safetydata 등록 IP 로컬 다운로드=대량 재적재) · **A8 상권 전국 확장**(`prod-ingest-stores.sh` 큰 bbox — data.go.kr 일일 쿼터·시간) · **B1 Web Push VAPID**(stretch) · **B2 카카오모빌리티 도로 폴리라인 키**(활용신청) · **A9 Fargate cpu 512**(트래픽/부하 붙을 때만, 지금 대기 §0-2). 전부 대량/외부라 사용자 go 후 실행.
+> - 이전 실행계획(아래): `/geuneul-start`가 `docs/BACKLOG.md`를 구동. 이제 그 백로그의 코드분은 전부 소진.
 
 - **상태(2026-07-10 데이터-커버리지 세션)**: 라이브 정상(App·API, 태스크데프 **rev50**). **남은 외부 승인 블로커 = 0건.** ① **상권 카페/스터디카페(B553077)** 계약 검증 + 코드기반 서버필터 + 격자 적재 완료·라이브(PR #56, TS-026) — 서울 distinct 29,886곳. ② **무더위쉼터 전국(safetydata DSSP-IF-10942)** 완료·라이브(PR #58, TS-027) — 사용자 전용키로 계약 검증 후 **전국 60,297건** 적재(서울 178·부산 196·대전 181/반경3km 실측). ⚠️ safetydata 키가 **발급 IP에 잠겨** ECS egress에서 `resultCode 32` → **등록 IP(로컬)에서 스냅샷 다운로드 → GitHub Release CSV → 기존 CSV 파이프라인**으로 우회 적재(직접 API 서비스는 IP 해제/로컬용으로 유지). 상세는 WORKLOG 2026-07-10 상권·쉼터 항목·TS-026/027.
 - **직전 상태(2026-07-10 P4-백로그 세션)**: 외부 승인 불필요 백로그 ①~⑨ 전부 완료·배포·프로덕션 실측(PR #44~#53, 핫픽스 #52). Flyway **V9~V12** 프로덕션 무사 적용(급증 트리거·verified·커뮤니티·모더레이션 hidden). 새 라이브 엔드포인트 실측 200: `/alerts/surge`·`/alerts/stream`(SSE)·`/places/{id}/popular-times`·`/recommendations?scenario=focus|longstay`·상세 `features`/`aiSummary`·`/admin/flags?status=`·`/reviews/{id}/comments`·`/reactions`. JaCoCo floor 0.60→**0.70**.
