@@ -742,3 +742,11 @@
 - 검증: `npm run lint`·`typecheck`·`build` 전부 green. `/api/alerts/{surge,stream}` 라우트 빌드 확인(ƒ dynamic). (프론트 CI=frontend-ci.yml, Vercel 프리뷰 배포.)
 - 산출물: `types/alert.ts`(신규) · `lib/backend.ts`(proxyStream) · `lib/api.ts`(fetchSurge) · `lib/surge.ts`(신규 훅) · `components/map/SurgeBanner.tsx`(신규) · `app/api/alerts/{surge,stream}/route.ts`(신규) · `app/(shell)/page.tsx`.
 - 관련: docs/BACKLOG.md A4, ADR-0016(급증 LISTEN/NOTIFY→SSE)·ADR-0004(BFF 프록시), CLAUDE.md §6(공포 조장 금지)·§0-9(간판 우선).
+
+## 2026-07-10 — A5. 시간대별 혼잡 popular-times 히트맵 UI (프론트) (브랜치 `feat/a5-popular-times-heatmap`)
+- 배경(docs/BACKLOG.md A5): 백엔드 `GET /places/{id}/popular-times`(요일×시간 혼잡 파생, Redis 1h 캐시, #45·#53)가 라이브인데 프론트 노출이 없었다. 상세 화면에 시간대별 혼잡을 보여준다.
+- 한 일: ① `types/popular.ts`·`fetchPopularTimes`·`usePopularTimes`(staleTime 10m — 백엔드 1h 캐시) · BFF 라우트 `/api/places/[id]/popular-times`. ② `components/place/PopularTimes.tsx` — **요일 선택 + 선택 요일의 24시간 혼잡 스트립**(셀 색=혼잡 강도, 히트맵 인코딩). 현재 KST 시각 셀 ring 강조, 시간 눈금(0/6/12/18), 범례. ③ PlaceDetailOverlay에 RecentReports 다음 배치.
+- 왜(why): ① **왜 7×24 히트맵이 아니라 하루치 스트립인가(dataviz 폼 선택)** — UGC 제보가 희소해 168칸 히트맵은 대부분 공백(노이즈). 모바일 상세 폭에도 안 맞는다. dataviz "데이터 job에 맞는 폼 + 희소 데이터 정직성" 원칙대로 **요일 선택 + 24시간 스트립**으로 압축(간판 안 가림 §0-9). 강도 인코딩(셀 색)은 유지. ② **왜 발산형(diverging) 색인가** — 그늘 사용자의 관심은 "자리 있나"라, 한산(자리 있음=좋음, teal) ↔ 붐빔(amber)의 **극성**이 "얼마나 바쁜가"(순차)보다 의미 있다. dataviz 발산 규약(두 극 + 중립 회색 중점) 준수. **`validate_palette.js`로 검증**: 두 극 CVD ΔE 19.8(>12 안전). ③ **왜 §6 amber(적색 아님)인가** — 붐빔도 "위험"이 아니라 주의 정도. ④ **왜 색만으로 구분 안 하나(접근성)** — 범례 + 셀 `aria-label`/`title`(시각·등급·제보수)로 relief 요건 충족(dataviz 대비 WARN 완화). ⑤ **왜 무데이터면 조용히 접나** — 로딩/에러/무데이터는 null 반환(살 섹션으로 상세를 채우지 않음, 간판 우선).
+- 검증: `npm run lint`·`typecheck`·`build` green. `/api/places/[id]/popular-times` 라우트 빌드 확인. dataviz 스킬 규격 준수(폼 선택·발산 팔레트 검증·접근성 relief).
+- 산출물: `types/popular.ts`·`lib/api.ts`·`lib/queries.ts`·`components/place/PopularTimes.tsx`·`app/api/places/[id]/popular-times/route.ts`·`PlaceDetailOverlay.tsx`.
+- 관련: docs/BACKLOG.md A5, ADR-0005 §④(자체 popular-times), dataviz 스킬, CLAUDE.md §6·§0-9.

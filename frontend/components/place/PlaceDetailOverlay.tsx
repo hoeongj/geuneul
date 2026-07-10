@@ -14,6 +14,7 @@ import { GRADE_META, gradeOf } from "@/lib/survival";
 import type { Place } from "@/types/place";
 import { DetailMiniMap } from "./DetailMiniMap";
 import { FeaturePills } from "./FeaturePills";
+import { PopularTimes } from "./PopularTimes";
 import { ReviewsSection } from "./ReviewsSection";
 
 // 예약 섹션(P2/P3): 흐리게 자리만.
@@ -223,6 +224,7 @@ export function PlaceDetailOverlay() {
             </ReservedBlock>
           )}
           {id != null && <RecentReports placeId={id} />}
+          {id != null && <PopularTimes placeId={id} />}
           {id != null && <ReviewsSection placeId={id} />}
         </div>
       </div>
