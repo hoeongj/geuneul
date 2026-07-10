@@ -328,3 +328,17 @@ merge`를 실행했고, 같은 방식으로 ⑦·⑧까지 red 위에 쌓였다(
    봉투가 다르다 — 도서관 클라이언트를 그대로 복붙했으면 `response` 래퍼 null로 전량 0건이 됐을 것이다.
 3. **전량 스냅샷 soft-delete는 "수집 완료"를 게이트로 둔다.** 6만건 페이지네이션 중 오류로 끊긴 부분 스냅샷으로
    deactivateStale을 켜면 안 덮인 멀쩡한 행을 지운다 → 첫 페이지 totalCount 대비 실제 수집량이 채워졌을 때만 적용.
+
+**§후속(2026-07-10) — IP 제한(resultCode 32)로 직접 API 경로가 ECS에서 막힘 → CSV 스냅샷 우회**:
+배포 후 ECS one-off로 직접 API 적재(`--ingest.source=shelter`)를 돌리자 **`resultCode=32 UNREGISTERED IP ERROR`**.
+safetydata 키가 **발급 시점의 등록 IP(사용자 로컬)에 잠겨** 있어, 로컬(등록 IP)에서는 되지만 **AWS Fargate egress
+IP에서는 거부**된다. 구조상: RDS가 프라이빗이라 적재는 반드시 VPC 내(ECS)에서 하고, ECS의 나가는 IP는 유동(assignPublicIp
+ephemeral)이며 NAT 게이트웨이는 비용상 배제 → **이 IP 잠금 키로는 직접 API 경로를 ECS에서 쓸 수 없다.**
+- **방어 설계 적중**: `complete` 게이트가 fetched=0을 감지해 deactivateStale을 건너뛰어 기존 데이터를 지키지 않았다면
+  전체 쉼터가 날아갔을 것이다(교훈 3의 게이트가 정확히 이 사고를 막았다).
+- **우회(원래 의도된 CSV 스냅샷 경로)**: 등록 IP(로컬)에서 전량 다운로드 → `SourceSpec.COOLING_SHELTER` 별칭과 일치하는
+  헤더의 CSV 생성 → GitHub Release 자산 업로드 → ECS가 **기존 CSV 파이프라인**(`--ingest.source=cooling_shelter --ingest.url=`)으로
+  적재. `SourceSpec.COOLING_SHELTER`에 safetydata 영문 헤더 별칭(RSTR_*·LA/LO)과 이중헤더 처리가 이미 있던 게 이 경로용이었다.
+- **학습**: **IP 잠금 외부 API + 프라이빗 DB + 이동 IP 실행환경**은 직접 호출이 성립하지 않는다. "데이터를 가져오는 곳(등록
+  IP)"과 "DB에 쓰는 곳(VPC)"이 다르면, 등록 IP에서 스냅샷을 떠서 VPC로 실어 나른다(파일/릴리즈). 키 IP 잠금 여부를 도입
+  전에 확인할 것. IP 해제(allow-all)나 고정 egress(EIP/NAT)를 얻으면 직접 API + 자동 동기화가 가능해진다.
