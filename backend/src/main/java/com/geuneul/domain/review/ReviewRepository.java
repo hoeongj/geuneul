@@ -1,11 +1,13 @@
 package com.geuneul.domain.review;
 
+import com.geuneul.domain.activity.MyReviewView;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
@@ -35,4 +37,18 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             countQuery = "SELECT count(*) FROM reviews r WHERE r.place_id = :placeId AND NOT r.hidden",
             nativeQuery = true)
     Page<ReviewWithAuthorView> findByPlaceIdWithAuthor(@Param("placeId") long placeId, Pageable pageable);
+
+    /**
+     * 특정 작성자의 공개 후기 목록(장소명 조인, 최신순) — N6 "내 글 관리" · N7 "작성자 공개 프로필"이 공유한다.
+     * 숨김 처리된 후기는 제외(공개·마이 활동 모두 hidden은 안 보인다, 모더레이션 일관).
+     */
+    @Query(value = """
+            SELECT r.id AS id, r.place_id AS placeId, p.name AS placeName, r.rating AS rating,
+                   r.comment AS comment, r.created_at AS createdAt
+            FROM reviews r
+            JOIN places p ON p.id = r.place_id
+            WHERE r.user_id = :userId AND NOT r.hidden
+            ORDER BY r.created_at DESC
+            """, nativeQuery = true)
+    List<MyReviewView> findByUserIdWithPlace(@Param("userId") long userId);
 }
