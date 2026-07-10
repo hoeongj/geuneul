@@ -39,10 +39,13 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/me").authenticated()
+                        .requestMatchers("/me/bookmarks").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reviews").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reviews/*/comments").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reactions").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/reactions").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/bookmarks").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/bookmarks/*").authenticated()
                         .requestMatchers(HttpMethod.POST, "/flags").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll())
