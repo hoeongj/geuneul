@@ -88,13 +88,21 @@ GET /places?bounds=126.93,37.49,126.97,37.52&category=COOLING_SHELTER
 # 최근접(kNN) — 서울 밖 어디서나 동작 (예: 부산)
 GET /places/nearest?lat=35.2133&lng=129.0157&category=COOLING_SHELTER&limit=3
 
-# 시나리오 추천 — 거리+실시간 상태로 "지금 갈만한 순" (scenario: rest30|restroom|rain)
+# 시나리오 추천 — 거리+실시간 상태로 "지금 갈만한 순" (scenario: rest30|restroom|rain|focus|longstay)
 GET /recommendations?lat=37.4963&lng=126.9575&scenario=restroom
 #   → 각 결과 = 장소(survival 배지) + matchScore(적합도) + reason(제보 요약)
 
 # 휘발성 제보 (익명, 타입별 TTL로 자동 만료 · 분당 3·시간당 10 레이트리밋)
-POST /reports   {"placeId":1,"reportType":"COOL","comment":"에어컨 빵빵"}
+#   lat/lng를 함께 보내면 장소 100m 이내일 때 "방문 인증"(verified)
+POST /reports   {"placeId":1,"reportType":"COOL","comment":"에어컨 빵빵","lat":37.4963,"lng":126.9575}
 GET  /places/1/reports
+
+# 실시간 제보 급증 알림 — 뷰포트 스냅샷 + SSE 스트림 (ADR-0016)
+GET /alerts/surge?bounds=126.93,37.49,126.97,37.52
+GET /alerts/stream            # text/event-stream (SSE)
+
+# 시간대별 혼잡 파생(자체 popular-times) — KST 요일×시간
+GET /places/1/popular-times
 ```
 
 ## 기술 스택
@@ -108,7 +116,7 @@ GET  /places/1/reports
 
 ## 문서
 
-- **아키텍처·의사결정 기록**: [`docs/adr/`](./docs/adr) (ADR 0001–0008, [색인](./docs/adr/README.md))
+- **아키텍처·의사결정 기록**: [`docs/adr/`](./docs/adr) (ADR 0001–0016, [색인](./docs/adr/README.md))
 - **배포(AWS)**: [`DEPLOY.md`](./DEPLOY.md) · **현황·다음 작업**: [`HANDOFF.md`](./HANDOFF.md)
 - **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
 - 전체 목표·범위·ERD·API 스펙: [`CLAUDE.md`](./CLAUDE.md)
@@ -121,6 +129,7 @@ GET  /places/1/reports
 - **P2 · UGC+인증** — 휘발성 제보(11타입·타입별 TTL, 레이트리밋 XFF/OOM 하드닝 TS-008) · **소셜 로그인**(카카오/구글 OAuth2+JWT, BFF code 교환) · **후기(review)** 영구 평판(로그인, 장소당 1건 upsert) · **사진 presign**(S3 SigV4, image 화이트리스트) · **trust_score** 실배선(로그인 제보 user_id 가중, V6) · **모더레이션**(신고 + ADMIN 검수 큐, V7).
 - **P3 · 스코어·추천·AI·데이터** — `survival_score`(SQL 뷰 + 순수 함수, 마커 3색, [ADR-0007](./docs/adr/0007-survival-score-sql-signals-java-compose.md)) · 시나리오 추천 [ADR-0008](./docs/adr/0008-recommendations-scenario-weighted-ranking.md) · **날씨**(기상청 초단기실황 + Redis TTL 캐시) + comfort 복원([ADR-0009](./docs/adr/0009-weather-comfort-additive-restore.md)) · **AI 한줄요약**(프로바이더 중립 OpenAI 호환 클라이언트, 현재 Mistral, graceful degradation, [ADR-0010](./docs/adr/0010-ai-summary-openrouter-provider.md)) · **공부공간 데이터 확장**(CAFE/STUDY_CAFE·soft-delete, V5, [ADR-0006](./docs/adr/0006-study-space-coverage-expansion.md)) · **주기동기화**(EventBridge→ECS RunTask + advisory lock, ENABLED, [ADR-0011](./docs/adr/0011-scheduled-public-data-sync.md)).
 - **P4 · 심화(간판 보강)** — **k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN/bounds GiST 사용 실증, V8 만료제보 인덱스, [ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)) · **ECS Service Auto Scaling**(CPU target-tracking, [ADR-0013](./docs/adr/0013-ecs-service-autoscaling.md)) · **관측성**(Micrometer/Prometheus + OTel 트레이싱 + 로컬 Grafana/Tempo, [ADR-0014](./docs/adr/0014-observability-otel-micrometer-grafana.md)) · **무료 HTTPS**(CloudFront 기본 도메인, [ADR-0015](./docs/adr/0015-cloudfront-default-domain-https.md)).
+- **P4 · 백로그 완주(승인 불필요 ①~⑨)** — **실시간 제보 급증 알림**(Postgres LISTEN/NOTIFY→SSE, 멀티 인스턴스 팬아웃, V9, [ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)) · **시간대별 혼잡 파생**(자체 popular-times, KST 요일×시간, Redis 캐시) · **GPS 방문 인증**(`verified`, ST_DWithin 100m → survival 가중, V10) · **place_features 등급화**(콘센트/wifi/noise_level → 상세 등급 칩) · **추천 시나리오 focus/longstay** · **후기 커뮤니티**(댓글·리액션, V11) · **모더레이션 확장**(신고 RESOLVED→콘텐츠 숨김, V12) · **프론트 노출**(카테고리 필터·등급·verified·AI요약) · **JaCoCo 0.70·캐시 심화**.
 - **후속 운영** — AI 프로바이더 Mistral 전환·중립 리네임(ADR-0010 §4) · 주기동기화 스케줄 실트리거 검증 후 ENABLED · 공중화장실 지오코딩 재적재(+5,437, 52,334건). **남은 데이터 확장(전국 쉼터·상권 카페)은 data.go.kr/safetydata 활용신청 승인 대기.**
 
 </details>
