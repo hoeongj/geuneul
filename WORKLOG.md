@@ -788,3 +788,22 @@
 - 사용자 입력 지점(BACKLOG 명시): **카카오모빌리티 활용신청·키**(도로 폴리라인 `mode=road` 승격 시). 키 확보 시 `DirectionsProvider` Kakao 구현 + TS-026 실호출 계약검증 + `.local`/SSM 키.
 - 산출물: `domain/route/*`(7파일) · `PlaceRepository`(waypoint 쿼리)·`GeoUtils`(haversine) · 백엔드 테스트 2 · 프론트 `types/route.ts`·`lib/api.ts`·`app/api/routes/toilet`·`PlaceDetailOverlay` · ADR-0019.
 - 관련: ADR-0019, ADR-0001(공간 인덱스)·ADR-0004(BFF), TS-026(외부 계약검증), CLAUDE.md §0-2·§6. **follow-up: Kakao 도로 폴리라인·지도 오버레이 UI·그늘/비 경로.**
+
+## 2026-07-10 — 데이터 op 실행: A3 쉼터 냉방 재적재 · A8 상권 6대 광역시 확장 · B1 Web Push VAPID (사용자 승인 후)
+사용자 승인("할 수 있는거 전부 다 해")으로 코드 완료 후 남은 대량 데이터 op·키 항목을 실행. (코드 PR은 A3 #63·A8 스크립트 기존·B1 #68에서 이미 머지됨 — 여기는 **실행 기록**.)
+
+### A3 — 쉼터 air_conditioned 실 재적재 (완료·라이브 검증)
+- **한 일**: safetydata `DSSP-IF-10942`를 **등록 IP(로컬)**에서 전량 재다운로드하되 **냉방기 보유수(COLR_HOLD_ARCNDTN) 컬럼 포함** CSV로 생성(헤더=`SourceSpec.COOLING_SHELTER` 별칭 + 냉방 컬럼, 주소 per-row 폴백 RN_DTL_ADRES→DTL_ADRES) → GitHub Release `data-v1/shelters.csv` 갱신(6.96MB) → ECS `prod-ingest.sh cooling_shelter <url> UTF-8` 재적재.
+- **결과(실측 로그)**: `source=cooling_shelter_std total=60,297 upserted=60,297 skipped=0 geocoded=0 deactivated=0 **featuresBackfilled=57,070**`(전국 쉼터의 95%가 냉방기 보유). A3 조건부 백필 코드(#63)가 냉방기>0 쉼터에 air_conditioned(conf 0.4) 부여.
+- **라이브 검증**: 쉼터 상세(휴서울이동노동자북창쉼터) `features=[air_conditioned/PRESENT/냉방/POSITIVE/0.4]` + **무제보인데 survival.comfortScore=0.353**(A1 시설-comfort 통합이 쉼터에서 실동작 — place_feature_signals 뷰→SurvivalScore 단조 상승), 등급은 §9대로 UNKNOWN 유지. **A1+A3 합작 완성.**
+- **왜 CSV 우회인가**: safetydata 키가 발급 IP에 잠겨 ECS egress 불가(TS-027) → 등록 IP 로컬 다운로드 + 기존 CSV 파이프라인이 유일 경로. 이번엔 냉방 컬럼을 실어 A3 백필을 활성화.
+
+### A8 — 상권 카페/스터디카페 6대 광역시 확장 (완료)
+- **한 일**: `prod-ingest-stores.sh <bbox> 1500`로 부산·대구·인천·대전·광주·울산 도심 격자 적재(멱등). data.go.kr B553077, 좌표 내장(geocoded 0).
+- **함정 발견·대응**: 6개를 병렬 실행하니 **`IngestBatchLock`(동시 실행 방지)**에 걸려 뒤 3개가 skip(exitCode 0이나 미적재) → **순차 실행**으로 정정(락 존중, 한 번에 하나).
+- **결과(세션 upsert, 격자 중복 포함)**: 부산 11,877(CAFE 10,965·STUDY 912) · 대구 7,136 · 대전 5,677 · 인천 5,869(CAFE 5,409·STUDY 460) · 광주 4,555(CAFE 4,110·STUDY 445) · 울산 2,504(CAFE 2,304·STUDY 200) = **≈37,618행 / 6대 광역시**. data.go.kr 일일 쿼터 에러 0(약 372셀). 서울(기존 distinct 29,886) + 6대 광역시 전부 CAFE 커버리지 실측 확인.
+- **남음**: 나머지 중소도시는 일일 쿼터·시간상 후속(멱등이라 하루 단위로 이어서 실행 — `prod-ingest-stores.sh <bbox>`).
+
+### B1 — Web Push VAPID (키 생성 완료, 전송 배선은 후속)
+- **한 일**: `npx web-push generate-vapid-keys`로 VAPID 키쌍 생성 → `.local/webpush.env`(gitignore). 공개키(87자)는 프론트 임베드용, 개인키는 비밀(§D).
+- **왜 전송 미배선인가**: 전체 Web Push 전송은 (1) 무거운 크립토 라이브러리(BouncyCastle) 신규 의존성 (2) **실기기(설치형 PWA) 없이는 end-to-end 검증 불가**. 검증 불가한 코드를 클린한(전부 green) 프로덕션에 blind로 넣는 것은 규율 위반(TS-026 정신·"검증 안 된 것 shipping 금지") → ADR-0018에서 이미 stretch로 분류. **키는 준비 완료**, 배선은 실기기 검증과 함께 후속. 인앱 알림 센터(B1 본체)는 이미 라이브.
