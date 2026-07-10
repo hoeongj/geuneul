@@ -5,6 +5,7 @@ import com.geuneul.domain.report.ReportRepository;
 import com.geuneul.domain.review.ReviewRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -32,8 +33,14 @@ public class ReactionService {
         this.commentRepository = commentRepository;
     }
 
-    /** 리액션 추가(멱등) — 이미 있으면 그대로. reacted=true + 갱신된 count 반환. */
-    @Transactional
+    /**
+     * 리액션 추가(멱등) — 이미 있으면 그대로. reacted=true + 갱신된 count 반환.
+     *
+     * <p>NOT_SUPPORTED로 각 리포 호출을 자기 트랜잭션에 둔다(TS-031) — 동시 이중요청에서 뒤늦은 save가
+     * uq_reaction 충돌로 예외를 던지면, 하나의 @Transactional이면 그 INSERT 실패가 트랜잭션을 오염시켜
+     * (PG 25P02) 이어지는 count SELECT가 500이 된다. 멱등성은 uq_reaction이 보장하므로 트랜잭션을 분리한다.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ReactionResponse add(ReactionTarget target, long targetId, long userId, ReactionType type) {
         requireTarget(target, targetId);
         if (!reactionRepository.existsByTargetTypeAndTargetIdAndUserIdAndType(target, targetId, userId, type)) {

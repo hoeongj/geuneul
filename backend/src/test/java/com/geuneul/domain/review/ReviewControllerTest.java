@@ -51,7 +51,7 @@ class ReviewControllerTest {
     JwtService jwtService;
 
     private static ReviewResponse sample() {
-        return new ReviewResponse(1L, 1L, "그늘러버", null, 5, "좋아요",
+        return new ReviewResponse(1L, 1L, 10L, "그늘러버", null, 5, "좋아요",
                 List.of(), OffsetDateTime.now(), OffsetDateTime.now());
     }
 

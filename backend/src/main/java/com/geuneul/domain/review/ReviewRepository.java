@@ -26,9 +26,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
      * Spring Data가 total count를 낼 수 있다(복잡한 JOIN 쿼리에서 COUNT 자동 유도가 불가능하므로).
      */
     @Query(value = """
-            SELECT r.id AS id, r.place_id AS placeId, r.rating AS rating, r.comment AS comment,
-                   r.photos_json AS photosJson, u.nickname AS nickname, u.profile_image AS profileImage,
-                   r.created_at AS createdAt, r.updated_at AS updatedAt
+            SELECT r.id AS id, r.place_id AS placeId, r.user_id AS authorId, r.rating AS rating,
+                   r.comment AS comment, r.photos_json AS photosJson, u.nickname AS nickname,
+                   u.profile_image AS profileImage, r.created_at AS createdAt, r.updated_at AS updatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
             WHERE r.place_id = :placeId AND NOT r.hidden

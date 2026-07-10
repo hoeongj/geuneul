@@ -387,3 +387,46 @@ HttpMessageNotWritableException ... java.io.IOException: Broken pipe`.
 타임아웃→Broken pipe로 되돌아온다. 전송은 비동기로 떼고 응답은 즉시. ② `java.net.http.HttpClient`엔 반드시
 connect/request 타임아웃을 준다(기본은 무한 대기). ③ 비동기 콜백에서 DB 쓰기는 요청 트랜잭션 밖이므로 별도
 @Transactional 빈을 거친다.
+
+## TS-030 — 다수 IT 컨텍스트가 단일 Testcontainers Postgres의 max_connections를 소진 → 새 컨텍스트 Flyway "too many clients"
+**상황**: N6 "내 글 관리" IT(`MyActivityFlowIT`)를 추가하자 **내 코드와 무관한** `ActuatorPrometheusOptInIT` 2건이
+CI에서 실패. 스택: 컨텍스트 로드 → `BeanCreationException` → `FlywaySqlUnableToConnectToDbException` →
+`org.postgresql.util.PSQLException`(ConnectionFactoryImpl). 재실행해도 재현(플래키 아님). 내 diff는 actuator·Flyway·
+datasource·AbstractIntegrationTest를 안 건드림.
+
+**원인**: `AbstractIntegrationTest`는 `@ServiceConnection`으로 HikariCP 풀(**기본 max 10**)을 붙인다. 각 IT가
+**고유 프로퍼티**(`jwt.secret=...` 7종, `management.exposure=...` 등)로 **서로 다른 Spring 컨텍스트**를 만들고, Spring
+TestContext 캐시(기본 maxSize 32)가 그 컨텍스트들을 **전부 살려둔다** → 컨텍스트마다 HikariCP 풀이 상주해
+**~10개 컨텍스트 × 10 = ~100 커넥션**이 단일 Testcontainers Postgres의 `max_connections`(기본 100)에 육박. 임계
+근처에서 컨텍스트를 **하나 더**(내 IT) 추가하자 그 다음 초기화되는 컨텍스트의 Flyway 접속이 "too many clients"로
+실패. 즉 **접속 총량 회귀**지, 내 로직 버그가 아니다(로직 버그면 NoSuchBean 등 다른 에러가 났을 것).
+
+**해결**: `AbstractIntegrationTest`의 `@TestPropertySource`에 `spring.datasource.hikari.maximum-pool-size=4`를 추가.
+서브클래스가 상속(inheritProperties)하므로 **모든 IT 컨텍스트의 풀이 4로 캡** → ~10 컨텍스트 × 4 = ~40 커넥션,
+100 아래로 안정. IT는 순차 MockMvc라 풀이 작아도 충분. 프로덕션은 컨텍스트가 하나뿐이라 무영향(테스트 프로퍼티만).
+
+**학습**: ① **"내가 안 건드린 IT가 커넥션 에러로 실패"는 십중팔구 접속 총량 소진** — 컨텍스트 수 × 풀 크기를 본다.
+② 컨텍스트별 고유 프로퍼티(jwt.secret 제각각 등)는 컨텍스트 캐시를 늘려 커넥션을 잠식한다 — 필요 없으면 프로퍼티를
+통일해 컨텍스트를 공유하는 게 근본적이나, **테스트 풀 캡**이 가장 수술적이고 컨텍스트 수 증가에도 견딘다. ③ 커넥션
+계열 실패(`PSQLException`/`too many clients`)와 로직/스키마 실패를 에러 종류로 구분해 오진(내 코드 탓)하지 말 것.
+
+## TS-031 — 제약위반 catch 후 같은 @Transactional에서 SELECT하면 PostgreSQL 25P02로 500
+**상황**: N7 팔로우 적대적 리뷰에서 발견. `FollowService.follow`(및 동일 패턴의 기존 `ReactionService.add`)는
+"멱등 삽입"을 `if(!existsBy) { try { save } catch(DataIntegrityViolationException){} } return new Resp(true, count())`로
+구현. 순차 경로(테스트가 타는 길)는 문제없지만, **진짜 동시 이중요청**(두 요청이 `existsBy` 가드를 함께 통과)에서
+뒤늦은 `save`가 UNIQUE 충돌 → `DataIntegrityViolationException`. catch로 무시했는데도 그 다음 `count()`가 500.
+
+**원인**: 메서드가 하나의 `@Transactional`이라 실패한 INSERT가 **트랜잭션 전체를 abort**시킨다(PostgreSQL은 문장
+하나가 실패하면 트랜잭션을 aborted 상태로 만든다). 그 상태에서 이어지는 SELECT(`count`)는
+`org.postgresql.util.PSQLException: current transaction is aborted, commands ignored until end of transaction block`
+(SQLState **25P02**) → 컨트롤러 500. 즉 catch가 예외는 삼켰지만 **트랜잭션 오염은 못 되돌린다**.
+
+**해결**: 쓰기 메서드를 `@Transactional(propagation = Propagation.NOT_SUPPORTED)`로 바꿔 `existsBy`/`save`/`count`를
+**각각 자기 트랜잭션**에서 돌게 했다(Spring Data 리포 메서드는 기본 REQUIRED라 바깥 tx가 없으면 호출마다 새 tx).
+실패한 `save`의 롤백이 자기 tx에 국한되고, 이어지는 `count`는 **새 tx**라 오염되지 않는다. 멱등성은 UNIQUE 제약이
+보장하므로 세 호출의 원자성은 애초에 필요 없다. `FollowService.follow` + `ReactionService.add` 둘 다 적용.
+
+**학습**: ① **제약위반을 catch해도 같은 트랜잭션은 이미 오염**됐다 — 이후 어떤 쿼리도 25P02로 실패한다. ②
+"try-save-catch 후 같은 tx에서 조회"는 PG에서 안티패턴. 대안: (a) 쓰기/조회를 트랜잭션 분리(NOT_SUPPORTED/
+REQUIRES_NEW), (b) `INSERT ... ON CONFLICT DO NOTHING` 네이티브(충돌해도 예외 없음). ③ 순차 테스트만으로는 이
+경로가 안 드러난다 — 동시성 함정은 리뷰/설계로 잡는다.

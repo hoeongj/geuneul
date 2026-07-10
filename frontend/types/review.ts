@@ -3,6 +3,7 @@
 export interface Review {
   id: number;
   placeId: number;
+  authorId: number; // 닉네임 탭 시 작성자 공개 프로필 이동(N7)
   authorNickname: string;
   authorProfileImage: string | null;
   rating: number; // 1~5
