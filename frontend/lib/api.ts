@@ -2,6 +2,7 @@
 import type { SurgeInfo } from "@/types/alert";
 import type { Bookmark, BookmarkToggle } from "@/types/bookmark";
 import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from "@/types/community";
+import type { NotificationCenter, NotificationRule, NotificationRuleType } from "@/types/notification";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
@@ -132,6 +133,48 @@ export async function removeBookmark(placeId: number): Promise<BookmarkToggle> {
   });
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<BookmarkToggle>;
+}
+
+// 알림 센터(발송 이력 + 안읽음 수, 로그인 필요).
+export function fetchNotifications(): Promise<NotificationCenter> {
+  return getJson<NotificationCenter>(`/api/notifications`);
+}
+
+// 알림 전체 읽음.
+export async function markNotificationsRead(): Promise<void> {
+  const res = await fetch(`/api/notifications/read`, { method: "POST", signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
+  if (!res.ok) throw await toApiError(res);
+}
+
+// 내 알림 규칙 목록.
+export function fetchNotificationRules(): Promise<NotificationRule[]> {
+  return getJson<NotificationRule[]>(`/api/notifications/rules`);
+}
+
+// 알림 규칙 생성 — SURGE_NEARBY는 lat/lng/radiusM 필요, BOOKMARK_SURGE는 불필요.
+export async function createNotificationRule(payload: {
+  type: NotificationRuleType;
+  lat?: number;
+  lng?: number;
+  radiusM?: number;
+}): Promise<NotificationRule> {
+  const res = await fetch(`/api/notifications/rules`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<NotificationRule>;
+}
+
+// 알림 규칙 삭제.
+export async function deleteNotificationRule(id: number): Promise<void> {
+  const res = await fetch(`/api/notifications/rules/${id}`, {
+    method: "DELETE",
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
 }
 
 // 로그아웃 — 세션 쿠키 삭제(서버 무상태).

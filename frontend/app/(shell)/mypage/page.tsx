@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NotificationsSection } from "@/components/notification/NotificationsSection";
 import { Icon } from "@/components/ui/Icon";
 import { useSelectedPlace } from "@/lib/context/selected";
 import { useLogout, useMe, useMyBookmarks } from "@/lib/queries";
@@ -108,6 +109,8 @@ function Profile({ user }: { user: User }) {
         <span className="text-[13px] text-ink-3">신뢰도</span>
         <span className="text-[15px] font-bold text-teal">{Math.round(user.trustScore)}</span>
       </div>
+
+      <NotificationsSection />
 
       <BookmarksSection />
 

@@ -112,7 +112,7 @@
 - [x] A7 bookmarks (테이블·API·UI) — V14 + domain.bookmark + BookmarkButton/마이페이지. CI pass 후 머지.
 - [ ] A8 상권 전국 확장
 - [ ] A9 Fargate cpu 512 (조건부)
-- [ ] B1 알림 (ADR + 구현)
+- [x] B1 알림 (ADR + 구현) — V15 + domain.notification + 급증 재사용 평가 + 인앱 센터(ADR-0018). CI pass 후 머지.
 - [ ] B2 루트 (ADR + 화장실 경로 MVP)
 
 > 각 완료 시: WORKLOG(무엇/왜/대안) + 필요시 ADR + TROUBLESHOOTING(사고) 기록, 이 체크박스와 HANDOFF 갱신.
