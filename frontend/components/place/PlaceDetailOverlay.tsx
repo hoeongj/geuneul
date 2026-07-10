@@ -112,10 +112,11 @@ export function PlaceDetailOverlay() {
         toLng: place.lng,
       });
       setRoute(r);
+      const shadeMsg = r.shadeSpots.length > 0 ? ` · 주변 피할 곳 ${r.shadeSpots.length}곳` : "";
       show(
-        r.waypoint
+        (r.waypoint
           ? `${r.waypoint.name} 화장실을 경유해요 · 총 약 ${Math.round(r.routeDistanceM)}m`
-          : "경로에 들를 화장실을 못 찾았어요",
+          : "경로에 들를 화장실을 못 찾았어요") + shadeMsg,
       );
     } catch {
       show("경로를 불러오지 못했어요");
@@ -160,6 +161,7 @@ export function PlaceDetailOverlay() {
           <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-bold text-ink-2 backdrop-blur">
             {route.mode === "road" ? "🛣️ 도로 경로" : "직선 경로"}
             {route.waypoint ? " · 화장실 경유" : ""}
+            {route.shadeSpots.length > 0 ? ` · 피할 곳 ${route.shadeSpots.length}` : ""}
           </span>
           <button
             type="button"
