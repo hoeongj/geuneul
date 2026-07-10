@@ -44,16 +44,19 @@ public class ReportNotificationListener implements SmartLifecycle {
     private final DataSource dataSource;
     private final ReportSurgeService surgeService;
     private final SurgeEmitterRegistry registry;
+    private final com.geuneul.domain.notification.NotificationService notificationService;
 
     private volatile boolean running = false;
     private volatile Connection listenConnection;
     private Thread worker;
 
     public ReportNotificationListener(DataSource dataSource, ReportSurgeService surgeService,
-                                      SurgeEmitterRegistry registry) {
+                                      SurgeEmitterRegistry registry,
+                                      com.geuneul.domain.notification.NotificationService notificationService) {
         this.dataSource = dataSource;
         this.surgeService = surgeService;
         this.registry = registry;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -125,7 +128,10 @@ public class ReportNotificationListener implements SmartLifecycle {
     private void handle(String payload) {
         try {
             long placeId = Long.parseLong(payload.trim());
-            surgeService.surgeForPlace(placeId).ifPresent(registry::broadcast);
+            surgeService.surgeForPlace(placeId).ifPresent(surge -> {
+                registry.broadcast(surge);       // A4 지도 배지(SSE)
+                notificationService.onSurge(surge); // B1 알림 규칙 평가·발송(ADR-0018)
+            });
         } catch (NumberFormatException e) {
             log.warn("[alert] 알 수 없는 NOTIFY 페이로드(무시): {}", payload);
         } catch (RuntimeException e) {
