@@ -2,17 +2,30 @@ package com.geuneul.domain.notification;
 
 import com.geuneul.domain.alert.dto.SurgeInfo;
 import com.geuneul.domain.notification.dto.NotificationRuleRequest;
+import com.geuneul.domain.place.PlaceDistanceView;
+import com.geuneul.domain.place.PlaceRepository;
+import com.geuneul.domain.weather.HeatComfort;
+import com.geuneul.domain.weather.Weather;
+import com.geuneul.domain.weather.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,13 +38,17 @@ class NotificationServiceTest {
 
     private NotificationRuleRepository ruleRepository;
     private NotificationDeliveryRepository deliveryRepository;
+    private WeatherService weatherService;
+    private PlaceRepository placeRepository;
     private NotificationService service;
 
     @BeforeEach
     void setUp() {
         ruleRepository = mock(NotificationRuleRepository.class);
         deliveryRepository = mock(NotificationDeliveryRepository.class);
-        service = new NotificationService(ruleRepository, deliveryRepository);
+        weatherService = mock(WeatherService.class);
+        placeRepository = mock(PlaceRepository.class);
+        service = new NotificationService(ruleRepository, deliveryRepository, weatherService, placeRepository);
     }
 
     @Test
@@ -91,5 +108,97 @@ class NotificationServiceTest {
         assertThatThrownBy(() -> service.setActive(10L, 99L, false))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
+    }
+
+    @Test
+    @DisplayName("HEAT_ESCAPE 규칙은 lat/lng 없으면 400")
+    void heatEscapeRequiresGeo() {
+        var req = new NotificationRuleRequest(NotificationRuleType.HEAT_ESCAPE, null, null, null);
+
+        assertThatThrownBy(() -> service.createRule(10L, req))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+        verify(ruleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("폭염주의보 + 근처 쉼터 있으면 폭염 피난 발송 1건")
+    void heatEscapeAdvisoryInsertsDelivery() {
+        NotificationRule rule = NotificationRule.of(10L, NotificationRuleType.HEAT_ESCAPE, 37.5, 127.0, null);
+        setId(rule, 7L);
+        when(ruleRepository.findByUserIdAndTypeAndActiveTrue(10L, NotificationRuleType.HEAT_ESCAPE))
+                .thenReturn(List.of(rule));
+
+        Weather weather = mock(Weather.class);
+        when(weatherService.getWeather(37.5, 127.0)).thenReturn(Optional.of(weather));
+
+        PlaceDistanceView shelter = mock(PlaceDistanceView.class);
+        when(shelter.getId()).thenReturn(500L);
+        when(shelter.getName()).thenReturn("상도동 경로당");
+        when(shelter.getDistanceM()).thenReturn(120.0);
+        when(placeRepository.findNearest(37.5, 127.0, "COOLING_SHELTER", 1)).thenReturn(List.of(shelter));
+
+        try (MockedStatic<HeatComfort> heatComfort = mockStatic(HeatComfort.class)) {
+            heatComfort.when(() -> HeatComfort.isHeatAdvisory(weather)).thenReturn(true);
+            heatComfort.when(() -> HeatComfort.feelsLike(weather)).thenReturn(34.0);
+
+            service.evaluateHeatEscape(10L);
+        }
+
+        verify(deliveryRepository).insertHeatEscape(eq(10L), eq(7L), eq(500L), anyString(), anyString(),
+                contains("heat:7:"));
+    }
+
+    @Test
+    @DisplayName("폭염주의보가 아니면 쉼터 조회·발송 없이 skip")
+    void heatEscapeSkipsWhenNotAdvisory() {
+        NotificationRule rule = NotificationRule.of(10L, NotificationRuleType.HEAT_ESCAPE, 37.5, 127.0, null);
+        setId(rule, 7L);
+        when(ruleRepository.findByUserIdAndTypeAndActiveTrue(10L, NotificationRuleType.HEAT_ESCAPE))
+                .thenReturn(List.of(rule));
+
+        Weather weather = mock(Weather.class);
+        when(weatherService.getWeather(37.5, 127.0)).thenReturn(Optional.of(weather));
+
+        try (MockedStatic<HeatComfort> heatComfort = mockStatic(HeatComfort.class)) {
+            heatComfort.when(() -> HeatComfort.isHeatAdvisory(weather)).thenReturn(false);
+
+            service.evaluateHeatEscape(10L);
+        }
+
+        verify(placeRepository, never()).findNearest(anyDouble(), anyDouble(), anyString(), anyInt());
+        verify(deliveryRepository, never()).insertHeatEscape(anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("폭염주의보여도 근처 쉼터가 없으면 발송 없이 skip")
+    void heatEscapeSkipsWhenNoShelter() {
+        NotificationRule rule = NotificationRule.of(10L, NotificationRuleType.HEAT_ESCAPE, 37.5, 127.0, null);
+        setId(rule, 7L);
+        when(ruleRepository.findByUserIdAndTypeAndActiveTrue(10L, NotificationRuleType.HEAT_ESCAPE))
+                .thenReturn(List.of(rule));
+
+        Weather weather = mock(Weather.class);
+        when(weatherService.getWeather(37.5, 127.0)).thenReturn(Optional.of(weather));
+        when(placeRepository.findNearest(37.5, 127.0, "COOLING_SHELTER", 1)).thenReturn(List.of());
+
+        try (MockedStatic<HeatComfort> heatComfort = mockStatic(HeatComfort.class)) {
+            heatComfort.when(() -> HeatComfort.isHeatAdvisory(weather)).thenReturn(true);
+
+            service.evaluateHeatEscape(10L);
+        }
+
+        verify(deliveryRepository, never()).insertHeatEscape(anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("활성 HEAT_ESCAPE 규칙이 없으면 날씨 조회조차 하지 않는다")
+    void heatEscapeNoRulesDoesNothing() {
+        when(ruleRepository.findByUserIdAndTypeAndActiveTrue(10L, NotificationRuleType.HEAT_ESCAPE))
+                .thenReturn(List.of());
+
+        service.evaluateHeatEscape(10L);
+
+        verify(weatherService, never()).getWeather(anyDouble(), anyDouble());
     }
 }

@@ -41,6 +41,15 @@ function RuleToggle({
           onError: () => show("알림 설정에 실패했어요"),
         },
       );
+    } else if (type === "HEAT_ESCAPE") {
+      // 폭염 피난은 현재 위치를 판정 중심으로 쓴다(반경 없음). 알림 센터를 열 때 온디맨드 평가된다(ADR-0020).
+      toggle.mutate(
+        { action: "create", type, lat: geo.lat, lng: geo.lng },
+        {
+          onSuccess: () => show("폭염 피난 알림을 켰어요"),
+          onError: () => show("알림 설정에 실패했어요"),
+        },
+      );
     } else {
       toggle.mutate(
         { action: "create", type },
@@ -106,6 +115,8 @@ export function NotificationsSection() {
       <RuleToggle type="SURGE_NEARBY" label="내 주변 제보 급증" desc="현재 위치 반경에서 제보가 몰리면 알려줘요" />
       <div className="border-t border-line-white-2" />
       <RuleToggle type="BOOKMARK_SURGE" label="관심 장소 소식" desc="저장한 장소에 제보가 몰리면 알려줘요" />
+      <div className="border-t border-line-white-2" />
+      <RuleToggle type="HEAT_ESCAPE" label="폭염 피난 추천" desc="더울 때 가까운 무더위쉼터로 안내해요" />
 
       {/* 알림 센터 */}
       <div className="border-t border-line-cream">
