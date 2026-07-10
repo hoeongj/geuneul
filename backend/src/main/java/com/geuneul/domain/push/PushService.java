@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -30,17 +32,23 @@ public class PushService {
 
     private final PushSubscriptionRepository repository;
     private final ObjectProvider<VAPIDKeyPair> vapidKeyPair; // push.enabled=false면 비어 있음
+    private final PushSubscriptionCleaner cleaner;
     private final String subject;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    // connect 타임아웃으로 죽은 endpoint가 오래 매달리지 않게 한다(요청 타임아웃은 요청별로 부여).
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     // ObjectMapper를 주입하지 않는다 — Boot 4는 Jackson 3(tools.jackson) 빈만 제공해
     // com.fasterxml.jackson(Jackson 2) ObjectMapper 빈이 없다(컨텍스트 부팅 실패, CI에서만 드러남 — TS-028).
     // 페이로드가 3필드라 버전 무관하게 직접 직렬화한다.
     public PushService(PushSubscriptionRepository repository,
                        ObjectProvider<VAPIDKeyPair> vapidKeyPair,
+                       PushSubscriptionCleaner cleaner,
                        @Value("${push.vapid.subject:mailto:admin@geuneul.app}") String subject) {
         this.repository = repository;
         this.vapidKeyPair = vapidKeyPair;
+        this.cleaner = cleaner;
         this.subject = subject;
     }
 
@@ -62,10 +70,12 @@ public class PushService {
     }
 
     /**
-     * 유저의 모든 기기에 push 전송. 비활성이면 no-op. 한 기기 실패가 다른 기기를 막지 않게 격리하고,
-     * 404/410(구독 소멸)이면 endpoint를 정리한다. 페이로드 = {title, body, url}(SW가 그대로 표시).
+     * 유저의 모든 기기에 push 전송. 비활성이면 no-op. <b>비동기 fire-and-forget</b> — push 서비스 왕복을
+     * 요청 스레드에서 기다리지 않는다. 그래야 {@code POST /push/test} 등 호출부가 즉시 응답한다(동기 전송은
+     * push 서비스 지연 시 클라이언트/CloudFront가 먼저 끊어 "Broken pipe"·프론트 오탐을 냈다 — TS-029).
+     * 한 기기 실패는 격리하고, 404/410(구독 소멸)이면 별도 트랜잭션({@link PushSubscriptionCleaner})으로 정리한다.
+     * 페이로드 = {title, body, url}(SW가 그대로 표시).
      */
-    @Transactional
     public void sendToUser(long userId, String title, String body, String url) {
         VAPIDKeyPair keys = vapidKeyPair.getIfAvailable();
         if (keys == null) {
@@ -77,16 +87,22 @@ public class PushService {
         }
         String payload = toPayload(title, body, url);
         for (PushSubscriptionEntity sub : subs) {
+            String endpoint = sub.getEndpoint();
             try {
-                sendOne(keys, sub, payload);
+                HttpRequest request = buildRequest(keys, sub, payload);
+                httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
+                        .thenAccept(res -> onResponse(endpoint, res.statusCode()))
+                        .exceptionally(ex -> {
+                            log.warn("[push] 비동기 전송 실패 endpoint(prefix)={} — {}", prefix(endpoint), ex.getMessage());
+                            return null;
+                        });
             } catch (Exception e) {
-                log.warn("[push] 전송 실패 userId={} endpoint(prefix)={} — {}",
-                        userId, prefix(sub.getEndpoint()), e.getMessage());
+                log.warn("[push] 요청 조립 실패 endpoint(prefix)={} — {}", prefix(endpoint), e.getMessage());
             }
         }
     }
 
-    private void sendOne(VAPIDKeyPair keys, PushSubscriptionEntity sub, String payload) throws Exception {
+    private HttpRequest buildRequest(VAPIDKeyPair keys, PushSubscriptionEntity sub, String payload) {
         PushSubscription subscription = new PushSubscription();
         subscription.setEndpoint(sub.getEndpoint());
         PushSubscription.Keys k = new PushSubscription.Keys();
@@ -94,21 +110,24 @@ public class PushService {
         k.setAuth(sub.getAuth());
         subscription.setKeys(k);
 
-        var request = StandardHttpClientRequestPreparer.getBuilder()
+        return StandardHttpClientRequestPreparer.getBuilder()
                 .pushSubscription(subscription)
                 .vapidJWTExpiresAfter(15, TimeUnit.MINUTES)
                 .vapidJWTSubject(subject)
                 .pushMessage(payload)
                 .ttl(1, TimeUnit.HOURS)
                 .build(keys)
-                .toRequest();
+                .toRequestBuilder()
+                .timeout(Duration.ofSeconds(10)) // 죽은 push 서비스가 스레드를 오래 잡지 않게
+                .build();
+    }
 
-        HttpResponse<Void> res = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-        int code = res.statusCode();
+    /** 비동기 응답 처리 — 404/410(구독 소멸)이면 정리(별도 트랜잭션), 그 외 4xx/5xx는 로그만. */
+    private void onResponse(String endpoint, int code) {
         if (code == 404 || code == 410) {
-            repository.deleteByEndpoint(sub.getEndpoint()); // 구독 소멸 → 정리
+            cleaner.remove(endpoint);
         } else if (code >= 400) {
-            log.warn("[push] push 서비스 {}: endpoint(prefix)={}", code, prefix(sub.getEndpoint()));
+            log.warn("[push] push 서비스 {}: endpoint(prefix)={}", code, prefix(endpoint));
         }
     }
 

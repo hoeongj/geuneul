@@ -366,3 +366,24 @@ docker-java가 colima 소켓을 못 잡아 IT가 **전부 skip**된다(TS-009). 
 **학습**: ① Boot 4에서 Jackson을 직접 다루면 `tools.jackson`(v3)이 기본 — `com.fasterxml.jackson`(v2) 빈을 기대하지
 말 것. ② 작은 JSON은 라이브러리 결합보다 직접 직렬화가 견고할 때가 있다. ③ 빈 와이어링/컨텍스트 변경은 로컬
 단위 green을 신뢰하지 말고 CI IT를 게이트로 삼는다(TS-009·TS-025 재확인).
+
+## TS-029 — 동기 push 전송이 응답을 붙잡아 "Broken pipe" + 프론트 오탐("실패했는데 배너는 옴")
+**상황**: F2 활성화 후 실기기 `/push/test` → **OS 배너는 실제로 도착**했는데 프론트 토스트는 "테스트 발송이
+실패했어요". ECS 로그: `DefaultHandlerExceptionResolver : Ignoring exception, response committed already:
+HttpMessageNotWritableException ... java.io.IOException: Broken pipe`.
+
+**원인**: `PushService.sendToUser`가 push 서비스(Apple 등)로의 HTTP 전송을 **요청 스레드에서 동기(`httpClient.send`)**
+로 기다렸다. 전송이 배너를 띄우는 데는 성공했지만 왕복이 느려, **클라이언트(브라우저 fetch→Vercel BFF→CloudFront)가
+먼저 타임아웃/연결 종료** → 서버가 204를 쓰려는 순간 파이프가 끊김(Broken pipe) → 프론트 `res.ok=false` →
+"실패" 오탐. 즉 **푸시는 성공, HTTP 응답만 못 돌려준** 미스매치. (HttpClient에 타임아웃도 없어 죽은 endpoint가
+있으면 더 오래 매달릴 수 있었음.)
+
+**해결**: 전송을 **비동기 fire-and-forget**(`httpClient.sendAsync`)로 바꿔 요청 스레드가 push 왕복을 안 기다리게
+했다 → `/push/test`가 즉시 204 응답(오탐 제거). connect 타임아웃(5s)+요청 타임아웃(10s) 추가로 죽은 endpoint가
+스레드를 오래 잡지 않게. 404/410 구독 정리는 비동기 콜백이 요청 트랜잭션 밖이라 **별도 @Transactional 빈**
+(`PushSubscriptionCleaner`)으로 수행(self-invocation은 프록시 우회라 안 됨).
+
+**학습**: ① **외부 서비스(푸시/웹훅) 전송을 API 응답 경로에서 동기로 기다리지 말 것** — 지연이 클라이언트
+타임아웃→Broken pipe로 되돌아온다. 전송은 비동기로 떼고 응답은 즉시. ② `java.net.http.HttpClient`엔 반드시
+connect/request 타임아웃을 준다(기본은 무한 대기). ③ 비동기 콜백에서 DB 쓰기는 요청 트랜잭션 밖이므로 별도
+@Transactional 빈을 거친다.
