@@ -13,6 +13,7 @@ import {
   fetchPlace,
   fetchPlaceReports,
   fetchPlaceReviews,
+  fetchPopularTimes,
   fetchUrgent,
   logout,
 } from "./api";
@@ -75,6 +76,16 @@ export function usePlaceReports(placeId: number | null) {
     queryFn: () => fetchPlaceReports(placeId!),
     enabled: placeId != null,
     staleTime: 10_000,
+  });
+}
+
+// 장소 상세 "시간대별 혼잡"(자체 popular-times). 이력 집계라 자주 안 변함 + 백엔드 Redis 1h 캐시 → staleTime 길게.
+export function usePopularTimes(placeId: number | null) {
+  return useQuery({
+    queryKey: ["popular-times", placeId],
+    queryFn: () => fetchPopularTimes(placeId!),
+    enabled: placeId != null,
+    staleTime: 10 * 60_000,
   });
 }
 

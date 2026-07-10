@@ -1,6 +1,7 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { SurgeInfo } from "@/types/alert";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
+import type { PopularTimesSlot } from "@/types/popular";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
 import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
 import type { User } from "@/types/user";
@@ -83,6 +84,11 @@ export function fetchNearestAny(params: { lat: number; lng: number; limit?: numb
 // 장소의 최근 유효 제보(미만료, 최신순 top20).
 export function fetchPlaceReports(placeId: number): Promise<Report[]> {
   return getJson<Report[]>(`/api/places/${placeId}/reports`);
+}
+
+// 장소의 시간대별 혼잡 파생(요일×시간, 만료 포함 이력 채굴). 백엔드 Redis 1h 캐시.
+export function fetchPopularTimes(placeId: number): Promise<PopularTimesSlot[]> {
+  return getJson<PopularTimesSlot[]>(`/api/places/${placeId}/popular-times`);
 }
 
 // 뷰포트 내 제보 급증 스냅샷(폴백/초기 상태). SSE(/api/alerts/stream)가 공백을 실시간으로 메운다.
