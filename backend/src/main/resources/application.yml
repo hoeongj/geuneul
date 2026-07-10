@@ -27,6 +27,15 @@ spring:
       ssl:
         enabled: ${REDIS_SSL:false}    # 관리형 Redis(TLS)면 true
 
+# Web Push(F2, ADR-0022). enabled=true일 때만 VAPID 빈 생성·전송(기본 off=회귀 0, 구독 저장은 항상 동작).
+# VAPID 키(PEM)·subject는 값이 비밀이라 env/SSM으로만(§D — 레포/문서에 금지).
+push:
+  enabled: ${PUSH_ENABLED:false}
+  vapid:
+    public-key-pem: ${PUSH_VAPID_PUBLIC_KEY_PEM:}
+    private-key-pem: ${PUSH_VAPID_PRIVATE_KEY_PEM:}
+    subject: ${PUSH_VAPID_SUBJECT:mailto:admin@geuneul.app}
+
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표) + 카카오 로그인 client_id + 카카오내비 길찾기(F3, 같은 앱 키). 규칙 D.
   oauth:

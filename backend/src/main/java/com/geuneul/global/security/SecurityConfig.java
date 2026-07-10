@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/bookmarks").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/bookmarks/*").authenticated()
                         .requestMatchers("/notifications", "/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/push/subscribe", "/push/test").authenticated()
                         .requestMatchers(HttpMethod.POST, "/flags").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll())
