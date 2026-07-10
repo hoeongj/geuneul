@@ -835,3 +835,9 @@
 - 산출물: `domain/push/*`(6파일)·`V16`·SecurityConfig·NotificationService · 프론트 `app/sw.ts`·`lib/push.ts`·`NotificationsSection`·BFF 3 · ADR-0022 · 테스트. **VAPID 키는 `.local/vapid*.pem`(gitignore, §D).**
 - 남은 것(활성화): `push.enabled=true` + VAPID 키(개인=SSM 비밀·공개=env) 태스크데프 rev → 실기기(설치형 PWA)에서 구독+테스트. **코드는 완료, 배포·실기기 검증만 남음.**
 - 관련: ADR-0022, ADR-0018(stretch 분리)·ADR-0020(HEAT_ESCAPE), TS-026·§0-2·§D. **BACKLOG F2 코드 완료.**
+
+## 2026-07-11 — F2 활성화 배포 (VAPID SSM/env + push.enabled=true, rev60)
+- 한 일: F2 코드(#77) 머지 후 프로덕션 활성화. ① 개인키 PEM을 **SSM SecureString** `/geuneul/push_vapid_private_key_pem`으로(§D, IAM exec role은 `/geuneul/*` 와일드카드라 정책 변경 불필요). ② F2 이미지 배포 완료(rev59)를 기다린 뒤 그 위에 env(`PUSH_ENABLED=true`·`PUSH_VAPID_PUBLIC_KEY_PEM`·`PUSH_VAPID_SUBJECT`)+secret(`PUSH_VAPID_PRIVATE_KEY_PEM`←SSM) 추가한 **rev60** 등록·서비스 갱신(force-new-deployment)·services-stable 대기.
+- 검증: `GET /push/public-key` → **`enabled=true`, publicKey 87자**(유효 VAPID). health 200. 서버측 Web Push 완전 동작.
+- 왜 이 순서인가: 활성화 rev는 반드시 **F2 이미지가 든 rev(59) 위에** 얹어야 한다(구 이미지에 push env만 얹으면 엔드포인트 없음). deploy.yml이 이미지만 교체(config 보존)라 F2 배포 완료를 기다린 뒤 describe→push 추가→register가 정석. 개인키는 태스크데프 인라인 금지→SSM(§D).
+- 남은 것: **실기기(설치형 PWA)에서 마이페이지 "기기 푸시 알림 켜기"→"테스트"** 로 OS 배너 1회 확인(사용자 액션, iOS는 Safari 설치 PWA 필수). 서버·프론트·활성화는 완료.
