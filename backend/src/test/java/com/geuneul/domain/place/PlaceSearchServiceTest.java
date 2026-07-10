@@ -211,6 +211,7 @@ class PlaceSearchServiceTest {
             @Override public double getFreshnessScore() { return 0.5; }
             @Override public double getComfortScore() { return 0.5; }
             @Override public double getRiskScore() { return 0.0; }
+            @Override public double getFeatureComfortScore() { return 0.0; }
         };
     }
 }

@@ -138,4 +138,53 @@ class SurvivalScoreTest {
 
         assertThat(withWeather.score()).isGreaterThan(withoutWeather.score());
     }
+
+    // --- 시설(place_features) comfort 통합 (A1, ADR-0017) ---
+
+    @Test
+    @DisplayName("featureComfort=null(시설 없음)이면 기존 오버로드와 정확히 동일(폴백 회귀)")
+    void featureComfortNullMatchesLegacyOverload() {
+        SurvivalScore legacy = SurvivalScore.of(0.0, 800.0, 2, 0.8, 0.5, 0.1, 1.0);
+        SurvivalScore withNullFeature = SurvivalScore.of(0.0, 800.0, 2, 0.8, 0.5, 0.1, 1.0, null);
+
+        assertThat(withNullFeature.score()).isEqualTo(legacy.score());
+        assertThat(withNullFeature.comfortScore()).isEqualTo(legacy.comfortScore());
+    }
+
+    @Test
+    @DisplayName("시설 comfort는 base 위에 단조 상승으로 얹혀 comfort_score를 올린다: 0.5 + (1−0.5)·1·0.5 = 0.75")
+    void featureComfortLiftsMonotonically() {
+        // base comfort=0.5(제보), 날씨 없음, featureComfort=1.0(포화)
+        SurvivalScore s = SurvivalScore.of(null, null, 1, 1.0, 0.5, 0.0, null, 1.0);
+
+        assertThat(s.comfortScore()).isCloseTo(0.75, within(1e-9));
+    }
+
+    @Test
+    @DisplayName("시설은 comfort를 올리기만 한다 — 있는 쪽이 없는 쪽보다 항상 크거나 같다(단조·무회귀)")
+    void featureNeverLowersComfort() {
+        SurvivalScore without = SurvivalScore.of(null, null, 1, 1.0, 0.9, 0.0, null, null);
+        SurvivalScore with = SurvivalScore.of(null, null, 1, 1.0, 0.9, 0.0, null, 0.6);
+
+        assertThat(with.comfortScore()).isGreaterThanOrEqualTo(without.comfortScore());
+    }
+
+    @Test
+    @DisplayName("무제보(reportCount=0)면 시설이 아무리 좋아도 등급은 여전히 UNKNOWN — 시설은 정적 사실, 등급은 실시간 신호 기준(§9)")
+    void featureNeverPromotesUnknownGrade() {
+        SurvivalScore s = SurvivalScore.of(null, null, 0, 0.0, 0.0, 0.0, null, 1.0);
+
+        assertThat(s.grade()).isEqualTo(Grade.UNKNOWN);
+        assertThat(s.comfortScore()).isGreaterThan(0.0); // comfort 자체는 시설로 오른다(등급만 별개)
+    }
+
+    @Test
+    @DisplayName("제보 있는 장소에서 시설이 OKAY(55)를 GOOD(≥60)로 끌어올릴 수 있다(수용 기준: comfort↑로 등급 상승)")
+    void featureCanPromoteOkayToGood() {
+        SurvivalScore withoutFeature = SurvivalScore.of(null, null, 1, 0.6, 0.5, 0.0, null, null);
+        SurvivalScore withFeature = SurvivalScore.of(null, null, 1, 0.6, 0.5, 0.0, null, 1.0);
+
+        assertThat(withoutFeature.grade()).isEqualTo(Grade.OKAY);   // 55
+        assertThat(withFeature.grade()).isEqualTo(Grade.GOOD);      // 68
+    }
 }

@@ -65,7 +65,8 @@ public class RecommendationService {
         PlaceResponse place = PlaceResponse.of(v, radiusMeters, weatherComfort); // canonical survival(§5) 포함
         int matchScore = SurvivalScore.of(
                 scenario.weights(), v.getDistanceM(), radiusMeters, v.getReportCount(),
-                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore(), weatherComfort).score();
+                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore(),
+                weatherComfort, v.getFeatureComfortScore()).score();
         String reason = RecommendationReason.of(v.getReportCount(), v.getComfortScore(), v.getRiskScore());
         return new RecommendationResponse(place, matchScore, reason);
     }

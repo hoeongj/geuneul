@@ -21,3 +21,4 @@
 | [0014](./0014-observability-otel-micrometer-grafana.md) | 관측성 — Micrometer/Prometheus(pull)+Boot 4 OTel 스타터(push 트레이싱)+로컬 Grafana/Tempo, prometheus는 프로덕션 기본 미노출 | 승인 |
 | [0015](./0015-cloudfront-default-domain-https.md) | ALB 무료 HTTPS — CloudFront 기본 도메인(*.cloudfront.net), 커스텀 도메인·ACM 없이 | 승인(apply 완료·라이브) |
 | [0016](./0016-realtime-report-surge-listen-notify-sse.md) | 실시간 제보 급증 알림 — Postgres LISTEN/NOTIFY(멀티 인스턴스 팬아웃) → SSE, Kafka/Redis Streams 배제 | 승인 |
+| [0017](./0017-place-feature-comfort-signal.md) | 시설(place_features) → survival_score comfort 통합 — 별도 SQL 뷰 집계 + Java 단조 상승, 등급은 실시간 신호로만 게이트 | 승인 |
