@@ -23,6 +23,11 @@ export function SearchBar({
   const reqIdRef = useRef(0);
   const boxRef = useRef<HTMLDivElement>(null);
 
+  // coords는 부모(page)가 렌더마다 새 객체로 만들어 넘긴다 → 객체 참조를 deps에 쓰면 무관한 리렌더에도
+  // 디바운스가 재실행돼 불필요한 카카오 호출이 난다. 원시값(lat/lng)만 deps로 써서 실제 위치 변화·입력에만 반응.
+  const biasLat = coords?.lat;
+  const biasLng = coords?.lng;
+
   // 디바운스 검색(2자 이상). 상태 변경은 전부 타임아웃 콜백 안에서만 한다(effect 본문 동기 setState 회피).
   // 2자 미만은 드롭다운 자체가 렌더에서 숨겨지므로(showDropdown 가드) 별도 초기화가 필요 없다.
   // 늦게 도착한 응답이 최신 입력을 덮지 않게 요청 id로 가드한다.
@@ -30,11 +35,12 @@ export function SearchBar({
     const q = query.trim();
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (q.length < 2) return;
+    const bias = biasLat != null && biasLng != null ? { lat: biasLat, lng: biasLng } : null;
     debounceRef.current = setTimeout(async () => {
       const myId = ++reqIdRef.current;
       setLoading(true);
       try {
-        const r = await searchPlaces(q, coords);
+        const r = await searchPlaces(q, bias);
         if (myId === reqIdRef.current) {
           setResults(r);
           setSearched(true);
@@ -51,7 +57,7 @@ export function SearchBar({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, coords]);
+  }, [query, biasLat, biasLng]);
 
   // 바깥 탭/클릭이면 드롭다운 닫기(pointerdown으로 터치까지 커버).
   useEffect(() => {
