@@ -4,6 +4,11 @@ import com.geuneul.domain.alert.dto.SurgeInfo;
 import com.geuneul.domain.notification.dto.NotificationResponse;
 import com.geuneul.domain.notification.dto.NotificationRuleRequest;
 import com.geuneul.domain.notification.dto.NotificationRuleResponse;
+import com.geuneul.domain.place.PlaceDistanceView;
+import com.geuneul.domain.place.PlaceRepository;
+import com.geuneul.domain.weather.HeatComfort;
+import com.geuneul.domain.weather.Weather;
+import com.geuneul.domain.weather.WeatherService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -11,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -27,13 +33,22 @@ public class NotificationService {
     /** cooldown 창(ms) — 같은 규칙×장소가 이 창 안에 반복 급증해도 재발송 안 함(dedup_key 시간 버킷). */
     static final long COOLDOWN_MS = 600_000; // 10분
 
+    /** HEAT_ESCAPE cooldown(ms) — 날씨는 시간당 갱신이라 규칙당 3시간 1회로 나깅 방지(ADR-0020). */
+    static final long HEAT_COOLDOWN_MS = 10_800_000; // 3시간
+
     private final NotificationRuleRepository ruleRepository;
     private final NotificationDeliveryRepository deliveryRepository;
+    private final WeatherService weatherService;
+    private final PlaceRepository placeRepository;
 
     public NotificationService(NotificationRuleRepository ruleRepository,
-                               NotificationDeliveryRepository deliveryRepository) {
+                               NotificationDeliveryRepository deliveryRepository,
+                               WeatherService weatherService,
+                               PlaceRepository placeRepository) {
         this.ruleRepository = ruleRepository;
         this.deliveryRepository = deliveryRepository;
+        this.weatherService = weatherService;
+        this.placeRepository = placeRepository;
     }
 
     // --- 규칙 CRUD ---
@@ -43,6 +58,10 @@ public class NotificationService {
         if (req.type() == NotificationRuleType.SURGE_NEARBY) {
             if (req.lat() == null || req.lng() == null || req.radiusM() == null || req.radiusM() <= 0) {
                 throw new ResponseStatusException(BAD_REQUEST, "SURGE_NEARBY는 lat·lng·radiusM(>0)이 필요합니다");
+            }
+        } else if (req.type() == NotificationRuleType.HEAT_ESCAPE) {
+            if (req.lat() == null || req.lng() == null) {
+                throw new ResponseStatusException(BAD_REQUEST, "HEAT_ESCAPE는 lat·lng(폭염 판정 중심)이 필요합니다");
             }
         }
         NotificationRule rule = ruleRepository.save(
@@ -106,6 +125,60 @@ public class NotificationService {
 
         if (nearby + bookmark > 0) {
             log.info("[notify] 급증 발송 placeId={} nearby={} bookmark={}", surge.placeId(), nearby, bookmark);
+        }
+    }
+
+    // --- 폭염 피난 평가(HEAT_ESCAPE, ADR-0020) ---
+
+    /**
+     * 유저의 활성 HEAT_ESCAPE 규칙을 온디맨드로 평가한다 — 알림 센터를 열 때 컨트롤러가 list() 직전에 호출한다.
+     * 급증(이벤트)과 달리 폭염은 상태라 트리거 소스가 없다 → 읽기 진입점에서 멱등 upsert(ADR-0020 §1).
+     * 규칙 중심 날씨가 폭염주의보(체감 ≥33℃)면 가장 가까운 무더위쉼터를 찾아 3시간 버킷 dedup으로 1건 발송.
+     * 날씨 결측·쉼터 없음이면 조용히 skip(graceful) — 한 규칙 실패가 다른 규칙/목록을 막지 않게 예외를 격리한다.
+     */
+    @Transactional
+    public void evaluateHeatEscape(long userId) {
+        List<NotificationRule> rules =
+                ruleRepository.findByUserIdAndTypeAndActiveTrue(userId, NotificationRuleType.HEAT_ESCAPE);
+        if (rules.isEmpty()) {
+            return;
+        }
+        long bucket = clock() / HEAT_COOLDOWN_MS;
+        for (NotificationRule rule : rules) {
+            try {
+                evaluateHeatRule(rule, bucket);
+            } catch (RuntimeException e) {
+                log.warn("[notify] HEAT_ESCAPE 평가 실패 ruleId={} (skip)", rule.getId(), e);
+            }
+        }
+    }
+
+    private void evaluateHeatRule(NotificationRule rule, long bucket) {
+        Double lat = rule.getCenterLat();
+        Double lng = rule.getCenterLng();
+        if (lat == null || lng == null) {
+            return; // 방어(생성 검증이 막지만 과거 데이터 대비)
+        }
+        Optional<Weather> weather = weatherService.getWeather(lat, lng);
+        if (weather.isEmpty() || !HeatComfort.isHeatAdvisory(weather.get())) {
+            return; // 날씨 결측 or 폭염 아님 → skip
+        }
+        List<PlaceDistanceView> shelters = placeRepository.findNearest(lat, lng, "COOLING_SHELTER", 1);
+        if (shelters.isEmpty()) {
+            return; // 근처 쉼터 없음 → 대상 없는 알림 안 만듦
+        }
+        PlaceDistanceView shelter = shelters.get(0);
+        Double feels = HeatComfort.feelsLike(weather.get());
+        String title = "폭염 — 근처 쉼터로 피해요";
+        String body = String.format(
+                "지금 체감 %d℃. 가까운 무더위쉼터 '%s'(%dm)에서 잠깐 쉬어가세요.",
+                Math.round(feels), shelter.getName(), Math.round(shelter.getDistanceM()));
+        String dedupKey = "heat:" + rule.getId() + ":" + bucket;
+
+        int inserted = deliveryRepository.insertHeatEscape(
+                rule.getUserId(), rule.getId(), shelter.getId(), title, body, dedupKey);
+        if (inserted > 0) {
+            log.info("[notify] 폭염 피난 발송 ruleId={} shelterId={} feels={}", rule.getId(), shelter.getId(), feels);
         }
     }
 
