@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FollowingSection } from "@/components/mypage/FollowingSection";
 import { MyActivitySection } from "@/components/mypage/MyActivitySection";
 import { NotificationsSection } from "@/components/notification/NotificationsSection";
 import { Icon } from "@/components/ui/Icon";
@@ -114,6 +115,8 @@ function Profile({ user }: { user: User }) {
       <NotificationsSection />
 
       <MyActivitySection />
+
+      <FollowingSection />
 
       <BookmarksSection />
 

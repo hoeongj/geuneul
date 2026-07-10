@@ -3,6 +3,7 @@ import type { MyComment, MyReaction, MyReview } from "@/types/activity";
 import type { SurgeInfo } from "@/types/alert";
 import type { Bookmark, BookmarkToggle } from "@/types/bookmark";
 import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from "@/types/community";
+import type { Following, FollowResult, UserProfile } from "@/types/follow";
 import type { NotificationCenter, NotificationRule, NotificationRuleType } from "@/types/notification";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
@@ -156,6 +157,29 @@ export function fetchMyComments(): Promise<MyComment[]> {
 
 export function fetchMyReactions(): Promise<MyReaction[]> {
   return getJson<MyReaction[]>(`/api/me/reactions`);
+}
+
+// 작성자 공개 프로필(N7) — 공개(누구나). 로그인 시 following 채워짐(BFF가 쿠키를 옵션 전달).
+export function fetchUserProfile(id: number): Promise<UserProfile> {
+  return getJson<UserProfile>(`/api/users/${id}`);
+}
+
+// 팔로우/언팔로우(로그인 필요, 멱등) — 응답 {following, followerCount}로 버튼·카운트 즉시 반영.
+export async function followUser(id: number): Promise<FollowResult> {
+  const res = await fetch(`/api/users/${id}/follow`, { method: "POST", signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<FollowResult>;
+}
+
+export async function unfollowUser(id: number): Promise<FollowResult> {
+  const res = await fetch(`/api/users/${id}/follow`, { method: "DELETE", signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<FollowResult>;
+}
+
+// 내 팔로잉 목록("나만" 봄, 로그인 필요).
+export function fetchMyFollowing(): Promise<Following[]> {
+  return getJson<Following[]>(`/api/me/following`);
 }
 
 // 관심 장소 저장(로그인 필요, 멱등 upsert).

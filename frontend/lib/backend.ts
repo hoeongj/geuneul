@@ -105,6 +105,37 @@ export function proxyAuthedPost(path: string, request: NextRequest): Promise<Nex
   return proxyAuthed("POST", path, request);
 }
 
+// 공개지만 로그인 시 개인화되는 GET(예: 작성자 프로필의 following 상태, N7). 세션 쿠키가 있으면 Bearer로 실어
+// 보내되, 없어도 401을 내지 않고 그대로 진행한다(비로그인도 프로필은 봄 — proxyAuthed와 proxy의 중간).
+export async function proxyOptionalAuth(method: string, path: string, request: NextRequest): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        accept: "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    const resBody = await res.text();
+    return new NextResponse(resBody, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
 // 사진 presign 전용 프록시: purpose=report는 익명 허용(proxyPost처럼 XFF/클라이언트IP를 보존해 백엔드
 // 레이트리밋이 유저별로 동작하게 함), purpose=review는 세션 쿠키가 있으면 Bearer로 함께 실어 보낸다
 // (proxyAuthedPost와 달리 쿠키가 없다고 즉시 401을 내지 않는다 — report 용도의 익명 요청까지 막아버리므로.

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { GeoProvider } from "@/lib/context/geo";
 import { SelectedPlaceProvider } from "@/lib/context/selected";
+import { SelectedUserProvider } from "@/lib/context/selectedUser";
 import { ToastProvider } from "@/lib/context/toast";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <GeoProvider>
         <ToastProvider>
-          <SelectedPlaceProvider>{children}</SelectedPlaceProvider>
+          <SelectedPlaceProvider>
+            <SelectedUserProvider>{children}</SelectedUserProvider>
+          </SelectedPlaceProvider>
         </ToastProvider>
       </GeoProvider>
     </QueryClientProvider>

@@ -20,6 +20,9 @@ public interface ReviewWithAuthorView {
 
     Long getPlaceId();
 
+    /** 작성자 유저 ID(N7) — 후기 닉네임 탭 시 작성자 공개 프로필로 이동하기 위해 노출. 후기는 익명이 아님(로그인 필수). */
+    Long getAuthorId();
+
     Integer getRating();
 
     String getComment();

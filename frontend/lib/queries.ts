@@ -19,9 +19,13 @@ import {
   fetchByRadius,
   fetchMe,
   fetchMyComments,
+  fetchMyFollowing,
   fetchMyReactions,
   fetchMyReviews,
   fetchNearestAny,
+  fetchUserProfile,
+  followUser,
+  unfollowUser,
   fetchPlace,
   fetchPlaceReports,
   fetchPlaceReviews,
@@ -175,6 +179,33 @@ export function useMyComments(enabled: boolean) {
 
 export function useMyReactions(enabled: boolean) {
   return useQuery({ queryKey: ["me-reactions"], queryFn: fetchMyReactions, enabled, staleTime: 30_000, retry: false });
+}
+
+// 작성자 공개 프로필(N7) — 공개 조회(로그인 시 following 포함). id가 null이면 비활성(오버레이 닫힘).
+export function useUserProfile(id: number | null) {
+  return useQuery({
+    queryKey: ["user-profile", id],
+    queryFn: () => fetchUserProfile(id!),
+    enabled: id != null,
+    staleTime: 30_000,
+  });
+}
+
+// 내 팔로잉 목록(로그인 시에만).
+export function useMyFollowing(enabled: boolean) {
+  return useQuery({ queryKey: ["me-following"], queryFn: fetchMyFollowing, enabled, staleTime: 30_000, retry: false });
+}
+
+// 팔로우 토글(로그인 필요) — 성공 시 해당 프로필과 내 팔로잉 목록 무효화(버튼·카운트·목록 즉시 갱신).
+export function useToggleFollow(userId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (next: boolean) => (next ? followUser(userId) : unfollowUser(userId)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["me-following"] });
+    },
+  });
 }
 
 // 관심 장소 저장/해제 토글 — 성공 시 목록 캐시 무효화(상세 버튼·마이페이지가 함께 갱신).
