@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
+import { fetchToiletRoute } from "@/lib/api";
 import { categoryLabel, iconForCategory } from "@/lib/categories";
 import { useGeo } from "@/lib/context/geo";
 import { useSelectedPlace } from "@/lib/context/selected";
@@ -94,6 +95,27 @@ export function PlaceDetailOverlay() {
   const walk = walkMinutes(distanceM);
 
   const kakaoLink = place ? kakaoDirectionsUrl(place) : "#";
+
+  // 화장실 포함 경로(B2) — 현재 위치→이 장소 사이 우회 최소 화장실을 경유지로 안내한다.
+  // 지도 폴리라인 오버레이는 후속(외부 도로 API 키 활성화 후, ADR-0019) — 지금은 경유 화장실을 알려준다.
+  const onToiletRoute = async () => {
+    if (!place) return;
+    try {
+      const route = await fetchToiletRoute({
+        fromLat: geo.lat,
+        fromLng: geo.lng,
+        toLat: place.lat,
+        toLng: place.lng,
+      });
+      show(
+        route.waypoint
+          ? `${route.waypoint.name} 화장실을 경유해요 · 총 약 ${Math.round(route.routeDistanceM)}m`
+          : "경로에 들를 화장실을 못 찾았어요",
+      );
+    } catch {
+      show("경로를 불러오지 못했어요");
+    }
+  };
 
   const onShare = async () => {
     if (!place) return;
@@ -211,6 +233,16 @@ export function PlaceDetailOverlay() {
             <Icon name="share" size={20} />
           </button>
         </div>
+
+        {/* 화장실 포함 경로(B2) — 현재 위치에서 이 장소로 가는 길에 우회 최소 화장실을 경유 */}
+        <button
+          type="button"
+          onClick={onToiletRoute}
+          className="flex h-[46px] w-full items-center justify-center gap-2 rounded-[14px] border border-line-cream bg-white text-[14px] font-bold text-ink-2"
+        >
+          <Icon name="toilet" size={17} />
+          화장실 들러 가기
+        </button>
 
         {/* AI 한 줄 요약(라이브, ADR-0010) — 유효 제보 없으면 안내 문구로 폴백 */}
         <div className="mt-1 flex flex-col gap-3">

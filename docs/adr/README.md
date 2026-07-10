@@ -23,3 +23,4 @@
 | [0016](./0016-realtime-report-surge-listen-notify-sse.md) | 실시간 제보 급증 알림 — Postgres LISTEN/NOTIFY(멀티 인스턴스 팬아웃) → SSE, Kafka/Redis Streams 배제 | 승인 |
 | [0017](./0017-place-feature-comfort-signal.md) | 시설(place_features) → survival_score comfort 통합 — 별도 SQL 뷰 집계 + Java 단조 상승, 등급은 실시간 신호로만 게이트 | 승인 |
 | [0018](./0018-notifications-in-app-center-surge-reuse.md) | 알림 — 인앱 센터 MVP + 급증 LISTEN/NOTIFY 재사용 평가, dedup_key로 멀티 인스턴스·cooldown 1회 발송, Web Push는 stretch | 승인 |
+| [0019](./0019-routes-toilet-waypoint-external-directions.md) | 루트 — 화장실 포함 경로: 경유지 선택은 우리 PostGIS(detour 최소), 도로 폴리라인은 외부 directions API(전략 추상화, 직선 MVP·Kakao 후속) | 승인(MVP) |

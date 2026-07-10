@@ -113,6 +113,6 @@
 - [ ] A8 상권 전국 확장
 - [ ] A9 Fargate cpu 512 (조건부)
 - [x] B1 알림 (ADR + 구현) — V15 + domain.notification + 급증 재사용 평가 + 인앱 센터(ADR-0018). CI pass 후 머지.
-- [ ] B2 루트 (ADR + 화장실 경로 MVP)
+- [x] B2 루트 (ADR + 화장실 경로 MVP) — domain.route + detour 최소 경유지(PostGIS) + 직선 MVP(ADR-0019). 도로 폴리라인은 카카오 키 후속. CI pass 후 머지.
 
 > 각 완료 시: WORKLOG(무엇/왜/대안) + 필요시 ADR + TROUBLESHOOTING(사고) 기록, 이 체크박스와 HANDOFF 갱신.
