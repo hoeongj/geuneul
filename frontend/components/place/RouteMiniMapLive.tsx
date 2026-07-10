@@ -50,6 +50,15 @@ export default function RouteMiniMapLive({
           image={markerImage("toilet", true)}
         />
       )}
+      {/* 경로 주변 그늘/실내 피난처(F4) — 쉼터·도서관·지하상가 오버레이("더울 때 피할 곳") */}
+      {route.shadeSpots.map((s) => (
+        <MapMarker
+          key={s.placeId}
+          position={{ lat: s.lat, lng: s.lng }}
+          image={markerImage(iconForCategory(s.category as Category), false)}
+          title={s.name}
+        />
+      ))}
       {/* 도착 */}
       <MapMarker
         position={{ lat: route.destination.lat, lng: route.destination.lng }}

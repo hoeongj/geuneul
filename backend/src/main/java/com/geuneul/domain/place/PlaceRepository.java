@@ -200,4 +200,28 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
             @Param("toLat") double toLat, @Param("toLng") double toLng,
             @Param("midLat") double midLat, @Param("midLng") double midLng,
             @Param("corridorM") double corridorM);
+
+    /**
+     * 경로 폴리라인 corridor(F4, N8) — 경로 라인에서 bufferM 이내의 그늘/실내 피난처(카테고리 CSV, enum name).
+     * {@code lineWkt}는 RouteService가 폴리라인으로 만든 {@code "LINESTRING(경도 위도, ...)"}. geography ST_DWithin이
+     * V3의 GIST(geography(geom)) 함수 인덱스를 선필터로 타고(점↔라인 거리), 라인까지 가까운 순으로 정렬한다.
+     * 자체 가중 라우팅(§0-2 지양)이 아니라 기존 경로에 "피할 곳"을 얹는 오버레이 쿼리다. {@code categories}는
+     * 파라미터 바인딩이라 인젝션 안전(값은 doubles로 만든 WKT).
+     */
+    @Query(value = """
+            SELECT p.id AS id, p.name AS name, p.category AS category,
+                   ST_Y(p.geom) AS lat, ST_X(p.geom) AS lng
+            FROM places p
+            WHERE p.deleted_at IS NULL
+              AND p.category = ANY(string_to_array(:categories, ','))
+              AND ST_DWithin(
+                    geography(p.geom),
+                    geography(ST_GeomFromText(:lineWkt, 4326)),
+                    :bufferM)
+            ORDER BY ST_Distance(geography(p.geom), geography(ST_GeomFromText(:lineWkt, 4326))) ASC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<com.geuneul.domain.route.RouteShadeView> findShadeAlongCorridor(
+            @Param("lineWkt") String lineWkt, @Param("categories") String categories,
+            @Param("bufferM") double bufferM, @Param("limit") int limit);
 }

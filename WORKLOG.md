@@ -910,3 +910,11 @@
 - **왜(why)**: ① **왜 캐릭터 합성 아이콘인가** — 시트 안 작은 디자인 아이콘(~296px)은 512 업스케일 시 흐림 → 고해상도 중앙 캐릭터(~730px)를 크림 정사각에 합성해 crisp + maskable safe-zone 확보(캐릭터 68~76%, 크림이 마스크 bleed 채움). ② **왜 회전 요소를 별도 SVG인가** — 참고 이미지의 바람개비는 래스터에 baked → 캐릭터는 바람개비 없는 버전을 쓰고 그 위에 CSS 회전 SVG를 얹어야 실제로 돈다(위치는 손 위치 68%로 preview 검증). ③ **왜 크림 배경 통일** — 캐릭터 에셋 bg = 스플래시 bg = manifest background = #FFFBEB → 설치형 PWA 런치·스플래시 이음새 제거. ④ **왜 원본 다운스케일 저장** — 5MB×2 원본 커밋은 git 비대 → 1400px 참고본으로 절충(사용자 "저장" 요청 충족).
 - **검증**: 프론트 tsc·eslint·build green. 스플래시 pinwheel 위치 ImageMagick 합성 preview로 손 위치 확인. 백엔드 무변경. 실제 렌더는 Vercel 배포 후 확인.
 - **관련**: 사용자 제공 로고/로딩 · PWA(manifest·apple-touch·maskable) · CLAUDE.md §7(PWA).
+
+## 2026-07-11 — N8: F4 그늘/비 경로 — 경로 corridor 주변 피난처 오버레이 (PR #87, ADR-0024)
+- **무엇**: 화장실 경로(F3)에 이어, **경로 폴리라인 주변 그늘/실내 피난처**(쉼터·도서관·지하상가)를 지도에 오버레이("더울 때·비 올 때 피할 곳"). 자체 라우팅이 아니라 기존 경로에 얹는다.
+  - 백엔드: `PlaceRepository.findShadeAlongCorridor`(폴리라인 `LINESTRING` WKT → `ST_DWithin(geography, 400m)` + 카테고리 CSV, V3 GIST 인덱스 경로) + `RouteShadeView` 프로젝션 + `RouteResponse.shadeSpots`(additive) + `RouteService`가 WKT 생성·조회·매핑.
+  - 프론트: `types/route.ShadeSpot` + `RouteMiniMapLive` 카테고리 마커 오버레이 + `PlaceDetailOverlay` 배너/토스트 "피할 곳 N".
+- **왜(why)**: ADR-0024 상세. ① **왜 corridor 오버레이(자체 라우팅 대신)** — §0-2 과설계 지양, 간판(PostGIS)만 재사용. ② **왜 쉼터·도서관·지하상가** — 셋 다 실내/지붕이라 **그늘(폭염)+비(장마) 동시 해결**("그늘/비"). 야외(음수대·공원)는 비 못 피해 제외. ③ **왜 폴리라인 LINESTRING corridor(중점 원 대신)** — F4는 경로 전 구간 주변을 봐야 하므로 라인 거리(ST_DWithin line)가 정확. WKT는 doubles로만 만들고 파라미터 바인딩(인젝션 안전)·Locale.ROOT(소수점 '.' 고정). ④ **400m·15개** — 도보 5분 우회 + 미니맵 혼잡 방지.
+- **검증**: 백엔드 `RouteServiceTest`(shadeSpots 조립 + 기존 waypoint/폴백) 로컬 green + `RouteToiletIT`(실 Postgres, corridor 쿼리 실행, CI). 프론트 tsc·eslint·build green. **마이그레이션 없음**(places·V3 인덱스 재사용).
+- **관련**: BACKLOG N8 · ADR-0024 · ADR-0021(F3)·0019(경로) · CLAUDE.md §0-2·§3.
