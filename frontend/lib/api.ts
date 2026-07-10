@@ -1,4 +1,5 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
+import type { MyComment, MyReaction, MyReview } from "@/types/activity";
 import type { SurgeInfo } from "@/types/alert";
 import type { Bookmark, BookmarkToggle } from "@/types/bookmark";
 import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from "@/types/community";
@@ -142,6 +143,19 @@ export async function fetchMe(): Promise<User | null> {
 // 내 관심 장소 목록(로그인 필요). 미로그인(401)이면 빈 배열로 처리(호출부 enabled 게이팅과 함께).
 export function fetchMyBookmarks(): Promise<Bookmark[]> {
   return getJson<Bookmark[]>(`/api/me/bookmarks`);
+}
+
+// 내 글 관리(N6) — 내 후기/댓글/유용해요(로그인 필요, 최신순). 미로그인은 enabled 게이팅으로 회피.
+export function fetchMyReviews(): Promise<MyReview[]> {
+  return getJson<MyReview[]>(`/api/me/reviews`);
+}
+
+export function fetchMyComments(): Promise<MyComment[]> {
+  return getJson<MyComment[]>(`/api/me/comments`);
+}
+
+export function fetchMyReactions(): Promise<MyReaction[]> {
+  return getJson<MyReaction[]>(`/api/me/reactions`);
 }
 
 // 관심 장소 저장(로그인 필요, 멱등 upsert).

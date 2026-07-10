@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/me").authenticated()
                         .requestMatchers("/me/bookmarks").authenticated()
+                        .requestMatchers("/me/reviews", "/me/comments", "/me/reactions").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reviews").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reviews/*/comments").authenticated()
                         .requestMatchers(HttpMethod.POST, "/reactions").authenticated()

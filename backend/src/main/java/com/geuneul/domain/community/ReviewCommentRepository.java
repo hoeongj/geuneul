@@ -1,5 +1,6 @@
 package com.geuneul.domain.community;
 
+import com.geuneul.domain.activity.MyCommentView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,4 +19,16 @@ public interface ReviewCommentRepository extends JpaRepository<ReviewComment, Lo
             ORDER BY c.created_at ASC
             """, nativeQuery = true)
     List<ReviewCommentWithAuthorView> findByReviewIdWithAuthor(@Param("reviewId") long reviewId);
+
+    /** 내가 쓴 댓글 목록(N6) — review_comments × reviews × places 조인, 최신순. 댓글의 후기가 달린 장소로 이동. */
+    @Query(value = """
+            SELECT c.id AS id, c.review_id AS reviewId, rv.place_id AS placeId, p.name AS placeName,
+                   c.comment AS comment, c.created_at AS createdAt
+            FROM review_comments c
+            JOIN reviews rv ON rv.id = c.review_id
+            JOIN places p ON p.id = rv.place_id
+            WHERE c.user_id = :userId
+            ORDER BY c.created_at DESC
+            """, nativeQuery = true)
+    List<MyCommentView> findByUserIdWithPlace(@Param("userId") long userId);
 }
