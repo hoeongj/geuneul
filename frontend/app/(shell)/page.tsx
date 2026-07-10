@@ -36,6 +36,7 @@ export default function MapPage() {
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
   const [snap, setSnap] = useState<SheetSnap>("half");
   const [recenterKey, setRecenterKey] = useState(0);
+  const [searchPin, setSearchPin] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   const coords = { lat: geo.lat, lng: geo.lng };
 
@@ -85,12 +86,19 @@ export default function MapPage() {
         onSelect={selected.open}
         onBoundsChange={onBoundsChange}
         recenterKey={recenterKey}
+        searchPin={searchPin}
       />
 
       {/* 상단 검색 + 필터 + 급증 배너(A4) */}
       <div className="pointer-events-none absolute inset-x-0 top-3 z-20 space-y-2.5 px-3">
         <div className="pointer-events-auto">
-          <SearchBar onClick={() => show("검색은 준비 중이에요 · 지도를 움직여 탐색하세요")} />
+          <SearchBar
+            coords={geo.isFallback ? null : coords}
+            onSelect={(r) => {
+              setSearchPin({ lat: r.lat, lng: r.lng, name: r.name });
+              show(`${r.name} 주변으로 이동했어요`);
+            }}
+          />
         </div>
         <div className="pointer-events-auto">
           <FilterChips selected={cats} onToggle={toggleCat} onClear={() => setCats([])} />
