@@ -3,6 +3,7 @@ package com.geuneul.domain.review;
 import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.auth.User;
 import com.geuneul.domain.auth.UserRepository;
+import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.review.dto.ReviewCreateRequest;
 import com.geuneul.domain.review.dto.ReviewListResponse;
@@ -32,15 +33,17 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final TrustScoreService trustScoreService;
     private final ObjectMapper objectMapper;
+    private final PhotoService photoService;
 
     public ReviewService(ReviewRepository reviewRepository, PlaceRepository placeRepository,
                          UserRepository userRepository, TrustScoreService trustScoreService,
-                         ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper, PhotoService photoService) {
         this.reviewRepository = reviewRepository;
         this.placeRepository = placeRepository;
         this.userRepository = userRepository;
         this.trustScoreService = trustScoreService;
         this.objectMapper = objectMapper;
+        this.photoService = photoService;
     }
 
     /**
@@ -69,7 +72,9 @@ public class ReviewService {
         // 후기도 trust_score 활동 신호다(TrustScore 근거) — 신규 작성·재작성(upsert) 모두 재계산해 둔다
         // (재작성은 count가 안 변하지만 age는 계속 흐르므로 최신 유지, 비용은 저빈도 UGC라 무시할 만함).
         trustScoreService.recalculate(userId);
-        return ReviewResponse.of(saved, user.getNickname(), user.getProfileImage(), toPhotos(photosJson));
+        // 비공개 버킷이라 저장 URL은 그대로 못 본다 → 조회 시점 presigned GET으로 변환해 내려준다(N1).
+        return ReviewResponse.of(saved, user.getNickname(), user.getProfileImage(),
+                photoService.presignGet(toPhotos(photosJson)));
     }
 
     /** 장소의 후기 목록 — 공개, 최신순 페이지네이션(작성자 닉네임/프로필 조인). */
@@ -77,7 +82,8 @@ public class ReviewService {
         requirePlace(placeId);
         Pageable pageable = PageRequest.of(page, size);
         Page<ReviewWithAuthorView> found = reviewRepository.findByPlaceIdWithAuthor(placeId, pageable);
-        Page<ReviewResponse> mapped = found.map(v -> ReviewResponse.of(v, toPhotos(v.getPhotosJson())));
+        // 사진 URL은 presignGet으로 임시 서명해 내려준다(N1 — 비공개 S3 403 해소, 버킷 퍼블릭 전환 없이).
+        Page<ReviewResponse> mapped = found.map(v -> ReviewResponse.of(v, photoService.presignGet(toPhotos(v.getPhotosJson()))));
         return ReviewListResponse.of(mapped);
     }
 

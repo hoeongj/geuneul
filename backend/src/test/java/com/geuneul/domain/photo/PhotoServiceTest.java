@@ -124,4 +124,50 @@ class PhotoServiceTest {
         PhotoPresignResponse b = service.presign(new PhotoPresignRequest("image/jpeg", 100L, "report"), false);
         assertThat(a.key()).isNotEqualTo(b.key());
     }
+
+    @Test
+    @DisplayName("presignGet: 우리 버킷 오브젝트 URL은 서명된 임시 GET URL로 변환된다(N1 — 비공개 S3 403 해소)")
+    void presignGetSignsOwnBucketObject() {
+        PhotoService service = service("geuneul-photos-test");
+        String stored = "https://geuneul-photos-test.s3.ap-northeast-2.amazonaws.com/review/abc.jpg";
+
+        String signed = service.presignGet(stored);
+
+        assertThat(signed).startsWith("https://geuneul-photos-test.s3.ap-northeast-2.amazonaws.com/review/abc.jpg");
+        assertThat(signed).contains("X-Amz-Signature=");
+        assertThat(signed).contains("X-Amz-Expires=");
+    }
+
+    @Test
+    @DisplayName("presignGet: 우리 버킷이 아닌 URL·null·빈 값은 손대지 않고 그대로 통과시킨다")
+    void presignGetPassesThroughForeignUrls() {
+        PhotoService service = service("geuneul-photos-test");
+
+        assertThat(service.presignGet("https://img/1.jpg")).isEqualTo("https://img/1.jpg");
+        assertThat(service.presignGet((String) null)).isNull();
+        assertThat(service.presignGet("")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("presignGet: 버킷 미설정이면(테스트/IT) 저장 URL을 그대로 돌려준다 — 계약이 안 깨진다")
+    void presignGetPassesThroughWhenBucketUnset() {
+        PhotoService service = service("");
+        String stored = "https://whatever.s3.ap-northeast-2.amazonaws.com/review/abc.jpg";
+        assertThat(service.presignGet(stored)).isEqualTo(stored);
+    }
+
+    @Test
+    @DisplayName("presignGet(List): null·빈 리스트는 빈 리스트, 각 원소는 개별 변환된다")
+    void presignGetList() {
+        PhotoService service = service("geuneul-photos-test");
+        assertThat(service.presignGet((java.util.List<String>) null)).isEmpty();
+        assertThat(service.presignGet(java.util.List.of())).isEmpty();
+
+        java.util.List<String> signed = service.presignGet(java.util.List.of(
+                "https://geuneul-photos-test.s3.ap-northeast-2.amazonaws.com/review/a.jpg",
+                "https://external/b.jpg"));
+        assertThat(signed).hasSize(2);
+        assertThat(signed.get(0)).contains("X-Amz-Signature=");
+        assertThat(signed.get(1)).isEqualTo("https://external/b.jpg"); // 외부 URL은 통과
+    }
 }

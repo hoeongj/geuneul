@@ -6,14 +6,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,6 +52,13 @@ public class PhotoService {
 
     /** 짧게: presign 발급 직후 바로 업로드하는 흐름이라 길게 열어둘 이유가 없다(탈취된 URL의 악용 창 최소화). */
     private static final Duration SIGNATURE_DURATION = Duration.ofMinutes(2);
+
+    /**
+     * 조회용 presigned GET 유효기간(N1). 응답 JSON에 실려 클라이언트가 즉시 &lt;img&gt;로 렌더하고,
+     * React Query가 상세 화면을 몇 분 캐시하므로 그 창을 넉넉히 덮되 탈취 시 악용 창은 짧게 유지하는 절충값.
+     * 커먼스 UGC 사진이라 민감도는 낮지만, 저장 URL을 그대로 공개하지 않는다는 원칙(비공개 버킷 s3.tf)은 지킨다.
+     */
+    private static final Duration VIEW_SIGNATURE_DURATION = Duration.ofHours(1);
 
     private final S3Presigner presigner;
     private final String bucket;
@@ -102,11 +112,54 @@ public class PhotoService {
 
         PresignedPutObjectRequest presigned = presigner.presignPutObject(presignRequest);
 
-        // 버킷은 비공개(퍼블릭 액세스 블록) — MVP는 오브젝트 URL을 그대로 저장한다(스키마 기존 photo_url/photos_json
-        // 그대로 재사용). presigned GET/CloudFront로 실제 뷰잉을 여는 건 스코프 밖(HANDOFF 다음 조각).
-        String objectUrl = "https://%s.s3.%s.amazonaws.com/%s".formatted(bucket, region, key);
+        // 버킷은 비공개(퍼블릭 액세스 블록) — 오브젝트 URL을 그대로 저장한다(스키마 기존 photo_url/photos_json 재사용).
+        // 실제 뷰잉은 읽기 시점에 presignGet()으로 임시 GET 서명을 발급한다(N1, 버킷 퍼블릭 전환 없이 403 해소).
+        String objectUrl = objectUrlFor(key);
         OffsetDateTime expiresAt = OffsetDateTime.now(clock).plus(SIGNATURE_DURATION);
 
         return new PhotoPresignResponse(presigned.url().toExternalForm(), objectUrl, key, expiresAt);
+    }
+
+    /**
+     * 저장된 비공개 S3 오브젝트 URL을 조회 시점 presigned GET URL로 변환한다(N1 — 사진 표시 버그의 공유 수정).
+     * 버킷이 완전 비공개(s3.tf 퍼블릭 차단·정책 없음)라 raw 오브젝트 URL은 {@code <img>}에서 403 → 읽기 경로에서
+     * 짧게 서명된 임시 GET URL을 발급해 내려준다. presign은 로컬 서명 연산이라 네트워크 호출이 없다(저비용).
+     *
+     * <p>우리 버킷 오브젝트가 아니거나(레거시·외부 URL) 버킷이 미설정(단위/IT 환경)이면 <b>원본을 그대로</b>
+     * 돌려준다 — 손대지 않아 무해하다(테스트가 저장한 임의 URL·빈 버킷에서 계약이 안 깨진다).
+     */
+    public String presignGet(String storedUrl) {
+        if (!StringUtils.hasText(storedUrl) || !StringUtils.hasText(bucket)) {
+            return storedUrl;
+        }
+        String prefix = objectUrlFor("");
+        if (!storedUrl.startsWith(prefix)) {
+            return storedUrl;
+        }
+        String key = storedUrl.substring(prefix.length());
+        if (key.isEmpty()) {
+            return storedUrl;
+        }
+        GetObjectRequest getRequest = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build();
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(VIEW_SIGNATURE_DURATION)
+                .getObjectRequest(getRequest)
+                .build();
+        return presigner.presignGetObject(presignRequest).url().toExternalForm();
+    }
+
+    /** 목록/후기 사진 배열용 — null·빈 리스트 안전, 각 원소를 presignGet으로 변환. */
+    public List<String> presignGet(List<String> storedUrls) {
+        if (storedUrls == null || storedUrls.isEmpty()) {
+            return List.of();
+        }
+        return storedUrls.stream().map(this::presignGet).toList();
+    }
+
+    private String objectUrlFor(String key) {
+        return "https://%s.s3.%s.amazonaws.com/%s".formatted(bucket, region, key);
     }
 }

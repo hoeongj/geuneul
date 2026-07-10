@@ -3,6 +3,7 @@ package com.geuneul.domain.report;
 import com.geuneul.domain.auth.JwtService;
 import com.geuneul.domain.auth.Role;
 import com.geuneul.domain.auth.TrustScoreService;
+import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.report.dto.ReportCreateRequest;
 import com.geuneul.domain.report.dto.ReportResponse;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -43,7 +45,9 @@ class ReportServiceTest {
         reportRepository = mock(ReportRepository.class);
         placeRepository = mock(PlaceRepository.class);
         trustScoreService = mock(TrustScoreService.class);
-        reportService = new ReportService(reportRepository, placeRepository, trustScoreService, CLOCK);
+        // PhotoService는 버킷 미설정이라 presignGet이 저장 photoUrl을 그대로 통과시킨다(N1 passthrough 분기).
+        PhotoService photoService = new PhotoService(mock(S3Presigner.class), "", "ap-northeast-2", CLOCK);
+        reportService = new ReportService(reportRepository, placeRepository, trustScoreService, photoService, CLOCK);
 
         when(placeRepository.existsById(1L)).thenReturn(true);
         when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));

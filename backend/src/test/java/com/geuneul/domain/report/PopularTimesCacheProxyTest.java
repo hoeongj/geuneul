@@ -1,10 +1,12 @@
 package com.geuneul.domain.report;
 
 import com.geuneul.domain.auth.TrustScoreService;
+import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.report.dto.PopularTimesSlot;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
@@ -59,8 +61,9 @@ class PopularTimesCacheProxyTest {
         when(reportRepository.congestionByPlace(1L)).thenReturn(List.of(slot));
 
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            PhotoService photoService = new PhotoService(mock(S3Presigner.class), "", "ap-northeast-2", CLOCK);
             ctx.registerBean(ReportService.class,
-                    () -> new ReportService(reportRepository, placeRepository, trustScoreService, CLOCK));
+                    () -> new ReportService(reportRepository, placeRepository, trustScoreService, photoService, CLOCK));
             ctx.register(CacheConfig.class);
             ctx.refresh();
 
