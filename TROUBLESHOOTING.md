@@ -301,3 +301,30 @@ merge`를 실행했고, 같은 방식으로 ⑦·⑧까지 red 위에 쌓였다(
    우리 로직만 검증하고 외부 계약은 가린다"와 동형).
 3. **미검증 스캐폴드는 "미검증"을 코드·ADR에 명시하고, 승인/해금 즉시 실호출로 확증**한다. 추상화
    (`StoreApiClient`/`StorePage`)를 잘 끼워둔 덕에 계약 정정이 클라이언트/서비스 국소 수정으로 끝났다(호출부 무영향).
+
+## TS-027 — 별개 포털(safetydata) API는 별개 키 + 별개 응답 봉투다(무더위쉼터)
+
+**상황**: 무더위쉼터 전국 데이터는 오랫동안 "외부 승인 대기" 블로커였다. 원인 정리(2026-07-10 실측):
+- data.go.kr에는 무더위쉼터 표준 오픈API가 **없다**(후보 엔드포인트 전부 `resultCode 12`/`-3`/미등록) — 표준데이터가
+  재난안전데이터공유플랫폼 **safetydata.go.kr**의 `DSSP-IF-10942`로 이관·폐기됐다.
+- safetydata는 data.go.kr과 **완전히 별개 포털**이라 **회원가입·활용신청·서비스키가 전부 별개**다. data.go.kr
+  공용키(datago)로 safetydata를 호출하면 `resultCode 30 (등록되지 않은 서비스키)`.
+
+**해결**: 사용자가 safetydata.go.kr에서 발급받은 **전용 서비스키**로 실호출 → `resultCode 00`, 전국 `totalCount=60,297`.
+키는 `.local/safetydata.env`(gitignore)에만 저장(규칙 D), 프로덕션엔 ECS RunTask env 오버라이드로만 주입(상시 배선 X).
+
+**계약 함정(코드 前 실호출로 확인 — TS-026 교훈 적용)**: safetydata V2 응답 봉투가 data.go.kr 표준과 **다르다**.
+- data.go.kr 표준: `{response:{header, body:{items:[...], totalCount}}}` (도서관 API).
+- **safetydata V2**: `{header:{resultCode,resultMsg}, totalCount, pageNo, numOfRows, body:[...]}` — `response` 래퍼 **없음**,
+  `header`·페이지네이션이 **최상위**, `body`는 `items` 없이 **레코드 배열 그 자체**.
+- 필드 키가 **대문자 스네이크**(`RSTR_NM`·`LA`·`LO`·`RSTR_FCLTY_NO`·`COLR_HOLD_ARCNDTN`) → record에 `@JsonProperty` 매핑 필수.
+  좌표는 TM(XCORD/YCORD=null)이 아니라 **WGS84 LA/LO(숫자)** 를 쓴다.
+
+**핵심 학습 포인트**:
+1. **"공공데이터 = data.go.kr"이 아니다.** 재난·안전 도메인은 safetydata.go.kr(행안부), 지자체는 각 열린데이터광장 등
+   **포털마다 키·인증·응답 규격이 다르다.** "승인 대기"의 진짜 원인이 "잘못된 포털에 신청"일 수 있으니 **데이터 출처 포털을
+   먼저 확정**한다(무더위쉼터는 data.go.kr이 아니라 safetydata).
+2. **새 외부 API는 계약을 코드보다 먼저 실호출로 고정한다(TS-026 재확인).** 같은 "표준 오픈API"처럼 보여도 포털이 다르면
+   봉투가 다르다 — 도서관 클라이언트를 그대로 복붙했으면 `response` 래퍼 null로 전량 0건이 됐을 것이다.
+3. **전량 스냅샷 soft-delete는 "수집 완료"를 게이트로 둔다.** 6만건 페이지네이션 중 오류로 끊긴 부분 스냅샷으로
+   deactivateStale을 켜면 안 덮인 멀쩡한 행을 지운다 → 첫 페이지 totalCount 대비 실제 수집량이 채워졌을 때만 적용.
