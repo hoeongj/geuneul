@@ -1,4 +1,5 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
+import type { SurgeInfo } from "@/types/alert";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
 import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
@@ -82,6 +83,12 @@ export function fetchNearestAny(params: { lat: number; lng: number; limit?: numb
 // 장소의 최근 유효 제보(미만료, 최신순 top20).
 export function fetchPlaceReports(placeId: number): Promise<Report[]> {
   return getJson<Report[]>(`/api/places/${placeId}/reports`);
+}
+
+// 뷰포트 내 제보 급증 스냅샷(폴백/초기 상태). SSE(/api/alerts/stream)가 공백을 실시간으로 메운다.
+export function fetchSurge(bounds: MapBounds): Promise<SurgeInfo[]> {
+  const qs = new URLSearchParams({ bounds: boundsParam(bounds), limit: "50" });
+  return getJson<SurgeInfo[]>(`/api/alerts/surge?${qs}`);
 }
 
 // 내 프로필 — 미로그인(401)이면 null. 그 외 오류는 throw(호출부에서 구분).
