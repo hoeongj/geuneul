@@ -105,7 +105,8 @@ public record PlaceResponse(
         Double distanceM = v.getDistanceM() == null ? null : Math.round(v.getDistanceM() * 10) / 10.0;
         SurvivalScore score = SurvivalScore.of(
                 v.getDistanceM(), radiusM, v.getReportCount(),
-                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore(), weatherComfort);
+                v.getFreshnessScore(), v.getComfortScore(), v.getRiskScore(),
+                weatherComfort, v.getFeatureComfortScore());
         return new PlaceResponse(
                 v.getId(),
                 v.getName(),

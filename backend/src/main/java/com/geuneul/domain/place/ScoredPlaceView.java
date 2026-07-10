@@ -40,4 +40,11 @@ public interface ScoredPlaceView {
 
     /** 리스크 신호(0~1) — 부정 제보(더움/붐빔/벌레/냄새/침수/미끄럼) 누적, 위험도 가중. */
     double getRiskScore();
+
+    /**
+     * 시설(place_features) 기반 comfort 신호(0~1) — 정적 시설(에어컨·콘센트·좌석 등)을 confidence·polarity로
+     * 집계한 값(place_feature_signals 뷰, A1/ADR-0017). 시설 없는 장소는 COALESCE(...,0)으로 0.
+     * 최종 조립 시 제보 comfort를 덮지 않게 report&gt;feature 순으로 가중된다(SurvivalScore).
+     */
+    double getFeatureComfortScore();
 }

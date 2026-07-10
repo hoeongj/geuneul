@@ -54,6 +54,15 @@ public record SurvivalScore(
     static final double W_REPORT_COMFORT = 0.6;
     static final double W_WEATHER_COMFORT = 0.4;
 
+    /**
+     * 시설(place_features) comfort의 최대 반영 강도(A1/ADR-0017). 시설은 제보/날씨 블렌드 위에 <b>단조 상승</b>
+     * (comfort를 올리기만, 내리지 않음)으로 얹어 회귀를 없앤다 — base + (1−base)·featureComfort·GAIN.
+     * GAIN=0.5라 시설이 완전 포화(=1)여도 base=0 장소를 최대 0.5까지만 끌어올린다(정적 시설만으로 "지금 완벽"은
+     * 아니다). 체감(감소 수익) 구조라 이미 comfort 높은(=UGC 강한) 장소는 거의 안 움직여 "PUBLIC 시설이 UGC를
+     * 덮지 않게"(A1 함정)를 만족한다.
+     */
+    static final double FEATURE_COMFORT_GAIN = 0.5;
+
     /** §5 표준 가중치 — survival_score(지도 배지)의 기본 프로파일. */
     public static final Weights DEFAULT_WEIGHTS = new Weights(W_DISTANCE, W_COMFORT, W_FRESHNESS, W_RISK);
 
@@ -89,7 +98,20 @@ public record SurvivalScore(
      */
     public static SurvivalScore of(Double distanceM, Double radiusM, long reportCount,
                                    double freshness, double comfort, double risk, Double weatherComfort) {
-        return of(DEFAULT_WEIGHTS, distanceM, radiusM, reportCount, freshness, comfort, risk, weatherComfort);
+        return of(DEFAULT_WEIGHTS, distanceM, radiusM, reportCount, freshness, comfort, risk, weatherComfort, null);
+    }
+
+    /**
+     * §5 표준 가중치 + 날씨 comfort 보정 + 시설 comfort 보정(A1/ADR-0017)까지 반영한다 — 지도 배지·상세 경로.
+     *
+     * @param featureComfort 시설(place_features) 기반 comfort 신호[0,1] (place_feature_signals 뷰). null이면
+     *                       시설 신호 없음 — 제보/날씨 comfort만으로 폴백(기존 동작과 동일).
+     */
+    public static SurvivalScore of(Double distanceM, Double radiusM, long reportCount,
+                                   double freshness, double comfort, double risk,
+                                   Double weatherComfort, Double featureComfort) {
+        return of(DEFAULT_WEIGHTS, distanceM, radiusM, reportCount, freshness, comfort, risk,
+                weatherComfort, featureComfort);
     }
 
     /**
@@ -100,21 +122,33 @@ public record SurvivalScore(
      */
     public static SurvivalScore of(Weights w, Double distanceM, Double radiusM, long reportCount,
                                    double freshness, double comfort, double risk) {
-        return of(w, distanceM, radiusM, reportCount, freshness, comfort, risk, null);
+        return of(w, distanceM, radiusM, reportCount, freshness, comfort, risk, null, null);
     }
 
     /**
-     * 시나리오 가중치 + 날씨 comfort 보정(ADR-0009)을 함께 적용하는 완전 조립 경로.
-     * 다른 모든 {@code of} 오버로드가 최종적으로 이 메서드로 수렴한다.
+     * 시나리오 가중치 + 날씨 comfort 보정(ADR-0009)만 적용(시설 신호 없음 — 폴백, 기존 동작과 동일).
      *
      * @param weatherComfort 날씨 기반 comfort 보정[0,1]. null이면 제보 comfort만 쓴다(폴백).
      */
     public static SurvivalScore of(Weights w, Double distanceM, Double radiusM, long reportCount,
                                    double freshness, double comfort, double risk, Double weatherComfort) {
+        return of(w, distanceM, radiusM, reportCount, freshness, comfort, risk, weatherComfort, null);
+    }
+
+    /**
+     * 시나리오 가중치 + 날씨 comfort 보정(ADR-0009) + 시설 comfort 보정(A1/ADR-0017)을 함께 적용하는 완전
+     * 조립 경로. 다른 모든 {@code of} 오버로드가 최종적으로 이 메서드로 수렴한다.
+     *
+     * @param weatherComfort 날씨 기반 comfort 보정[0,1]. null이면 제보 comfort만 쓴다(폴백).
+     * @param featureComfort 시설 기반 comfort 보정[0,1]. null이면 시설 신호 없음 — 단조 상승 미적용(폴백).
+     */
+    public static SurvivalScore of(Weights w, Double distanceM, Double radiusM, long reportCount,
+                                   double freshness, double comfort, double risk,
+                                   Double weatherComfort, Double featureComfort) {
         double f = clamp01(freshness);
         double reportComfort = clamp01(comfort);
         double r = clamp01(risk);
-        double c = effectiveComfort(reportComfort, weatherComfort);
+        double c = effectiveComfort(reportComfort, weatherComfort, featureComfort);
 
         Double distanceScore = distanceScore(distanceM, radiusM);
 
@@ -135,16 +169,28 @@ public record SurvivalScore(
     }
 
     /**
-     * comfort_score 조립(ADR-0009): 날씨 신호가 있으면 제보 comfort(0.6)·날씨 comfort(0.4)의 가중평균,
-     * 없으면 제보 comfort 그대로(폴백 — 이전 동작과 100% 동일해 기존 호출부·테스트가 깨지지 않는다).
+     * comfort_score 조립(ADR-0009 + A1/ADR-0017): 먼저 제보·날씨를 블렌드하고(base), 그 위에 시설 comfort를
+     * <b>단조 상승</b>으로 얹는다.
+     * <ol>
+     *   <li><b>base</b>: 날씨 신호가 있으면 제보 comfort(0.6)·날씨 comfort(0.4)의 가중평균, 없으면 제보 comfort
+     *       그대로(ADR-0009, 폴백 — 시설 신호가 없으면 이전 동작과 100% 동일).</li>
+     *   <li><b>시설 상승</b>: {@code base + (1−base)·featureComfort·GAIN} — 시설은 comfort를 <b>올리기만</b> 한다
+     *       (내리지 않음 → 회귀 없음, §9 마커 안정). 체감(감소 수익)이라 이미 base가 높으면(UGC 강함) 거의 안
+     *       움직여 "PUBLIC 시설이 UGC를 덮지 않게" 한다.</li>
+     * </ol>
+     * 부정 시설(소음 loud)은 뷰에서 이미 긍정과 상쇄돼 feature_comfort에 반영되므로(그만큼 상승폭이 준다)
+     * 여기서 따로 감점하지 않는다 — 단조성을 지키기 위한 의도적 단순화(ADR-0017).
      */
-    private static double effectiveComfort(double reportComfort, Double weatherComfort) {
-        if (weatherComfort == null) {
-            return reportComfort;
+    private static double effectiveComfort(double reportComfort, Double weatherComfort, Double featureComfort) {
+        double base = weatherComfort == null
+                ? reportComfort
+                : clamp01((W_REPORT_COMFORT * reportComfort + W_WEATHER_COMFORT * clamp01(weatherComfort))
+                        / (W_REPORT_COMFORT + W_WEATHER_COMFORT));
+        if (featureComfort == null || featureComfort <= 0) {
+            return base;
         }
-        double wc = clamp01(weatherComfort);
-        return clamp01((W_REPORT_COMFORT * reportComfort + W_WEATHER_COMFORT * wc)
-                / (W_REPORT_COMFORT + W_WEATHER_COMFORT));
+        double fc = clamp01(featureComfort);
+        return clamp01(base + (1 - base) * fc * FEATURE_COMFORT_GAIN);
     }
 
     /** 거리 점수: 가까울수록 1, 반경 끝에서 0. 중심점(반경 검색)이 있을 때만. */

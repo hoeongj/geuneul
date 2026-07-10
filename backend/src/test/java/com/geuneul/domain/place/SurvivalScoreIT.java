@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
@@ -38,10 +39,14 @@ class SurvivalScoreIT extends AbstractIntegrationTest {
     @Autowired
     ReportRepository reportRepository;
 
+    @Autowired
+    JdbcTemplate jdbc;
+
     private Long placeId;
 
     @BeforeEach
     void setUp() {
+        jdbc.update("DELETE FROM place_features");
         reportRepository.deleteAll();
         placeRepository.deleteAll();
         Place p = placeRepository.save(Place.of(
@@ -52,6 +57,11 @@ class SurvivalScoreIT extends AbstractIntegrationTest {
 
     private void save(ReportType type, OffsetDateTime expiresAt) {
         reportRepository.save(Report.anonymous(placeId, type, null, true, expiresAt));
+    }
+
+    private void feature(String type, String value, double confidence) {
+        jdbc.update("INSERT INTO place_features(place_id, feature_type, value, source, confidence) "
+                + "VALUES (?, ?, ?, 'test', ?)", placeId, type, value, confidence);
     }
 
     @Test
@@ -104,6 +114,18 @@ class SurvivalScoreIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.survival.grade").value("UNKNOWN"))
                 .andExpect(jsonPath("$.survival.reportCount").value(0));
+    }
+
+    @Test
+    @DisplayName("시설(냉방) 뷰가 comfort로 흘러 무제보라도 comfortScore>0 — 단 등급은 정보 부족이라 UNKNOWN(A1/ADR-0017)")
+    void featureLiftsComfortButNotGrade() throws Exception {
+        feature("air_conditioned", "true", 0.7); // place_feature_signals 뷰가 feature_comfort로 집계
+
+        mvc.perform(get("/places/" + placeId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.survival.reportCount").value(0))
+                .andExpect(jsonPath("$.survival.comfortScore").value(org.hamcrest.Matchers.greaterThan(0.0)))
+                .andExpect(jsonPath("$.survival.grade").value("UNKNOWN")); // 시설은 정적 사실, 등급은 실시간 신호 기준(§9)
     }
 
     @Test

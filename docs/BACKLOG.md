@@ -103,7 +103,7 @@
 ---
 
 # 완료 체크리스트 (다음 세션이 갱신)
-- [ ] A1 comfort SQL 통합 (V13)
+- [x] A1 comfort SQL 통합 (V13) — 뷰 place_feature_signals + SurvivalScore 단조 상승(ADR-0017). CI pass 후 머지.
 - [ ] A2 verified→trust
 - [ ] A3 쉼터 air_conditioned 백필
 - [ ] A4 급증 SSE 프론트 구독

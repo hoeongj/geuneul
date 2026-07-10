@@ -39,9 +39,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.report_count, 0)   AS "reportCount",
                    COALESCE(s.freshness_score, 0) AS "freshnessScore",
                    COALESCE(s.comfort_score, 0)  AS "comfortScore",
-                   COALESCE(s.risk_score, 0)     AS "riskScore"
+                   COALESCE(s.risk_score, 0)     AS "riskScore",
+                   COALESCE(fs.feature_comfort, 0) AS "featureComfortScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
+            LEFT JOIN place_feature_signals fs ON fs.place_id = p.id
             WHERE p.deleted_at IS NULL
               AND ST_DWithin(
                     geography(p.geom),
@@ -72,9 +74,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.report_count, 0)   AS "reportCount",
                    COALESCE(s.freshness_score, 0) AS "freshnessScore",
                    COALESCE(s.comfort_score, 0)  AS "comfortScore",
-                   COALESCE(s.risk_score, 0)     AS "riskScore"
+                   COALESCE(s.risk_score, 0)     AS "riskScore",
+                   COALESCE(fs.feature_comfort, 0) AS "featureComfortScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
+            LEFT JOIN place_feature_signals fs ON fs.place_id = p.id
             WHERE p.deleted_at IS NULL
               AND ST_DWithin(
                     geography(p.geom),
@@ -114,9 +118,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.report_count, 0)   AS "reportCount",
                    COALESCE(s.freshness_score, 0) AS "freshnessScore",
                    COALESCE(s.comfort_score, 0)  AS "comfortScore",
-                   COALESCE(s.risk_score, 0)     AS "riskScore"
+                   COALESCE(s.risk_score, 0)     AS "riskScore",
+                   COALESCE(fs.feature_comfort, 0) AS "featureComfortScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
+            LEFT JOIN place_feature_signals fs ON fs.place_id = p.id
             WHERE p.deleted_at IS NULL
               AND p.geom && ST_MakeEnvelope(:west, :south, :east, :north, 4326)
               AND (CAST(:category AS text) IS NULL OR p.category = CAST(:category AS text))
@@ -137,9 +143,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                    COALESCE(s.report_count, 0)   AS "reportCount",
                    COALESCE(s.freshness_score, 0) AS "freshnessScore",
                    COALESCE(s.comfort_score, 0)  AS "comfortScore",
-                   COALESCE(s.risk_score, 0)     AS "riskScore"
+                   COALESCE(s.risk_score, 0)     AS "riskScore",
+                   COALESCE(fs.feature_comfort, 0) AS "featureComfortScore"
             FROM places p
             LEFT JOIN place_report_signals s ON s.place_id = p.id
+            LEFT JOIN place_feature_signals fs ON fs.place_id = p.id
             WHERE p.id = :id AND p.deleted_at IS NULL
             """, nativeQuery = true)
     java.util.Optional<ScoredPlaceView> findByIdScored(@Param("id") long id);
