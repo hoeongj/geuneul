@@ -28,7 +28,7 @@ spring:
         enabled: ${REDIS_SSL:false}    # 관리형 Redis(TLS)면 true
 
 kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표) + 카카오 로그인 client_id(같은 앱). 규칙 D.
+  rest-api-key: ${KAKAO_REST_API_KEY:}   # 지오코딩(주소→좌표) + 카카오 로그인 client_id + 카카오내비 길찾기(F3, 같은 앱 키). 규칙 D.
   oauth:
     client-secret: ${KAKAO_CLIENT_SECRET:}  # 선택(콘솔 [보안] "사용함"일 때만). 비면 미전송.
 
