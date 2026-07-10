@@ -1,118 +1,80 @@
-# 그늘(Geuneul) — 다음 세션 실행 백로그 (심화 + additive 전량)
+# 그늘(Geuneul) — 백로그 (다음 세션 실행 대상)
 
-> **사용자 지시(2026-07-10)**: "심화나 있으면 좋은 것들 **전부 다 하나도 빠짐없이** 다 하라." → 다음 세션은 이 문서의 **A(additive)부터 B(심화)까지 전 항목**을 순서대로 착수·완료한다. 이 문서는 `HANDOFF.md`(현황)와 짝이며, `/geuneul-start` 명령이 이 문서를 로드해 실행한다.
+> **상태(2026-07-10)**: 심화+additive 코드(A1~A7·B1~B2)는 **전량 구현·머지·라이브**(PR #61~#69). 사용자 승인 데이터 op(A3 쉼터 냉방 재적재·A8 6대 광역시)도 실행 완료. **이 문서는 이제 "후속·외부 대기·신규 심화" 백로그**다. `/geuneul-start`가 이 문서를 로드해 구동한다.
 >
-> **현재 상태 요약**: 로드맵 W0~P4 + 데이터 커버리지(~146,000곳) 완성·라이브, **외부 승인 블로커 0건**(상권 #56·쉼터 #58 해소). 남은 것 = 이 문서의 심화/additive뿐.
->
-> **철칙(CLAUDE.md·TS)**: 기능 브랜치 → PR → **머지 전 `gh pr checks <N>`로 "Backend (Gradle, JDK 21)" pass 눈으로 확인(TS-025)** → 머지. 커밋 신원 `ghdtjdwn`/`seongjuice999@gmail.com`, **Co-Authored-By: Claude 트레일러 금지(§A)**. 비밀·개인정보(IP 등)는 `.local`·env로만(§D). 결정은 웹 2026 트렌드 확인 + `WORKLOG.md`(무엇/왜/대안), 사고는 `TROUBLESHOOTING.md`. 네이티브 프로젝션 시각컬럼=`Instant`+UTV 부착(TS-016). 로컬 IT는 colima로 skip될 수 있음 → **SKIP≠통과, CI가 유일 게이트(TS-009)**. 간판(지리·스코어링) 우선, 커뮤니티는 살(§0-9). 침수/위험 표현은 공포 조장 금지(§6).
+> **철칙(CLAUDE.md·TS)**: 기능 브랜치 → PR → **머지 전 `gh pr checks <N>`로 "Backend (Gradle, JDK 21)" pass 눈확인(TS-025)** → squash 머지. 커밋 신원 `ghdtjdwn`/`seongjuice999@gmail.com`, **Co-Authored-By: Claude 금지(§A)**. 비밀·개인정보(키·IP)는 `.local`·env로만(§D). 결정은 웹 2026 트렌드 확인 + `WORKLOG.md`(무엇/왜/대안), 사고는 `TROUBLESHOOTING.md`, 아키텍처는 `docs/adr/`. 새 외부 API는 코드 前 실호출 계약검증(TS-026). 네이티브 프로젝션 시각컬럼=`Instant`+UTC(TS-016). 로컬 IT는 colima skip → **SKIP≠통과, CI가 유일 게이트(TS-009)**. 간판(지리·스코어링) 우선, 커뮤니티는 살(§0-9). 침수/위험 표현 공포 조장 금지(§6).
 
 ---
 
-## 실행 순서 (권장)
-작고 확실한 것(A)부터 momentum을 쌓고, 대형 심화(B)는 ADR 선행 후 착수. 각 항목 = 원칙적으로 1 PR.
+## ✅ 완료 (2026-07-10 심화+additive 세션) — 참고용
 
-**A. Additive 폴리시(간판 마무리·백엔드 준비분 프론트 노출)** → **B. 심화 tier(알림·루트, ADR 선행)**
+| 항목 | PR | 산출물 |
+|---|---|---|
+| A1 시설 comfort SQL 통합 | #61 | V13 `place_feature_signals` 뷰 + SurvivalScore 단조 상승 (ADR-0017) |
+| A2 verified→trust 보너스 | #62 | TrustScore verified 보너스(캡 20)·`countByUserIdAndVerifiedTrue` |
+| A3 쉼터 냉방 조건부 백필 | #63 | CSV 파이프라인 ConditionalFeature **+ 실 재적재(57,070 백필, 라이브)** |
+| A4 급증 SSE 프론트 | #64 | `proxyStream`·EventSource·SurgeBanner |
+| A5 popular-times 히트맵 | #65 | 요일선택+24h 스트립(dataviz 발산 팔레트 검증) |
+| A6 후기 커뮤니티 최소 UI | #66 | 댓글·유용해요 토글(§0-9 최소) |
+| A7 bookmarks | #67 | V14 `domain.bookmark` + ★버튼·마이페이지 |
+| A8 상권 전국 확장 | 스크립트 | **6대 광역시**(부산·대구·인천·대전·광주·울산) ≈37,618행 |
+| B1 알림 | #68 | V15 `domain.notification` — 급증 재사용+인앱 센터 (ADR-0018) |
+| B2 루트 | #69 | `domain.route` — detour 최소 경유지+직선 MVP (ADR-0019) |
 
-> ⚠️ **중간에 사용자 입력이 필요할 수 있는 지점**(미리 알림): B2 루트의 외부 경로 API(카카오모빌리티 등) 활용신청/키, B1 알림의 Web Push VAPID 키(직접 생성 가능), A3/A8의 대량 재적재(safetydata IP·API 호출량). 해당 지점에서 한 줄 제안 후 진행.
-
----
-
-# A. Additive 폴리시
-
-## A1. 시설 comfort → survival_score SQL 통합 【간판】
-- **무엇**: 현재 `place_features` 등급은 표시(`FeatureGrade`)만 하고 **survival_score엔 안 들어간다**. air_conditioned·outlet·wifi·seating·water(POSITIVE)와 noise 등(NEGATIVE)을 `comfort_score` 성분에 반영.
-- **어디서**: `place_report_signals` 뷰(V4→V6→V10→V12 계보) 또는 스코어드 쿼리(`PlaceRepository`의 `comfortScore`). 신규 마이그레이션 **V13**에서 `place_features`를 comfort에 조인(polarity·confidence 가중). 순수함수 `SurvivalScore`는 comfort_score를 받으므로 뷰/쿼리만 손보면 됨.
-- **왜**: 냉방 쉼터·콘센트 카페가 **무제보라도** comfort↑ → 마커색·종합점수에 반영(간판 정밀화). ADR-0007 스코어 계보 준수.
-- **수용 기준**: 냉방 쉼터가 comfort 성분↑로 등급 상승, 마커 3색 흔들림 최소(§9). 실 PostGIS IT로 뷰 시맨틱 확증.
-- **함정**: 재정규화(가중치 합), confidence 낮은 PUBLIC feature가 UGC를 덮지 않게. ADR로 근거 기록.
-
-## A2. verified 방문인증 → 유저 trust_score 연동 【간판】
-- **무엇**: 현재 `reports.verified`(V10)는 **제보 단위 뷰 가중(×1.3)** 만. 방문인증 제보를 꾸준히 한 유저의 `trust_score`를 올려 선순환.
-- **어디서**: `domain.auth` trust(V6 trust weight 계보), `ReportRepository`. trust 재계산에 verified 제보 수 반영.
-- **왜**: 허위제보 억제(§0-7). 신뢰 유저 제보가 스코어에 더 실림.
-- **함정**: 재계산 트리거(제보 시/배치). 어뷰징(자기 verified 남발) 상한.
-
-## A3. 쉼터 air_conditioned 조건부 백필 【간판·데이터】
-- **무엇**: 쉼터는 CSV 스냅샷 경로로 적재돼 **air_conditioned feature가 없다**(그 백필은 API 서비스 `ShelterIngestionService` 전용인데 IP 제한으로 prod 미사용). 냉방기 보유(COLR_HOLD_ARCNDTN>0) 쉼터에 air_conditioned(낮은 confidence) 부여.
-- **접근(택1)**: (a) 로컬(등록 IP)에서 스냅샷 재생성 시 CSV에 `COLR_HOLD_ARCNDTN` 컬럼 포함 → `SourceSpec`/`StandardCsvParser`에 **조건부 feature 백필** 지원 추가(또는 `SourceSpec.defaultFeatures` 확장) → CSV 재적재. (b) safetydata **IP 해제 후** `prod-ingest-shelter.sh`(API 서비스, 이미 백필 로직 보유)로 적재.
-- **연계**: A1(comfort SQL 통합)과 합치면 냉방쉼터 comfort↑가 실동작.
-- **함정**: 조건부(냉방기>0만). 재적재는 `.local/safetydata.env` 등록 IP(로컬 세션)에서 다운로드.
-
-## A4. 급증 알림 프론트 구독 + 지도 급증 배지 【간판·프론트】
-- **무엇**: 백엔드 `GET /alerts/stream`(SSE)·`GET /alerts/surge?bounds=`(스냅샷) 라이브(#44). 프론트에서 **EventSource 구독** → 지도에 "제보 급증" 배지/토스트, 리스트 강조.
-- **어디서**: `frontend/app/(shell)/page.tsx`(홈 지도), `lib`, BFF(`app/api`). SSE는 BFF로 프록시(ADR-0004, text/event-stream 패스스루).
-- **왜**: 실시간 UGC 시공간(간판)의 사용자 체감 완성.
-- **함정**: SSE 재연결/백오프, BFF의 스트리밍 프록시(청크·keep-alive), 표현 순화(§6).
-
-## A5. popular-times 히트맵 UI 【살·프론트】
-- **무엇**: 백엔드 `GET /places/{id}/popular-times`(요일×시간 집계, Redis 1h 캐시) 라이브(#45·#53). 상세 화면에 히트맵/시간대 막대.
-- **어디서**: `frontend/components/place/PlaceDetailOverlay.tsx`. **`dataviz` 스킬로 차트 규격** 준수(색·접근성·다크모드).
-- **함정**: 데이터 희소(제보 적은 장소)일 때 폴백 표시. 간판 안 가리게.
-
-## A6. 후기 커뮤니티 최소 UI (댓글·리액션) 【살·프론트】
-- **무엇**: 백엔드 `POST/GET /reviews/{id}/comments`·`POST/DELETE /reactions`(#49) 라이브. 상세 후기에 **최소** 댓글 목록/작성 + "유용했어요" 토글.
-- **왜/규율**: §0-9 — 커뮤니티가 **전면에 나오지 않게**(간판 우선). 리뷰앱화 금지.
-- **함정**: 로그인 게이팅, 낙관적 UI, 리액션 멱등(카운트).
-
-## A7. 관심 장소(bookmarks) — 테이블·API·UI 【살, B1 선행 의존성】
-- **무엇**: ERD `bookmarks(user_id, place_id, memo, created_at)` **미구현**. 저장/해제 + 마이페이지 목록. **B1 알림의 "관심 장소 상태 변화"의 선행**이라 A에서 먼저.
-- **어디서**: 신규 `domain.bookmark`, Flyway **V14**(V13은 A1이 선점 가능 — 번호 충돌 주의), API `POST /bookmarks`·`DELETE /bookmarks/{placeId}`·`GET /me/bookmarks`. 프론트 상세 "저장" 버튼 + 마이페이지 탭.
-- **함정**: 유니크(user_id, place_id), 로그인 필요.
-
-## A8. 상권 카페/스터디카페 전국 확장 【데이터·간판】
-- **무엇**: 현재 **서울만**(distinct 29,886). `prod-ingest-stores.sh`에 더 큰 bbox로 광역시→전국 확대(멱등).
-- **어디서**: `infra/scripts/prod-ingest-stores.sh <minLng,minLat,maxLng,maxLat> [radius]`. 6대 광역시부터 단계적.
-- **함정**: data.go.kr **일일 호출 한도**(격자 셀×2코드) — 하루 단위로 나눠 실행. `aws ecs wait` 10분 캡(대형 격자는 로그/exitCode로 판정, WORKLOG 참고).
-
-## A9. Fargate task_cpu 512 (조건부) 【인프라】
-- **무엇**: 부팅 93초 단축(TS-005 근본 해결). **트래픽·부하가 붙을 때만**. 지금은 대기.
-- **어디서**: `infra/terraform`(task def cpu). k6 부하 결과로 판단.
+라이브(태스크데프 **rev56**): API·App 200 · `/me/bookmarks`·`/notifications` 401 · `/routes/toilet` 200. Flyway **V13·V14·V15** 적용. 상세 근거는 `WORKLOG.md`(2026-07-10 A1~B2·데이터 op 항목) + ADR 0017~0019.
 
 ---
 
-# B. 심화 tier (신규 대형 — ADR 선행 필수)
+## 🎯 다음 세션 후속 백로그 (F1~F6)
 
-## B1. 알림 (Notifications) 【심화, CLAUDE.md §3·§9】
-- **무엇**: ① 내 주변 침수/벌레 **급증 알림**, ② **관심 장소 상태 변화**(A7 bookmarks 의존), ③ **폭염 피난 추천**(날씨 트리거). ERD `notifications(id, user_id, type, condition_json, is_active, created_at)` — **미구현**.
-- **선행 ADR**: 전달 방식 결정 — **PWA Web Push(VAPID)** vs **인앱 알림 센터(+기존 SSE)**. 권장: 인앱 센터 + SSE를 MVP로, Web Push는 stretch(VAPID 키는 `web-push`로 직접 생성 가능 → `.local`/SSM). 2026 트렌드(Web Push on iOS PWA 지원) 웹검색 확인 후 결정, WORKLOG 기록.
-- **재사용**: `domain.alert`(LISTEN/NOTIFY→SSE, `ReportNotificationListener`·`SurgeEmitterRegistry`) — 급증 신호 인프라 그대로. `domain.weather`(폭염 트리거). `bookmarks`(A7).
-- **구현 조각**:
-  1. Flyway: `notifications`(규칙) + 필요시 `notification_deliveries`(발송 이력·dedup).
-  2. `domain.notification`: 규칙 CRUD `POST /notifications/rules`·`GET /notifications/rules`·`PATCH .../{id}`(활성 토글), 평가기(제보 급증 이벤트/스케줄에서 규칙 매칭 → 발송).
-  3. 전달: 인앱(`GET /notifications` 폴링 또는 SSE 확장) → (stretch) Web Push(service worker `push` 핸들러 + VAPID).
-  4. 프론트: 알림 설정 UI(반경·타입) + 알림 센터 + (Web Push 권한 요청).
-- **규율/함정**: **§6 공포 조장 금지**("위험!" 금지 → "최근 침수 제보, 우회 권장"). **dedup/rate**(같은 급증을 반복 알림 금지 — cooldown). 위치 프라이버시(규칙의 반경 중심좌표 저장 최소화). Web Push 키는 비밀(§D).
-- **수용 기준**: 규칙 생성 → 조건 충족 시 1회 알림(중복 없이) → 인앱 표시. IT.
+> 실행 순서 권장: **쿼터만 있으면 되는 것(F1)** → **사용자 액션이 필요한 것(F2·F3)** → **트래픽/설계 대기(F4·F5·F6)**. 각 항목 = 코드 있는 것은 1 PR, 데이터 op는 스크립트.
 
-## B2. 루트 (Routes) 【심화, 가장 큼·리스크】
-- **무엇**: ① **화장실 포함 경로**(A→B 중간에 화장실 경유), ② **그늘 경로**, ③ **비 피하는 경로**.
-- **선행 ADR + 외부 결정**: 자체 라우팅(pgRouting=도로망 데이터 대공사)은 과설계 → **외부 경로 API + 우리 POI 오버레이**가 현실적. 후보: **카카오모빌리티 길찾기 API**(활용신청·키 필요 → 사용자 액션 가능) 또는 OSRM 자가호스팅. 웹검색으로 2026 국내 길찾기 API 옵션·쿼터·요금 확인 후 ADR.
-- **현실적 스코프(단계)**:
-  1. **화장실 포함 경로(MVP)**: A→B에서 `/places/nearest?type=TOILET` 경유지 1개 삽입 → 외부 directions API로 waypoint 경로. **먼저 구현**.
-  2. **그늘/비 경로(심화)**: 경로상 그늘 POI 밀도·강수 가중은 난도 높음 → **단순화**(경로 주변 그늘/실내 POI 표시) 또는 설계만 기록하고 후속. 무리한 자체 가중 라우팅은 §0-2(과설계 금지)로 지양.
-- **함정**: 외부 API 키(사용자 활용신청 필요 시 **한 줄 제안 후 진행**), 쿼터·요금, 경로 좌표계, 표현 순화(§6).
-- **수용 기준**: 화장실 포함 경로 1개 시나리오 end-to-end(출발·도착 → 경유 화장실 → 경로 폴리라인). 그늘/비는 ADR에 스코프 명시.
+### F1. A8 상권 나머지 지역 확장 【데이터·간판 · 사용자 쿼터만】 ← 바로 가능
+- **무엇**: 현재 서울(distinct 29,886) + 6대 광역시 적재됨. 나머지 도시(수원·성남·용인·창원·청주·전주·천안·포항·김해·제주 등)로 확대(멱등).
+- **어떻게**: `./infra/scripts/prod-ingest-stores.sh <minLng,minLat,maxLng,maxLat> 1500` — **반드시 한 번에 하나씩(순차)**. ⚠️ **`IngestBatchLock`이 동시 실행을 막는다** — 병렬로 띄우면 뒤 태스크가 skip(exitCode 0이나 미적재, WORKLOG 2026-07-10 A8 함정). data.go.kr **일일 쿼터**라 하루 단위로 나눠. 완료 판정은 로그 `[store-api] ingestArea 완료`(스크립트 `aws ecs wait` 10분 캡 주의).
+- **수용 기준**: 대상 도시 `/places?category=CAFE` 200. resultCode 쿼터 에러 나오면 다음 날.
+
+### F2. B1 Web Push 전송 배선 【심화·stretch · 실기기 검증 필요】
+- **무엇**: 인앱 알림 센터(B1 본체)는 라이브. 실제 브라우저 푸시를 얹는다. **VAPID 키는 이미 생성됨**(`.local/webpush.env` — 공개키/개인키, gitignore).
+- **구현 조각**: (1) Flyway `push_subscriptions(user_id, endpoint, p256dh, auth)` + `POST /push/subscribe`. (2) 서버 전송(web-push 라이브러리 = BouncyCastle 크립토 의존성) — `NotificationService.onSurge`에서 인앱 delivery와 함께 push, **feature flag 게이팅**(회귀 0). (3) 프론트 service worker `push`·`notificationclick` + 권한요청 + 구독(공개 VAPID). 키는 SSM/env(§D).
+- **⚠️ 왜 미착수**: end-to-end 푸시는 **설치형 PWA(iOS 홈화면 추가 필수 — 웹 트렌드 ADR-0018)** 실기기라야 검증 가능. 검증 불가한 크립토 코드를 클린 프로덕션에 blind ship 안 함(§0-2·TS-026 정신). **실기기(안드로이드/설치 PWA) 준비 시 착수.**
+- **수용 기준**: 실기기 구독 → 급증 발생 → OS 알림 1회. 인앱 센터 회귀 0.
+
+### F3. B2 카카오모빌리티 도로 폴리라인 【심화 · 사용자 활용신청 키】
+- **무엇**: B2 화장실 경로는 직선 MVP(`mode=straight`) 라이브. 실제 도로 폴리라인으로 승격.
+- **어떻게**: 카카오모빌리티 다중경유지 길찾기(`POST https://apis-navi.kakaomobility.com/v1/waypoints/directions`) **활용신청·키**(사용자 액션). 키 확보 시 → `DirectionsProvider` **Kakao 구현체**(TS-026 실호출 계약검증) 빈으로 얹으면 `RouteService` 무변경으로 `mode=road` 승격. 키는 `.local`/SSM(§D). 프론트 **지도 폴리라인 오버레이 UI**(KakaoMapLive polyline).
+- **수용 기준**: `/routes/toilet` `mode=road`+도로 폴리라인. 상세 "화장실 들러 가기"가 지도에 경로 표시.
+
+### F4. B2 그늘/비 경로 【심화 · 설계】
+- **무엇**: ADR-0019 스코프만 기록. **단순화**: 경로 주변 그늘/실내 POI(쉼터·도서관·지하상가) 오버레이 표시(자체 가중 라우팅은 §0-2 지양). F3 이후.
+
+### F5. HEAT_ESCAPE 알림 평가 【심화 · 날씨 트리거】
+- **무엇**: B1 `NotificationRuleType.HEAT_ESCAPE` 타입은 정의됐으나 평가 미구현(ADR-0018). 폭염(날씨) 트리거로 근처 쉼터 피난 추천.
+- **어떻게**: 급증(LISTEN/NOTIFY)과 달리 날씨 이벤트라 **주기 평가** 필요 → 기존 EventBridge 주기동기화 스케줄 재사용 또는 조회 시 온디맨드(새 스케줄러는 §0-2 지양). `domain.weather` 폭염 판정 + `notification_deliveries` 발송(dedup 재사용).
+
+### F6. A9 Fargate task_cpu 512 【인프라 · 트래픽 대기】
+- **무엇**: 부팅 93초 단축(TS-005 근본). **트래픽·부하 붙을 때만**(§0-2). k6 재부하 결과로 판단. 지금 대기.
 
 ---
 
-# 조건부/의존 항목 (사용자·외부 상태 대기)
-- **safetydata 자동 동기화**: 사용자가 safetydata 키 **IP 제한 해제**(allow-all) 시 → `domain.ingest.safetydata`(구현·테스트 완료) + `prod-ingest-shelter.sh`로 ECS 직접 API + EventBridge 주기 동기화 배선. (HANDOFF ⏳/README 참고. IP 안 풀리면 로컬 스냅샷 재적재로 유지.)
-- **B2 외부 경로 API 키**: 카카오모빌리티 등 활용신청 필요 시 사용자 액션.
-- **B1 Web Push VAPID 키**: `web-push` CLI로 생성 가능(사용자 승인 후 `.local`/SSM).
+## 신규 심화 아이디어 (선택 — 제안 후 착수)
+- **P5 실사용**: 동작구(상도·노량진) UGC 필드테스트·시딩(콜드스타트, 배포는 라이브).
+- **관측성 심화**: Grafana 대시보드·알림 규칙, k6 재부하 + EXPLAIN 재튜닝(신규 뷰 V13 포함).
+- **A1 후속**: 부정 시설(소음) 별도 risk 채널(현재는 comfort 상쇄만, ADR-0017 한계).
 
 ---
 
-# 완료 체크리스트 (다음 세션이 갱신)
-- [x] A1 comfort SQL 통합 (V13) — 뷰 place_feature_signals + SurvivalScore 단조 상승(ADR-0017). 머지 완료(#61).
-- [x] A2 verified→trust — TrustScore verified 보너스(캡 20), countByUserIdAndVerifiedTrue. 머지 완료(#62).
-- [x] A3 쉼터 air_conditioned 백필 — CSV 파이프라인 조건부 백필 코드(냉방기>0). 실 재적재는 대량 재적재(사용자 입력 지점). 머지 완료(#63).
-- [x] A4 급증 SSE 프론트 구독 — EventSource + 스냅샷 폴링, SurgeBanner(§6 중립). 머지 완료(#64).
-- [x] A5 popular-times 히트맵 UI — 요일선택+24h 스트립(발산 팔레트 검증). 프론트 CI green.
-- [x] A6 커뮤니티 최소 UI — 후기 댓글(지연 로드)+유용해요 토글, 최소 표면(§0-9). 프론트 CI green.
-- [x] A7 bookmarks (테이블·API·UI) — V14 + domain.bookmark + BookmarkButton/마이페이지. CI pass 후 머지.
-- [x] A8 상권 전국 확장 — 6대 광역시(부산·대구·인천·대전·광주·울산) 적재 완료(≈37,618행). 중소도시는 쿼터상 후속.
-- [ ] A9 Fargate cpu 512 (조건부)
-- [x] B1 알림 (ADR + 구현) — V15 + domain.notification + 급증 재사용 평가 + 인앱 센터(ADR-0018). CI pass 후 머지.
-- [x] B2 루트 (ADR + 화장실 경로 MVP) — domain.route + detour 최소 경유지(PostGIS) + 직선 MVP(ADR-0019). 도로 폴리라인은 카카오 키 후속. CI pass 후 머지.
+## 완료 체크리스트 (2026-07-10 세션)
+- [x] A1 comfort SQL 통합 (V13, ADR-0017) — #61
+- [x] A2 verified→trust — #62
+- [x] A3 쉼터 air_conditioned 백필 (코드 #63 + 실 재적재 57,070)
+- [x] A4 급증 SSE 프론트 — #64
+- [x] A5 popular-times 히트맵 — #65
+- [x] A6 커뮤니티 최소 UI — #66
+- [x] A7 bookmarks (V14) — #67
+- [x] A8 상권 전국 확장 (6대 광역시)
+- [x] B1 알림 (V15, ADR-0018) — #68
+- [x] B2 루트 (ADR-0019) — #69
+- [ ] A9 Fargate cpu 512 → **F6** (트래픽 대기)
 
-> 각 완료 시: WORKLOG(무엇/왜/대안) + 필요시 ADR + TROUBLESHOOTING(사고) 기록, 이 체크박스와 HANDOFF 갱신.
+> 다음 세션: 위 **F1~F6 중 준비된 것부터**(F1은 쿼터만, 바로 가능). 완료 시 WORKLOG·ADR·HANDOFF 갱신.
