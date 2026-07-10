@@ -35,16 +35,13 @@
 - **어떻게**: `./infra/scripts/prod-ingest-stores.sh <minLng,minLat,maxLng,maxLat> 1500` — **반드시 한 번에 하나씩(순차)**. ⚠️ **`IngestBatchLock`이 동시 실행을 막는다** — 병렬로 띄우면 뒤 태스크가 skip(exitCode 0이나 미적재, WORKLOG 2026-07-10 A8 함정). data.go.kr **일일 쿼터**라 하루 단위로 나눠. 완료 판정은 로그 `[store-api] ingestArea 완료`(스크립트 `aws ecs wait` 10분 캡 주의).
 - **수용 기준**: 대상 도시 `/places?category=CAFE` 200. resultCode 쿼터 에러 나오면 다음 날.
 
-### F2. B1 Web Push 전송 배선 【심화·stretch · 실기기 검증 필요】
-- **무엇**: 인앱 알림 센터(B1 본체)는 라이브. 실제 브라우저 푸시를 얹는다. **VAPID 키는 이미 생성됨**(`.local/webpush.env` — 공개키/개인키, gitignore).
-- **구현 조각**: (1) Flyway `push_subscriptions(user_id, endpoint, p256dh, auth)` + `POST /push/subscribe`. (2) 서버 전송(web-push 라이브러리 = BouncyCastle 크립토 의존성) — `NotificationService.onSurge`에서 인앱 delivery와 함께 push, **feature flag 게이팅**(회귀 0). (3) 프론트 service worker `push`·`notificationclick` + 권한요청 + 구독(공개 VAPID). 키는 SSM/env(§D).
-- **⚠️ 왜 미착수**: end-to-end 푸시는 **설치형 PWA(iOS 홈화면 추가 필수 — 웹 트렌드 ADR-0018)** 실기기라야 검증 가능. 검증 불가한 크립토 코드를 클린 프로덕션에 blind ship 안 함(§0-2·TS-026 정신). **실기기(안드로이드/설치 PWA) 준비 시 착수.**
-- **수용 기준**: 실기기 구독 → 급증 발생 → OS 알림 1회. 인앱 센터 회귀 0.
+### ~~F2. B1 Web Push 전송 배선~~ ✅ 코드완료 (2026-07-11, PR #77, ADR-0022) — 실기기 최종확인만 남음
+- **한 것**: `domain.push`(V16 push_subscriptions·PushService·PushController `/push/subscribe|test|public-key`·WebPushConfig)·HEAT_ESCAPE에 push additive·프론트 Serwist SW `push`/`notificationclick`+구독 UI. **라이브러리 = `zerodep-web-push-java`**(JDK 내장 crypto, BouncyCastle 없음 → ADR-0018 미룬 사유 해소). `push.enabled` 플래그(기본 off=회귀 0). VAPID 키 SSM/env로 활성화. 단위테스트 6건.
+- **함정**: Boot 4=Jackson 3라 Jackson2 `ObjectMapper` 주입 시 컨텍스트 부팅 실패(TS-028, CI에서만 드러남) → 직접 직렬화로 해소.
+- **남은 것**: 활성화 배포 후 **실기기(설치형 PWA)에서 `/push/test`로 OS 배너 1회 최종 확인**(iOS는 Safari 설치 PWA 필수).
 
-### F3. B2 카카오모빌리티 도로 폴리라인 【심화 · 사용자 활용신청 키】
-- **무엇**: B2 화장실 경로는 직선 MVP(`mode=straight`) 라이브. 실제 도로 폴리라인으로 승격.
-- **어떻게**: 카카오모빌리티 다중경유지 길찾기(`POST https://apis-navi.kakaomobility.com/v1/waypoints/directions`) **활용신청·키**(사용자 액션). 키 확보 시 → `DirectionsProvider` **Kakao 구현체**(TS-026 실호출 계약검증) 빈으로 얹으면 `RouteService` 무변경으로 `mode=road` 승격. 키는 `.local`/SSM(§D). 프론트 **지도 폴리라인 오버레이 UI**(KakaoMapLive polyline).
-- **수용 기준**: `/routes/toilet` `mode=road`+도로 폴리라인. 상세 "화장실 들러 가기"가 지도에 경로 표시.
+### ~~F3. B2 카카오모빌리티 도로 폴리라인~~ ✅ 완료·라이브 (2026-07-11, PR #76, ADR-0021)
+- **한 것**: `KakaoDirectionsProvider`(@Primary) — `POST apis-navi.kakaomobility.com/v1/waypoints/directions`. **핵심: 새 키 발급 불필요** — 기존 카카오 REST 키(지오코딩/로그인용, 이미 SSM 배선)가 navi 엔드포인트에 인가됨을 실호출 계약검증(TS-026). 프론트 `RouteMiniMap` 폴리라인 오버레이(road 실선/straight 점선). **라이브 검증: `/routes/toilet` mode=road, 113정점, 실 경유 화장실.** 키 없으면 직선 폴백(graceful).
 
 ### F4. B2 그늘/비 경로 【심화 · 설계】
 - **무엇**: ADR-0019 스코프만 기록. **단순화**: 경로 주변 그늘/실내 POI(쉼터·도서관·지하상가) 오버레이 표시(자체 가중 라우팅은 §0-2 지양). F3 이후.
