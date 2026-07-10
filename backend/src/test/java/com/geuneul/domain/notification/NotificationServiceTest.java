@@ -40,6 +40,7 @@ class NotificationServiceTest {
     private NotificationDeliveryRepository deliveryRepository;
     private WeatherService weatherService;
     private PlaceRepository placeRepository;
+    private com.geuneul.domain.push.PushService pushService;
     private NotificationService service;
 
     @BeforeEach
@@ -48,7 +49,9 @@ class NotificationServiceTest {
         deliveryRepository = mock(NotificationDeliveryRepository.class);
         weatherService = mock(WeatherService.class);
         placeRepository = mock(PlaceRepository.class);
-        service = new NotificationService(ruleRepository, deliveryRepository, weatherService, placeRepository);
+        pushService = mock(com.geuneul.domain.push.PushService.class);
+        service = new NotificationService(ruleRepository, deliveryRepository, weatherService, placeRepository,
+                pushService);
     }
 
     @Test

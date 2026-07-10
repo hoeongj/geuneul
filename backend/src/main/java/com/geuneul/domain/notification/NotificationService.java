@@ -6,6 +6,7 @@ import com.geuneul.domain.notification.dto.NotificationRuleRequest;
 import com.geuneul.domain.notification.dto.NotificationRuleResponse;
 import com.geuneul.domain.place.PlaceDistanceView;
 import com.geuneul.domain.place.PlaceRepository;
+import com.geuneul.domain.push.PushService;
 import com.geuneul.domain.weather.HeatComfort;
 import com.geuneul.domain.weather.Weather;
 import com.geuneul.domain.weather.WeatherService;
@@ -40,15 +41,18 @@ public class NotificationService {
     private final NotificationDeliveryRepository deliveryRepository;
     private final WeatherService weatherService;
     private final PlaceRepository placeRepository;
+    private final PushService pushService;
 
     public NotificationService(NotificationRuleRepository ruleRepository,
                                NotificationDeliveryRepository deliveryRepository,
                                WeatherService weatherService,
-                               PlaceRepository placeRepository) {
+                               PlaceRepository placeRepository,
+                               PushService pushService) {
         this.ruleRepository = ruleRepository;
         this.deliveryRepository = deliveryRepository;
         this.weatherService = weatherService;
         this.placeRepository = placeRepository;
+        this.pushService = pushService;
     }
 
     // --- 규칙 CRUD ---
@@ -179,6 +183,8 @@ public class NotificationService {
                 rule.getUserId(), rule.getId(), shelter.getId(), title, body, dedupKey);
         if (inserted > 0) {
             log.info("[notify] 폭염 피난 발송 ruleId={} shelterId={} feels={}", rule.getId(), shelter.getId(), feels);
+            // 인앱 센터에 이어 OS 배너도(F2) — push 비활성이면 no-op, 실패는 격리(회귀 0).
+            pushService.sendToUser(rule.getUserId(), title, body, "/");
         }
     }
 
