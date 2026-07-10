@@ -4,10 +4,12 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import type { MapBounds, ReportCreatePayload, Scenario } from "@/types/place";
 import type { ReviewCreatePayload } from "@/types/review";
 import {
+  addBookmark,
   createReport,
   createReview,
   createReviewComment,
   fetchByBounds,
+  fetchMyBookmarks,
   fetchByRadius,
   fetchMe,
   fetchNearestAny,
@@ -18,6 +20,7 @@ import {
   fetchReviewComments,
   fetchUrgent,
   logout,
+  removeBookmark,
 } from "./api";
 
 // 뷰포트 이동(bounds) 시 마커 재조회. keepPreviousData 로 패닝 중 깜빡임 방지 → 과호출/리렌더 최소화.
@@ -138,6 +141,27 @@ export function useMe() {
     queryFn: fetchMe,
     staleTime: 60_000,
     retry: false,
+  });
+}
+
+// 내 관심 장소 목록(로그인 시에만 조회 — 미로그인은 enabled=false로 401 회피).
+export function useMyBookmarks(enabled: boolean) {
+  return useQuery({
+    queryKey: ["bookmarks"],
+    queryFn: fetchMyBookmarks,
+    enabled,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+// 관심 장소 저장/해제 토글 — 성공 시 목록 캐시 무효화(상세 버튼·마이페이지가 함께 갱신).
+export function useToggleBookmark() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ placeId, next }: { placeId: number; next: boolean }) =>
+      next ? addBookmark(placeId) : removeBookmark(placeId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
   });
 }
 

@@ -1,5 +1,6 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { SurgeInfo } from "@/types/alert";
+import type { Bookmark, BookmarkToggle } from "@/types/bookmark";
 import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from "@/types/community";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
@@ -104,6 +105,33 @@ export async function fetchMe(): Promise<User | null> {
   if (res.status === 401) return null;
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<User>;
+}
+
+// 내 관심 장소 목록(로그인 필요). 미로그인(401)이면 빈 배열로 처리(호출부 enabled 게이팅과 함께).
+export function fetchMyBookmarks(): Promise<Bookmark[]> {
+  return getJson<Bookmark[]>(`/api/me/bookmarks`);
+}
+
+// 관심 장소 저장(로그인 필요, 멱등 upsert).
+export async function addBookmark(placeId: number, memo?: string): Promise<BookmarkToggle> {
+  const res = await fetch(`/api/bookmarks`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ placeId, memo }),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<BookmarkToggle>;
+}
+
+// 관심 장소 해제(로그인 필요, 멱등).
+export async function removeBookmark(placeId: number): Promise<BookmarkToggle> {
+  const res = await fetch(`/api/bookmarks/${placeId}`, {
+    method: "DELETE",
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<BookmarkToggle>;
 }
 
 // 로그아웃 — 세션 쿠키 삭제(서버 무상태).
