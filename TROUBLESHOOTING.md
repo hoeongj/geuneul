@@ -387,3 +387,25 @@ HttpMessageNotWritableException ... java.io.IOException: Broken pipe`.
 타임아웃→Broken pipe로 되돌아온다. 전송은 비동기로 떼고 응답은 즉시. ② `java.net.http.HttpClient`엔 반드시
 connect/request 타임아웃을 준다(기본은 무한 대기). ③ 비동기 콜백에서 DB 쓰기는 요청 트랜잭션 밖이므로 별도
 @Transactional 빈을 거친다.
+
+## TS-030 — 다수 IT 컨텍스트가 단일 Testcontainers Postgres의 max_connections를 소진 → 새 컨텍스트 Flyway "too many clients"
+**상황**: N6 "내 글 관리" IT(`MyActivityFlowIT`)를 추가하자 **내 코드와 무관한** `ActuatorPrometheusOptInIT` 2건이
+CI에서 실패. 스택: 컨텍스트 로드 → `BeanCreationException` → `FlywaySqlUnableToConnectToDbException` →
+`org.postgresql.util.PSQLException`(ConnectionFactoryImpl). 재실행해도 재현(플래키 아님). 내 diff는 actuator·Flyway·
+datasource·AbstractIntegrationTest를 안 건드림.
+
+**원인**: `AbstractIntegrationTest`는 `@ServiceConnection`으로 HikariCP 풀(**기본 max 10**)을 붙인다. 각 IT가
+**고유 프로퍼티**(`jwt.secret=...` 7종, `management.exposure=...` 등)로 **서로 다른 Spring 컨텍스트**를 만들고, Spring
+TestContext 캐시(기본 maxSize 32)가 그 컨텍스트들을 **전부 살려둔다** → 컨텍스트마다 HikariCP 풀이 상주해
+**~10개 컨텍스트 × 10 = ~100 커넥션**이 단일 Testcontainers Postgres의 `max_connections`(기본 100)에 육박. 임계
+근처에서 컨텍스트를 **하나 더**(내 IT) 추가하자 그 다음 초기화되는 컨텍스트의 Flyway 접속이 "too many clients"로
+실패. 즉 **접속 총량 회귀**지, 내 로직 버그가 아니다(로직 버그면 NoSuchBean 등 다른 에러가 났을 것).
+
+**해결**: `AbstractIntegrationTest`의 `@TestPropertySource`에 `spring.datasource.hikari.maximum-pool-size=4`를 추가.
+서브클래스가 상속(inheritProperties)하므로 **모든 IT 컨텍스트의 풀이 4로 캡** → ~10 컨텍스트 × 4 = ~40 커넥션,
+100 아래로 안정. IT는 순차 MockMvc라 풀이 작아도 충분. 프로덕션은 컨텍스트가 하나뿐이라 무영향(테스트 프로퍼티만).
+
+**학습**: ① **"내가 안 건드린 IT가 커넥션 에러로 실패"는 십중팔구 접속 총량 소진** — 컨텍스트 수 × 풀 크기를 본다.
+② 컨텍스트별 고유 프로퍼티(jwt.secret 제각각 등)는 컨텍스트 캐시를 늘려 커넥션을 잠식한다 — 필요 없으면 프로퍼티를
+통일해 컨텍스트를 공유하는 게 근본적이나, **테스트 풀 캡**이 가장 수술적이고 컨텍스트 수 증가에도 견딘다. ③ 커넥션
+계열 실패(`PSQLException`/`too many clients`)와 로직/스키마 실패를 에러 종류로 구분해 오진(내 코드 탓)하지 말 것.

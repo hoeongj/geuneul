@@ -13,6 +13,7 @@ import java.util.List;
 public record ReviewResponse(
         @Schema(description = "후기 ID", example = "1") Long id,
         @Schema(description = "장소 ID", example = "1") Long placeId,
+        @Schema(description = "작성자 ID — 닉네임 탭 시 공개 프로필 이동(N7)", example = "5") Long authorId,
         @Schema(description = "작성자 닉네임", example = "그늘사랑") String authorNickname,
         @Schema(description = "작성자 프로필 이미지", nullable = true) String authorProfileImage,
         @Schema(description = "별점(1~5)", example = "5") int rating,
@@ -23,13 +24,13 @@ public record ReviewResponse(
 ) {
 
     public static ReviewResponse of(Review r, String nickname, String profileImage, List<String> photos) {
-        return new ReviewResponse(r.getId(), r.getPlaceId(), nickname, profileImage, r.getRating(),
+        return new ReviewResponse(r.getId(), r.getPlaceId(), r.getUserId(), nickname, profileImage, r.getRating(),
                 r.getComment(), photos, r.getCreatedAt(), r.getUpdatedAt());
     }
 
     public static ReviewResponse of(ReviewWithAuthorView v, List<String> photos) {
         // 네이티브 쿼리 프로젝션은 Instant로 받는다(ReviewWithAuthorView 주석, TS-016) — 여기서 UTC로 부착.
-        return new ReviewResponse(v.getId(), v.getPlaceId(), v.getNickname(), v.getProfileImage(),
+        return new ReviewResponse(v.getId(), v.getPlaceId(), v.getAuthorId(), v.getNickname(), v.getProfileImage(),
                 v.getRating(), v.getComment(), photos,
                 v.getCreatedAt().atOffset(ZoneOffset.UTC), v.getUpdatedAt().atOffset(ZoneOffset.UTC));
     }

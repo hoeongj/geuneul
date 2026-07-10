@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { ApiError, toggleReaction } from "@/lib/api";
+import { useSelectedUser } from "@/lib/context/selectedUser";
 import { useToast } from "@/lib/context/toast";
 import { usePhotoUpload } from "@/lib/hooks";
 import {
@@ -166,6 +167,7 @@ function ReviewComments({ reviewId, loggedIn }: { reviewId: number; loggedIn: bo
 // 후기 목록 — 공개 조회, 최신순. 제보(RecentReports)와 대칭 패턴.
 function ReviewList({ placeId, loggedIn }: { placeId: number; loggedIn: boolean }) {
   const { data, isLoading, isError } = usePlaceReviews(placeId);
+  const selectedUser = useSelectedUser();
   if (isLoading) {
     return <p className="py-1 text-[12.5px] text-muted">후기를 불러오는 중…</p>;
   }
@@ -182,7 +184,14 @@ function ReviewList({ placeId, loggedIn }: { placeId: number; loggedIn: boolean 
         <li key={r.id} className="border-b border-line-cream pb-3 last:border-none last:pb-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-[13px] font-bold text-ink">{r.authorNickname}</span>
+              {/* 닉네임 탭 → 작성자 공개 프로필(N7). 후기는 익명이 아니라 항상 작성자가 있다. */}
+              <button
+                type="button"
+                onClick={() => selectedUser.open(r.authorId)}
+                className="truncate text-[13px] font-bold text-ink underline-offset-2 active:underline"
+              >
+                {r.authorNickname}
+              </button>
               <Stars value={r.rating} />
             </div>
             <span className="shrink-0 text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
