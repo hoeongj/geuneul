@@ -4,6 +4,7 @@ import com.geuneul.domain.auth.AuthProvider;
 import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.auth.User;
 import com.geuneul.domain.auth.UserRepository;
+import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.review.dto.ReviewCreateRequest;
 import com.geuneul.domain.review.dto.ReviewListResponse;
@@ -15,9 +16,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Field;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -51,8 +54,10 @@ class ReviewServiceTest {
         userRepository = mock(UserRepository.class);
         trustScoreService = mock(TrustScoreService.class);
         // 실 Jackson 3 ObjectMapper — photos<->JSON 직렬화 계약을 실제로 태워 검증한다.
+        // PhotoService는 버킷 미설정(빈 문자열)이라 presignGet이 저장 URL을 그대로 통과시킨다(N1 passthrough 분기).
+        PhotoService photoService = new PhotoService(mock(S3Presigner.class), "", "ap-northeast-2", Clock.systemUTC());
         reviewService = new ReviewService(reviewRepository, placeRepository, userRepository,
-                trustScoreService, JsonMapper.builder().build());
+                trustScoreService, JsonMapper.builder().build(), photoService);
 
         when(placeRepository.existsById(1L)).thenReturn(true);
         when(userRepository.findById(10L)).thenReturn(Optional.of(user(10L, "그늘러버")));

@@ -88,11 +88,20 @@ function ReviewComments({ reviewId, loggedIn }: { reviewId: number; loggedIn: bo
     const comment = text.trim();
     if (!comment || mutation.isPending) return;
     mutation.mutate(comment, {
-      onSuccess: () => setText(""),
+      // 방금 쓴 댓글이 바로 보이도록 섹션을 펼친 채로 둔다(N2 — "개수만 늘고 내용 안 보임" 착시 제거).
+      onSuccess: () => {
+        setText("");
+        setOpen(true);
+      },
       onError: (err) =>
         show(err instanceof ApiError && err.status === 401 ? "로그인이 필요해요" : "댓글 등록에 실패했어요"),
     });
   };
+
+  // 카운트만 뜨고 내용이 숨는 착시를 없앤다(N2): 접힌 상태에선 "N개 보기"로 탭하면 열린다는 걸 명시하고,
+  // 펼친 상태에선 "N · 접기"로 토글 방향을 알려준다. 카운트는 한 번 펼친 뒤부터 캐시로 표시된다(지연 로드 유지).
+  const count = data?.length ?? 0;
+  const toggleLabel = count > 0 ? (open ? `댓글 ${count} · 접기` : `댓글 ${count}개 보기`) : "댓글";
 
   return (
     <div>
@@ -102,7 +111,7 @@ function ReviewComments({ reviewId, loggedIn }: { reviewId: number; loggedIn: bo
         aria-expanded={open}
         className="flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[12px] font-bold text-muted"
       >
-        💬 댓글{data && data.length > 0 ? ` ${data.length}` : ""}
+        💬 {toggleLabel}
       </button>
 
       {open && (
@@ -179,6 +188,15 @@ function ReviewList({ placeId, loggedIn }: { placeId: number; loggedIn: boolean 
             <span className="shrink-0 text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
           </div>
           {r.comment && <p className="mt-1 text-[12.5px] text-ink-3">{r.comment}</p>}
+          {/* 첨부 사진(N1) — 백엔드가 조회 시점 presigned GET URL로 내려준다(비공개 S3 403 해소). 가로 스크롤 썸네일. */}
+          {r.photos.length > 0 && (
+            <div className="mt-2 flex gap-1.5 overflow-x-auto">
+              {r.photos.map((src, i) => (
+                // eslint-disable-next-line @next/next/no-img-element -- presigned S3 GET URL(N1), next/image 도메인 화이트리스트 불필요
+                <img key={i} src={src} alt="" className="h-[72px] w-[72px] shrink-0 rounded-[8px] object-cover" />
+              ))}
+            </div>
+          )}
           {/* 2차 커뮤니티(살) — 유용해요 + 댓글. 최소 표면(§0-9). */}
           <div className="mt-2 flex items-start gap-2">
             <HelpfulToggle reviewId={r.id} loggedIn={loggedIn} />

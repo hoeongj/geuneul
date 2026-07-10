@@ -857,3 +857,14 @@
 ### 산출물
 - `docs/BACKLOG.md` 재구성(N1~N9 + 결정 로그) · `.claude/commands/geuneul-finish.md`(신규 명령어) · `HANDOFF.md` 갱신 · 이 WORKLOG. **코드 변경 없음(계획만).**
 - 실사용 확인분: F2 async 수정 라이브(rev61, enabled=true) — 실기기 재테스트 시 배너+성공 토스트 정상 기대.
+
+## 2026-07-11 — N1·N2·N3: 사진 표시 버그(공유 수정) + 댓글 UX + 제보 capture 제거 (PR #81)
+`/geuneul-finish` 실행 1차 — 실사용 버그/UX 3건을 1 PR로 묶었다(ReviewsSection.tsx 공유 수정 + 제보 입력).
+- **N1 사진 표시(버그·최우선, 리뷰·제보 공유 수정)**: 두 결함을 함께 고쳤다.
+  - (A, 프론트) `ReviewsSection` ReviewList에 `r.photos` 가로 스크롤 썸네일 `<img>` 루프 추가(72×72, `no-img-element` eslint-disable). 제보는 이미 `<img>`로 그렸다.
+  - (B, 백엔드·핵심 공유 수정) **presigned-GET-at-read**. `PhotoService.presignGet(String)`/`presignGet(List<String>)` 신설 — 저장된 비공개 S3 오브젝트 URL(`https://{bucket}.s3.{region}.amazonaws.com/{key}`)을 조회 시점에 1시간 서명 GET URL로 변환. **우리 버킷 오브젝트가 아니거나 버킷 미설정이면 원본 그대로 통과**(레거시·외부·테스트 무해). `ReviewService.create/listByPlace`·`ReportService.create/recentByPlace`가 응답 조립 시 호출. `ReportResponse.of(Report, photoUrl)` 오버로드 추가.
+- **왜 presigned-GET-at-read인가(why, 검토 대안)**: 버킷은 s3.tf가 **의도적으로 완전 비공개**(퍼블릭 액세스 블록·BucketOwnerEnforced·정책 없음, CloudFront는 ALB 오리진만) → raw 오브젝트 URL은 `<img>`에서 **403**. 대안 ① 버킷 퍼블릭 전환 = **거부**(s3.tf 의도 위반·UGC 사진 공개 노출). 대안 ② photos 버킷에 CloudFront+OAC 배포 = 새 배포·TF 추가로 더 무겁다. **presigned-GET-at-read**는 기존 인프라(S3Presigner 빈)만으로 서명 연산(네트워크 0)이라 가장 가볍고 비공개 원칙을 지킨다 → 채택. 트레이드오프: 서명이 응답마다 갱신돼 브라우저 이미지 캐시 재사용이 약함(응답 자체는 React Query가 캐시) — 커먼스 UGC라 허용, 최적화가 필요하면 CloudFront+OAC로 승격(확장점). TTL 1h = React Query 상세 캐시 창을 넉넉히 덮되 탈취 창은 짧게 유지하는 절충.
+- **N2 댓글 UX(버그·경미, 백엔드 무변경)**: `ReviewComments` — ① 댓글 작성 성공 시 `setOpen(true)`로 섹션을 펼친 채 유지(방금 쓴 댓글 즉시 노출). ② 토글 라벨을 상태 명시형으로 — 접힘+카운트 있으면 `"댓글 N개 보기"`(탭하면 열린다는 affordance), 펼침이면 `"댓글 N · 접기"`. "개수만 늘고 내용 안 보임" 착시 제거. 읽기 경로·`useCreateReviewComment` 무효화는 원래 정상(진단대로 stale 배포도 이 PR 머지로 Vercel 최신화).
+- **N3 제보 capture 제거(버그·1줄)**: `report/page.tsx` 사진 input의 `capture="environment"` 제거 → 리뷰 입력과 동일하게 네이티브 선택지(보관함/카메라/파일) 노출.
+- **검증**: 백엔드 `PhotoServiceTest`(presignGet 4케이스 추가: 자기버킷 서명·외부/null/빈 통과·버킷미설정 통과·List 매핑)·`ReviewServiceTest`·`ReportServiceTest`·`PopularTimesCacheProxyTest`(생성자 +PhotoService) 로컬 green. 프론트 tsc·eslint·build green. 마이그레이션 없음. IT는 CI 게이트(TS-009).
+- **관련**: CLAUDE.md §1/§5(제보/후기 분리)·§7(S3 presign)·§0-9(커뮤니티 최소 표면)·§D. BACKLOG N1·N2·N3. 버킷 퍼블릭 전환 금지 원칙 유지.

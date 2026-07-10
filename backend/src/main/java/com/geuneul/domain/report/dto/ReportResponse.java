@@ -23,13 +23,21 @@ public record ReportResponse(
 ) {
 
     public static ReportResponse of(Report r) {
+        return of(r, r.getPhotoUrl());
+    }
+
+    /**
+     * 사진 URL을 명시적으로 받는 오버로드(N1) — 비공개 S3 저장 URL은 그대로 못 보므로 읽기 경로에서
+     * PhotoService.presignGet으로 임시 GET 서명 URL로 변환한 값을 넘긴다. 나머지 필드는 동일.
+     */
+    public static ReportResponse of(Report r, String photoUrl) {
         return new ReportResponse(
                 r.getId(),
                 r.getPlaceId(),
                 r.getReportType().name(),
                 r.getReportType().label(),
                 r.getComment(),
-                r.getPhotoUrl(),
+                photoUrl,
                 r.isAnonymous(),
                 r.isVerified(),
                 r.getCreatedAt(),

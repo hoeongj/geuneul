@@ -176,7 +176,6 @@ export default function ReportPage() {
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture="environment"
           hidden
           onChange={(e) => {
             const file = e.target.files?.[0];
