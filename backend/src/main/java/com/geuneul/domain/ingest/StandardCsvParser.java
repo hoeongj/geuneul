@@ -32,7 +32,8 @@ public class StandardCsvParser {
             List<PlaceRow> rows,                 // 좌표 보유 행
             List<GeocodeCandidate> needGeocode,  // 좌표 없음 + 주소 있음 → 지오코딩 대상
             int totalRecords,
-            int skipped                          // 좌표도 주소도 못 살리는 행
+            int skipped,                         // 좌표도 주소도 못 살리는 행
+            java.util.Set<String> conditionalFeatureIds  // 조건부 백필(A3) 대상 external_id(예: 냉방기>0 쉼터)
     ) {
     }
 
@@ -52,6 +53,7 @@ public class StandardCsvParser {
 
         List<PlaceRow> rows = new ArrayList<>();
         List<GeocodeCandidate> needGeocode = new ArrayList<>();
+        java.util.Set<String> conditionalFeatureIds = new java.util.HashSet<>();
         int total = 0;
         int skipped = 0;
 
@@ -63,6 +65,10 @@ public class StandardCsvParser {
             String addrCol = findColumn(normalized, spec.addressAliases());
             String latCol = findColumn(normalized, spec.latAliases());   // 옵션 — 없으면 전행 지오코딩 경로
             String lngCol = findColumn(normalized, spec.lngAliases());
+            // 조건부 백필(A3): 컬럼이 CSV에 있을 때만 활성(옵션) — 없으면 no-op(기존 별칭 헤더 CSV 그대로 동작).
+            SourceSpec.ConditionalFeature conditional = spec.conditionalFeature();
+            String conditionalCol = conditional == null ? null
+                    : findColumn(normalized, conditional.columnAliases());
 
             for (CSVRecord record : parser) {
                 total++;
@@ -94,10 +100,19 @@ public class StandardCsvParser {
                     needGeocode.add(new GeocodeCandidate(externalId, name, address));
                 } else {
                     skipped++;
+                    continue;   // 장소가 안 실리면 feature도 무의미 — 조건부 백필 대상에서 제외
+                }
+
+                // 조건부 백필 판정: 수치 컬럼 값이 >0이면 이 external_id를 대상에 추가(냉방기 보유 쉼터 등).
+                if (conditionalCol != null) {
+                    Double n = parseDouble(get(record, conditionalCol));
+                    if (n != null && n > 0) {
+                        conditionalFeatureIds.add(externalId);
+                    }
                 }
             }
         }
-        return new Result(rows, needGeocode, total, skipped);
+        return new Result(rows, needGeocode, total, skipped, conditionalFeatureIds);
     }
 
     private static Map<String, String> normalizeHeaders(Map<String, Integer> headerMap) {

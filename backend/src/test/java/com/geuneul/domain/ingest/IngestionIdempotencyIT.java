@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +33,9 @@ class IngestionIdempotencyIT extends AbstractIntegrationTest {
 
     @Autowired
     FakeGeocodingClient fakeGeocoder;
+
+    @Autowired
+    JdbcTemplate jdbc;
 
     @TempDir
     Path tempDir;
@@ -73,6 +77,32 @@ class IngestionIdempotencyIT extends AbstractIntegrationTest {
 
         assertThat(second.geocodeReused()).isEqualTo(1);   // SD-005는 저장 좌표 재사용
         assertThat(fakeGeocoder.calls()).isEqualTo(3);     // 2 + 재시도 1(실패했던 SD-006만)
+    }
+
+    @Test
+    @DisplayName("A3: 냉방기 보유(COLR_HOLD_ARCNDTN>0) 쉼터에만 air_conditioned가 조건부 백필된다")
+    void backfillsAirConditionedForEquippedShelters() throws IOException {
+        Path csv = tempDir.resolve("shelter_aircon.csv");
+        Files.writeString(csv, """
+                RSTR_FCLTY_NO,RSTR_NM,RN_DTL_ADRES,LA,LO,COLR_HOLD_ARCNDTN
+                AC-2,냉방쉼터,서울 동작구 성대로 1,37.50,127.00,2
+                AC-0,비냉방쉼터,서울 동작구 성대로 2,37.51,127.01,0
+                """, StandardCharsets.UTF_8);
+
+        var summary = ingestionService.ingest(SourceSpec.COOLING_SHELTER, csv, StandardCharsets.UTF_8);
+
+        assertThat(summary.featuresBackfilled()).isEqualTo(1);   // AC-2만
+        assertThat(airConditionedCount("AC-2")).isEqualTo(1);
+        assertThat(airConditionedCount("AC-0")).isZero();
+    }
+
+    private int airConditionedCount(String externalId) {
+        Integer n = jdbc.queryForObject("""
+                SELECT count(*) FROM place_features f
+                JOIN places p ON p.id = f.place_id
+                WHERE p.source = ? AND p.source_external_id = ? AND f.feature_type = 'air_conditioned'
+                """, Integer.class, SourceSpec.COOLING_SHELTER.sourceKey(), externalId);
+        return n == null ? 0 : n;
     }
 
     @Test
