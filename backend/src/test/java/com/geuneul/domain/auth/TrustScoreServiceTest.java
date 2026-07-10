@@ -75,6 +75,24 @@ class TrustScoreServiceTest {
     }
 
     @Test
+    @DisplayName("방문인증(verified) 제보가 있으면 같은 제보 수라도 trust_score가 더 높다(A2 선순환)")
+    void verifiedReportsRaiseTrust() {
+        User withVerified = userCreatedDaysAgo(20L, 90);
+        when(userRepository.findById(20L)).thenReturn(Optional.of(withVerified));
+        when(reportRepository.countByUserId(20L)).thenReturn(20L);
+        when(reportRepository.countByUserIdAndVerifiedTrue(20L)).thenReturn(8L);
+        when(reviewRepository.countByUserId(20L)).thenReturn(5L);
+
+        trustScoreService.recalculate(20L);
+
+        // verifiedCount=8이 보너스로 반영된다(같은 20/5/90인데 verified만 0→8)
+        double withoutVerified = TrustScore.calculate(20, 5, 0, 90);
+        double expected = TrustScore.calculate(20, 5, 8, 90);
+        assertThat(expected).isGreaterThan(withoutVerified);
+        assertThat(withVerified.getTrustScore()).isCloseTo(expected, offset(0.001));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 유저면 아무 것도 하지 않는다 (방어적 — 삭제된 유저의 뒤늦은 콜백 등)")
     void missingUserIsNoop() {
         when(userRepository.findById(999L)).thenReturn(Optional.empty());

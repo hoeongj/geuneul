@@ -103,9 +103,9 @@
 ---
 
 # 완료 체크리스트 (다음 세션이 갱신)
-- [x] A1 comfort SQL 통합 (V13) — 뷰 place_feature_signals + SurvivalScore 단조 상승(ADR-0017). CI pass 후 머지.
-- [ ] A2 verified→trust
-- [x] A3 쉼터 air_conditioned 백필 — CSV 파이프라인 조건부 백필 코드(냉방기>0). 실 재적재는 대량 재적재(사용자 입력 지점).
+- [x] A1 comfort SQL 통합 (V13) — 뷰 place_feature_signals + SurvivalScore 단조 상승(ADR-0017). 머지 완료(#61).
+- [x] A2 verified→trust — TrustScore verified 보너스(캡 20), countByUserIdAndVerifiedTrue. CI pass 후 머지.
+- [x] A3 쉼터 air_conditioned 백필 — CSV 파이프라인 조건부 백필 코드(냉방기>0). 실 재적재는 대량 재적재(사용자 입력 지점). 머지 완료(#63).
 - [ ] A4 급증 SSE 프론트 구독
 - [ ] A5 popular-times 히트맵 UI
 - [ ] A6 커뮤니티 최소 UI

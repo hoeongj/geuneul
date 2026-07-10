@@ -23,6 +23,12 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     long countByUserId(Long userId);
 
     /**
+     * 유저의 GPS 방문인증(verified=true) 제보 수 — trust_score verified 보너스(A2). countByUserId의
+     * 부분집합이며, idx_reports_user(V6, user_id 부분 인덱스)로 좁힌 뒤 verified를 필터한다(전체스캔 없음).
+     */
+    long countByUserIdAndVerifiedTrue(Long userId);
+
+    /**
      * 시간대별 혼잡 파생(ADR-0005 §④, 자체 popular-times) — 한 장소의 제보 이력을 KST 기준 요일×시간으로 집계.
      * <b>만료 제보도 포함</b>한다(휘발성 규약은 스코어에만 적용 — 혼잡 패턴은 과거 이력을 채굴). place_id
      * 선필터라 idx_reports_place_created 경로를 타고, 정렬은 요일→시간. created_at은 timestamptz(UTC 저장)라

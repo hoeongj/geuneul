@@ -47,9 +47,10 @@ public class TrustScoreService {
     public void recalculate(long userId) {
         userRepository.findById(userId).ifPresent(user -> {
             long reportCount = reportRepository.countByUserId(userId);
+            long verifiedCount = reportRepository.countByUserIdAndVerifiedTrue(userId);
             long reviewCount = reviewRepository.countByUserId(userId);
             long accountAgeDays = Duration.between(user.getCreatedAt(), OffsetDateTime.now(clock)).toDays();
-            double score = TrustScore.calculate(reportCount, reviewCount, accountAgeDays);
+            double score = TrustScore.calculate(reportCount, reviewCount, verifiedCount, accountAgeDays);
             user.updateTrustScore(score);
             userRepository.save(user);
         });

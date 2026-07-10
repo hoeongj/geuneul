@@ -725,3 +725,12 @@
 - 남은 데이터 작업(사용자 입력 지점): 냉방 컬럼 포함 shelters.csv 재생성(등록 IP 로컬 + safetydata 키) → Release 업로드 → `prod-ingest.sh cooling_shelter <url> UTF-8`. 세션 마지막에 배치로 제안·수행.
 - 산출물: `SourceSpec`·`StandardCsvParser`·`IngestionService`(각 소폭) · 테스트 2파일. 마이그레이션 없음(place_features는 V2, 백필은 기존 경로).
 - 관련: docs/BACKLOG.md A3, ADR-0006(백필 규약)·ADR-0017(A1 comfort 통합 — 냉방쉼터 comfort↑ 실동작 연계), CLAUDE.md §4(무더위쉼터=기본 레이어)·§0-3(멱등).
+
+## 2026-07-10 — A2. verified 방문인증 → 유저 trust_score 연동 (브랜치 `feat/a2-verified-trust`)
+- 배경(docs/BACKLOG.md A2): `reports.verified`(V10, GPS 100m 방문인증)는 지금까지 **제보 단위**로만 place_report_signals 뷰에서 ×1.3 가중됐다. 방문인증 제보를 꾸준히 한 유저의 `trust_score`(V6 TrustScore 계보)를 **유저 단위**로도 올려, 그 유저의 이후 제보가 뷰 가중에서 더 실리는 선순환을 만든다(허위제보 억제 §0-7).
+- 한 일: ① `TrustScore.calculate`에 4-arg 오버로드(`reportCount, reviewCount, verifiedCount, accountAgeDays`) 추가 — `verifiedBonus = min(verifiedCount, 20)`을 contributions에 additive(3-arg는 verifiedCount=0으로 위임, 하위호환). ② `ReportRepository.countByUserIdAndVerifiedTrue`(파생 쿼리, idx_reports_user 경로) 추가. ③ `TrustScoreService.recalculate`가 verified 수를 세어 전달. ④ 단위·IT 테스트.
+- 왜(why): ① **왜 additive 보너스(별도 성분 아님)인가** — verified 제보는 그 자체가 이미 reportCount에 포함되므로, 보너스는 그 위에 추가 1 기여(=verified는 실질 2배 가중). 후기(2x)와 같은 "신호 강도 차등" 방식이라 기존 로그 스케일·곱(age 게이트) 구조를 그대로 재사용(공식 일관성). ② **왜 캡 20인가(§0-7 어뷰징)** — 한 장소에 눌러앉아 self-verify를 남발하는 어뷰징 차단. 레이트리밋(분3·시간10)+로그 포화가 1차 방어, 캡이 2차. 20이면 성실 인증 유저는 다 받고(이미 volume 상당) 무한 남발만 자른다. ③ **왜 온디맨드 재계산 유지인가** — 기존 TrustScoreService가 제보/후기 저장 직후 재계산(배치 아님, WORKLOG 2026-07-09 근거). verified 수 카운트 1회만 추가라 비용 미미, 새 트리거·스케줄 불필요(§0-2 과설계 금지). ④ **왜 곱 게이트를 verified가 못 넘는가** — verified 보너스도 volumeScore에만 기여하고 ageScore는 그대로라, age=0 신규 계정은 verified가 많아도 여전히 0(스팸 억제 목적 유지, 단위테스트 `verifiedCannotBypassAgeGate`로 고정).
+- 스코프 규율: 하위호환 100% — 3-arg 오버로드가 verifiedCount=0으로 위임해 기존 호출부·테스트 전부 불변(Mockito 미스텁 long은 0L이라 기존 서비스 테스트도 그대로 pass). 뷰(V10 ×1.3 제보단위 가중)는 안 건드림 — A2는 유저단위 신호만 추가.
+- 검증: 단위 green — `TrustScoreTest` 4건(3-arg 동치·verified 상승·캡 포화·age 게이트) + `TrustScoreServiceTest` 1건(verified 있으면 더 높음). IT — `GpsVisitVerifyIT`에 `countByUserIdAndVerifiedTrue` 실 DB 집계 1건(인증 2 + 비인증 1 → verified 2). 로컬 IT colima skip(TS-009) → **CI Backend(Gradle) pass 확인 후 머지**(TS-025).
+- 산출물: `TrustScore`·`TrustScoreService`·`ReportRepository`(각 소폭) · 테스트 3파일. 마이그레이션 없음(파생 쿼리는 기존 idx_reports_user 경로).
+- 관련: ADR-0005 §④(GPS 방문인증)·V6 trust 계보·V10 verified, CLAUDE.md §5·§0-7, docs/BACKLOG.md A2.
