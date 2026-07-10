@@ -1,6 +1,6 @@
 # ADR-0006. 공부 가능 공간(공공 + 카페) 데이터 커버리지 확장 — "여름 실내 오래 버티기" survival 레이어
 
-- 상태: **Accepted(구현 반영)** — 카테고리(CAFE/STUDY_CAFE)·스키마(is_commercial/deleted_at)·파서·인제스천 코드 완료(2026-07-09). **프로덕션 실적재는 미실행**(사용자 통제, `infra/scripts/prod-ingest.sh` 리뷰 후 실행). 상권정보(STUDY_CAFE/CAFE) 오픈API는 활용신청 미승인(403)이라 계약 미검증 상태로 코드만 준비됨 — 아래 "구현 정정" 참고.
+- 상태: **Accepted(구현 반영)** — 카테고리(CAFE/STUDY_CAFE)·스키마(is_commercial/deleted_at)·파서·인제스천 코드 완료(2026-07-09). **상권정보(STUDY_CAFE/CAFE) 오픈API 계약 검증 완료(2026-07-10)** — 활용신청 승인 확인(resultCode 00) 후 실호출로 응답 계약·업종코드 확정(아래 "구현 정정(2026-07-10)"·TS-026). 프로덕션 실적재는 머지→배포 후 `infra/scripts/prod-ingest-stores.sh`로 실행.
 - 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), `domain.ingest.openapi`(도서관)·`domain.ingest.storeapi`(상권정보) 신설, Flyway V5, ADR-0002(멱등)·ADR-0003(지오코딩), CLAUDE.md §3(커버리지 원칙)·§9(간판 vs 살)
 - 근거 조사: 다중 에이전트 리서치(공공 공부공간 데이터셋·노들서가류·카페 데이터·모델링) — wf_e524daf8. 구현 단계에서 도서관 오픈API 실호출로 원안의 핵심 가정 하나를 정정함(아래).
 
@@ -9,7 +9,7 @@
 원안(위 "결정" 섹션, 착수 시점 문서)은 소스별 접근 방식을 추정으로 정했으나, 실제 구현 중 **실 API 호출로 검증**한 결과 한 가지가 정정됐다(CLAUDE.md §B 의사결정 프로토콜 — 검증 후 재확정):
 
 - **전국도서관표준데이터 = CSV 다운로드가 아니라 JSON 오픈API로 적재.** 원안은 "오픈API는 경기도만 제공, CSV 다운로드가 전국"이라 추정했다(HANDOFF 메모 근거). 그러나 `https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api` 를 확보된 `.local/datago.env`의 `DATA_GO_KR_SERVICE_KEY`로 실호출한 결과 **지역 파라미터 없이 pageNo/numOfRows 페이지네이션만으로 전국 3,555건**을 반환했다(광주·서울 등 여러 시도 확인, `totalCount=3555`). CSV 다운로드보다 훨씬 단순하고(수동 파일 확보 불필요), 레코드마다 열람좌석수(`seatCo`)를 직접 제공해 ADR 원안의 "열람좌석수>0만 백필" 조건부 규칙을 CSV 경로의 균일 근사 없이 **그대로 정밀 구현**할 수 있었다(`domain.ingest.openapi.PublicLibraryIngestionService`).
-- **상권정보(STUDY_CAFE/CAFE)는 계약 미검증.** 같은 계정 키로 상가업소정보 오픈API(`B553077/api/open/sdsc2`)를 호출했으나 **403(활용신청 미승인)** — 도서관 API와 달리 별도 승인 절차가 있다. 코드(`domain.ingest.storeapi`)는 공식 매뉴얼·서드파티 가이드 리서치를 근거로 준비했지만, 실 필드명·enum 값(divId 등)을 확증하지 못해 **승인 후 재검증이 필요한 상태로 남겨뒀다.** 그래서 행정동코드 열거가 필요한 `storeListInDong` 대신, 우리 PostGIS 반경검색과 동일한 정신모델인 **반경 검색(`storeListInRadius`)**을 택했다 — 행정동코드 목록(또 다른 데이터셋)을 몰라도 격자 좌표 순회로 전국을 커버할 수 있어 승인 후 즉시 쓸 수 있는 형태.
+- **상권정보(STUDY_CAFE/CAFE)는 계약 미검증(2026-07-09) → 계약 검증 완료(2026-07-10).** 같은 계정 키로 상가업소정보 오픈API(`B553077/api/open/sdsc2`)를 호출했으나 승인 전엔 **403** — 도서관 API와 달리 별도 승인 절차가 있다. 행정동코드 열거가 필요한 `storeListInDong` 대신 우리 PostGIS 반경검색과 동일한 정신모델인 **반경 검색(`storeListInRadius`)**을 택했다(격자 좌표 순회로 전국 커버). 승인 후 실호출로 추정 계약을 **3군데 정정**했다(TS-026): ① 응답 봉투는 도서관 API 같은 `{response:{…}}` 래퍼가 **아니라 `{header,body}` 최상위**, ② 좌표(lon/lat)·페이지네이션(totalCount)은 문자열이 아니라 **JSON 숫자**, ③ 업종 소분류코드 확정 = **카페 `I21201`, 독서실/스터디카페 `R10202`**(추정 `I56191` 폐기). 코드 확정으로 (a) 분류명 텍스트 매칭 → **코드 기반 확정 분류**(`StoreCategoryMapper.classifyByCode`) 승격, (b) `indsSclsCd` **서버측 필터**로 대상 업종만 페이지네이션(전체 상가 수신 → 클라 필터의 호출량 낭비 제거). 격자 커버리지는 `StoreIngestionService.ingestArea(bbox,radius)`로 구현.
 
 ## 구현 결과 요약
 
@@ -76,7 +76,7 @@
 ## 착수 순서(Recommended Order) — 진행 상황(2026-07-09)
 
 0. **골격**: `PlaceCategory` += CAFE/STUDY_CAFE. — ✅ **완료**(프론트 categories 동기는 미착수, 백엔드만 이번 범위).
-1. 업종코드 매핑표(15067631)로 커피점·독서실/스터디카페 소분류 코드 실측 확정. — ❌ **미착수**(상권정보 API 승인 대기 중이라 코드값 대신 업종소분류명 텍스트 매칭으로 임시 구현, `StoreCategoryMapper`).
+1. 업종코드 매핑표로 커피점·독서실/스터디카페 소분류 코드 실측 확정. — ✅ **완료(2026-07-10)**: 승인 후 실호출로 **카페 `I21201`, 독서실/스터디카페 `R10202`** 확정. `StoreCategoryMapper`를 코드맵 authority로 승격(`targetCodes()`/`classifyByCode`), 분류명 매칭은 방어적 폴백으로 강등. 서버측 `indsSclsCd` 필터로 승격(TS-026).
 2. 스키마: `places` += `is_commercial`·`deleted_at`(V5). `IngestionService`/`PlaceBulkUpsertRepository` += set-based feature 백필 + 스냅샷 diff soft-delete(opt-in). — ✅ **완료**.
 3. 전국도서관표준데이터(LIBRARY) 적재 코드 — ✅ **완료**(CSV가 아니라 JSON 오픈API로 경로 정정, 위 "구현 정정" 참고). **프로덕션 실적재는 미실행**(사용자 통제).
 4. 상권정보 STUDY_CAFE → CAFE 적재 코드 — ✅ **코드 완료, ⚠️계약 미검증**(활용신청 미승인 403). 승인 후 재검증 필요.

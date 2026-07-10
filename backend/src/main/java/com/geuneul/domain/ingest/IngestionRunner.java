@@ -30,9 +30,12 @@ import java.time.Duration;
  *   ./gradlew bootRun --args='--ingest.source=public_toilet --ingest.file=/path/toilets.csv --ingest.charset=MS949'
  * JSON 오픈API 소스(도서관, ADR-0006) — 파일 불필요, 페이지네이션으로 전량 자체 수집:
  *   ./gradlew bootRun --args='--ingest.source=library --ingest.deactivate-stale=true'
- * 반경 오픈API 소스(상권정보 STUDY_CAFE/CAFE, ADR-0006, ⚠️계약 미검증) — 지역 중심좌표+반경 필요:
- *   ./gradlew bootRun --args='--ingest.source=study_cafe --ingest.lat=37.4962 --ingest.lng=126.9573 --ingest.radius=2000'
- *   전국 커버리지는 prod-ingest 쪽이 격자 좌표를 순회해 여러 번 호출한다(soft-delete는 이 경로에 없음 — 클래스 주석 참고).
+ * 반경 오픈API 소스(상권정보 CAFE+STUDY_CAFE 동시, ADR-0006, 계약 검증 완료 TS-026):
+ *   한 지역: ./gradlew bootRun --args='--ingest.source=stores --ingest.lat=37.4962 --ingest.lng=126.9573 --ingest.radius=1500'
+ *   넓은 지역(bbox 격자, 한 실행으로 서울 등 커버):
+ *     ./gradlew bootRun --args='--ingest.source=stores --ingest.bbox=126.76,37.42,127.18,37.70 --ingest.radius=1500'
+ *   ingestRegion이 CAFE·STUDY_CAFE를 서버측 업종코드 필터로 함께 수집한다(soft-delete는 이 경로에 없음 — 클래스 주석 참고).
+ *   레거시 별칭 study_cafe/cafe도 같은 핸들러로 라우팅한다.
  * 운영:  ECS one-off task(RunTask 커맨드 오버라이드)로 실행 — RDS가 프라이빗 서브넷이라
  *        로컬에서 직접 붙을 수 없고, 같은 VPC 안에서 돌리는 것이 정석 (DEPLOY.md §운영 인제스천).
  *        CSV 파일은 --ingest.url(GitHub Release 자산 등)로 받는다.
@@ -49,6 +52,7 @@ public class IngestionRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionRunner.class);
     private static final String LIBRARY_CLI_NAME = "library";
+    private static final String STORES_CLI_NAME = "stores";
     private static final String STUDY_CAFE_CLI_NAME = "study_cafe";
     private static final String CAFE_CLI_NAME = "cafe";
 
@@ -110,12 +114,18 @@ public class IngestionRunner implements ApplicationRunner {
             // JSON 오픈API 경로 — 파일/URL 불필요, 서비스가 자체 페이지네이션으로 전량 수집(ADR-0006).
             // P3 무인 스케줄 대상: serviceKey(DATA_GO_KR_SERVICE_KEY)만으로 다운로드까지 자족 실행.
             libraryIngestionService.ingestAll(deactivateStale);
-        } else if (STUDY_CAFE_CLI_NAME.equals(source) || CAFE_CLI_NAME.equals(source)) {
-            // 반경 오픈API 경로 — 지역 중심좌표+반경 필요, soft-delete 미지원(StoreIngestionService 주석).
-            double lat = Double.parseDouble(require(args, "ingest.lat"));
-            double lng = Double.parseDouble(require(args, "ingest.lng"));
+        } else if (STORES_CLI_NAME.equals(source) || STUDY_CAFE_CLI_NAME.equals(source)
+                || CAFE_CLI_NAME.equals(source)) {
+            // 반경/격자 오픈API 경로 — CAFE+STUDY_CAFE 동시 수집, soft-delete 미지원(StoreIngestionService 주석).
             int radius = Integer.parseInt(require(args, "ingest.radius"));
-            storeIngestionService.ingestRegion(lat, lng, radius);
+            if (args.containsOption("ingest.bbox")) {
+                double[] bbox = parseBbox(require(args, "ingest.bbox"));
+                storeIngestionService.ingestArea(bbox[0], bbox[1], bbox[2], bbox[3], radius);
+            } else {
+                double lat = Double.parseDouble(require(args, "ingest.lat"));
+                double lng = Double.parseDouble(require(args, "ingest.lng"));
+                storeIngestionService.ingestRegion(lat, lng, radius);
+            }
         } else {
             SourceSpec spec = SourceSpec.fromCliName(source);
             Charset charset = Charset.forName(args.containsOption("ingest.charset")
@@ -177,5 +187,22 @@ public class IngestionRunner implements ApplicationRunner {
             throw new IllegalArgumentException("--" + name + "=<값>이 필요합니다");
         }
         return value;
+    }
+
+    /** "minLng,minLat,maxLng,maxLat" → [minLng, minLat, maxLng, maxLat]. */
+    private static double[] parseBbox(String raw) {
+        String[] parts = raw.split(",");
+        if (parts.length != 4) {
+            throw new IllegalArgumentException(
+                    "--ingest.bbox=minLng,minLat,maxLng,maxLat 형식이어야 합니다 (4개 값): " + raw);
+        }
+        double minLng = Double.parseDouble(parts[0].trim());
+        double minLat = Double.parseDouble(parts[1].trim());
+        double maxLng = Double.parseDouble(parts[2].trim());
+        double maxLat = Double.parseDouble(parts[3].trim());
+        if (minLng >= maxLng || minLat >= maxLat) {
+            throw new IllegalArgumentException("--ingest.bbox min이 max보다 작아야 합니다: " + raw);
+        }
+        return new double[] {minLng, minLat, maxLng, maxLat};
     }
 }
