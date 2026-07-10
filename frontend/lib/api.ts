@@ -5,6 +5,7 @@ import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from 
 import type { NotificationCenter, NotificationRule, NotificationRuleType } from "@/types/notification";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
+import type { ToiletRoute } from "@/types/route";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
 import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
 import type { User } from "@/types/user";
@@ -92,6 +93,22 @@ export function fetchPlaceReports(placeId: number): Promise<Report[]> {
 // 장소의 시간대별 혼잡 파생(요일×시간, 만료 포함 이력 채굴). 백엔드 Redis 1h 캐시.
 export function fetchPopularTimes(placeId: number): Promise<PopularTimesSlot[]> {
   return getJson<PopularTimesSlot[]>(`/api/places/${placeId}/popular-times`);
+}
+
+// 화장실 포함 경로 — 출발→경유 화장실→도착(B2). 경유 화장실 선택은 백엔드 PostGIS(우회 최소).
+export function fetchToiletRoute(params: {
+  fromLat: number;
+  fromLng: number;
+  toLat: number;
+  toLng: number;
+}): Promise<ToiletRoute> {
+  const qs = new URLSearchParams({
+    fromLat: String(params.fromLat),
+    fromLng: String(params.fromLng),
+    toLat: String(params.toLat),
+    toLng: String(params.toLng),
+  });
+  return getJson<ToiletRoute>(`/api/routes/toilet?${qs}`);
 }
 
 // 뷰포트 내 제보 급증 스냅샷(폴백/초기 상태). SSE(/api/alerts/stream)가 공백을 실시간으로 메운다.
