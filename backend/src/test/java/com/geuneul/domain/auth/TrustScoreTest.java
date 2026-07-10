@@ -73,4 +73,37 @@ class TrustScoreTest {
         assertThat(mid).isGreaterThan(low);
         assertThat(high).isGreaterThan(mid);
     }
+
+    // --- A2. GPS 방문인증(verified) 보너스 ---
+
+    @Test
+    @DisplayName("verified 미제공 3-arg 오버로드는 verifiedCount=0과 정확히 동일(하위호환)")
+    void legacyOverloadMatchesZeroVerified() {
+        assertThat(TrustScore.calculate(10, 2, 30))
+                .isEqualTo(TrustScore.calculate(10, 2, 0, 30));
+    }
+
+    @Test
+    @DisplayName("같은 제보/후기/연령이라도 방문인증 제보가 있으면 trust_score가 더 높다(선순환)")
+    void verifiedReportsRaiseScore() {
+        double withoutVerified = TrustScore.calculate(10, 1, 0, 30);
+        double withVerified = TrustScore.calculate(10, 1, 6, 30); // 10건 중 6건 인증
+
+        assertThat(withVerified).isGreaterThan(withoutVerified);
+    }
+
+    @Test
+    @DisplayName("self-verify 남발은 상한(20)에서 포화 — 캡 이상은 점수를 더 올리지 못한다(어뷰징 억제, §0-7)")
+    void verifiedBonusIsCapped() {
+        double atCap = TrustScore.calculate(1000, 0, 20, 30);
+        double wayOverCap = TrustScore.calculate(1000, 0, 10_000, 30);
+
+        assertThat(wayOverCap).isEqualTo(atCap); // 캡 넘는 verified는 무시
+    }
+
+    @Test
+    @DisplayName("verified 보너스도 계정 연령 게이트를 못 넘는다 — age=0이면 여전히 0(곱 결합)")
+    void verifiedCannotBypassAgeGate() {
+        assertThat(TrustScore.calculate(20, 0, 20, 0)).isEqualTo(0.0);
+    }
 }
