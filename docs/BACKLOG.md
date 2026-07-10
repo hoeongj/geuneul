@@ -108,7 +108,7 @@
 - [x] A3 쉼터 air_conditioned 백필 — CSV 파이프라인 조건부 백필 코드(냉방기>0). 실 재적재는 대량 재적재(사용자 입력 지점). 머지 완료(#63).
 - [x] A4 급증 SSE 프론트 구독 — EventSource + 스냅샷 폴링, SurgeBanner(§6 중립). 머지 완료(#64).
 - [x] A5 popular-times 히트맵 UI — 요일선택+24h 스트립(발산 팔레트 검증). 프론트 CI green.
-- [ ] A6 커뮤니티 최소 UI
+- [x] A6 커뮤니티 최소 UI — 후기 댓글(지연 로드)+유용해요 토글, 최소 표면(§0-9). 프론트 CI green.
 - [ ] A7 bookmarks (테이블·API·UI)
 - [ ] A8 상권 전국 확장
 - [ ] A9 Fargate cpu 512 (조건부)

@@ -750,3 +750,12 @@
 - 검증: `npm run lint`·`typecheck`·`build` green. `/api/places/[id]/popular-times` 라우트 빌드 확인. dataviz 스킬 규격 준수(폼 선택·발산 팔레트 검증·접근성 relief).
 - 산출물: `types/popular.ts`·`lib/api.ts`·`lib/queries.ts`·`components/place/PopularTimes.tsx`·`app/api/places/[id]/popular-times/route.ts`·`PlaceDetailOverlay.tsx`.
 - 관련: docs/BACKLOG.md A5, ADR-0005 §④(자체 popular-times), dataviz 스킬, CLAUDE.md §6·§0-9.
+
+## 2026-07-10 — A6. 후기 커뮤니티 최소 UI (댓글·유용해요) (프론트) (브랜치 `feat/a6-community-ui`)
+- 배경(docs/BACKLOG.md A6): 백엔드 `POST/GET /reviews/{id}/comments`·`POST/DELETE /reactions`(#49, V11)가 라이브인데 프론트 노출이 없었다. 상세 후기에 최소 댓글 + "유용해요" 토글을 연다. **규율: 커뮤니티는 살, 간판 아님(§0-9) — 최소 표면만.**
+- 한 일: ① `types/community.ts`·`fetchReviewComments`·`createReviewComment`·`toggleReaction` · BFF 라우트 `/api/reviews/[id]/comments`(GET 공개+POST 로그인)·`/api/reactions`(POST/DELETE). ② `backend.ts` 인증 프록시를 `proxyAuthed(method,...)`로 일반화(리액션 취소=DELETE+body 지원, `proxyAuthedPost`는 래퍼로 호환). ③ `useReviewComments`(펼침 시 지연 로드)·`useCreateReviewComment`. ④ ReviewsSection에 후기별 footer: `HelpfulToggle`(👍) + `ReviewComments`(💬 접힘 기본).
+- 왜(why): ① **왜 리액션이 상호작용 기반인가** — 백엔드 후기 응답에 reacted/count가 없어(ReviewResponse 확인) 초기 상태를 못 받는다. 상태를 읽으려 POST하는 건 부작용이라 금물 → 클릭 시 POST/DELETE 응답 {reacted,count}로만 표시(카운트를 과시하지 않음, §0-9와도 정합). ② **왜 댓글은 기본 접힘·지연 로드인가** — 커뮤니티가 전면에 나오면 리뷰앱이 돼 간판이 희석된다(§0-9). 펼쳤을 때만 `useReviewComments(enabled)`로 로드해 상세 진입 비용도 안 늘린다. ③ **왜 proxyAuthed 일반화인가** — 리액션 취소가 DELETE+body라 POST 전용 프록시로 부족. method 파라미터화로 DRY(기존 후기 POST 호환 유지). ④ **왜 로그인 게이팅을 프론트에서도 하나** — 비로그인 클릭은 백엔드 왕복 없이 "로그인 필요" 토스트(불필요 401 왕복 방지, 기존 후기 폼과 동일 UX).
+- 스코프 규율(§0-9): 후기 footer의 작은 칩 2개(👍/💬)만 노출, survival_score(간판)와 무연결. 커뮤니티 카운트를 전면에 세우지 않는다.
+- 검증: `npm run lint`·`typecheck`·`build` green. `/api/reactions`·`/api/reviews/[id]/comments` 라우트 빌드 확인.
+- 산출물: `types/community.ts`·`lib/api.ts`·`lib/backend.ts`(proxyAuthed)·`lib/queries.ts`·`components/place/ReviewsSection.tsx`·`app/api/reactions/route.ts`·`app/api/reviews/[id]/comments/route.ts`.
+- 관련: docs/BACKLOG.md A6, #49(커뮤니티 백엔드 V11), CLAUDE.md §8(커뮤니티=2차·살)·§0-9(간판 우선·리뷰앱화 금지).
