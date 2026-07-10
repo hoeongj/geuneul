@@ -901,3 +901,12 @@
 - **검증**: 백엔드 `FollowServiceTest`(멱등·자기팔로우400·없는유저404·프로필 조립·비로그인 following=false) 로컬 green + `FollowFlowIT`(실 Postgres: 공개프로필·팔로우·내 팔로잉·언팔·자기팔로우400·404·401). `ReviewControllerTest` authorId 반영. 프론트 tsc·eslint·build green. **마이그레이션 V17**.
 - **적대적 리뷰 → 동시성 하드닝(TS-031)**: 리뷰가 `follow()`의 "catch 후 같은 tx에서 count()"가 진짜 동시 이중팔로우 시 PG 25P02(aborted tx)로 500 날 수 있음을 지적(기존 `ReactionService.add`도 동일 패턴). **둘 다** `@Transactional(propagation=NOT_SUPPORTED)`로 각 리포 호출을 자기 tx에 분리해 수정(멱등성은 UNIQUE가 보장). 상세 TS-031.
 - **관련**: BACKLOG N7 · ADR-0023 · CLAUDE.md §0-9·§1·§0-2 · N6 쿼리 공유 · TS-016. `domain.follow` 신규.
+
+## 2026-07-11 — 브랜딩: 로고·앱아이콘·로딩 스플래시 (PR #86, 프론트 전용)
+- **무엇**: 사용자가 만든 로고 시트(`Logo.png`)·로딩화면(`Loading.png`)을 프로젝트에 반영.
+  - **에셋**: 고해상도 중앙 캐릭터(구름머리 요정, 바람개비 없는 버전)를 크롭 → 크림(#FFFBEB) 정사각 캔버스에 합성해 앱아이콘 생성(ImageMagick). `icon-192/512`·`icon-maskable-512`(safe-zone 68%)·`apple-touch-icon`(180)·`favicon.ico`(48/32/16). 스플래시 히어로 `brand/character.png`. 원본 시트는 다운스케일(1400px) 참고본 `brand/logo.png`·`loading-reference.png`로 저장(≈5MB 원본 대신).
+  - **적용**: `manifest.ts` 아이콘 PNG(any/maskable)·`background_color=#FFFBEB`(스플래시와 이음새 없음). `layout.tsx` favicon/apple-touch PNG. `sw.ts` 푸시 아이콘/배지 → `icon-192.png`. 기존 placeholder SVG 제거.
+  - **로딩 스플래시**: `SplashScreen`(루트 마운트, 최초 로드 시 노출→페이드아웃). 캐릭터의 손/무릎(~68%)에 **회전하는 부채/바람개비 SVG**(흰 원반 + 민트 부채살 12 + 티일 허브, `animate-spin` 2.4s)를 얹어 "가운데 회전 모션"(사용자 요청) 구현 + "그늘" 워드마크 + "활성화된 그늘 지역을 찾고 있습니다…".
+- **왜(why)**: ① **왜 캐릭터 합성 아이콘인가** — 시트 안 작은 디자인 아이콘(~296px)은 512 업스케일 시 흐림 → 고해상도 중앙 캐릭터(~730px)를 크림 정사각에 합성해 crisp + maskable safe-zone 확보(캐릭터 68~76%, 크림이 마스크 bleed 채움). ② **왜 회전 요소를 별도 SVG인가** — 참고 이미지의 바람개비는 래스터에 baked → 캐릭터는 바람개비 없는 버전을 쓰고 그 위에 CSS 회전 SVG를 얹어야 실제로 돈다(위치는 손 위치 68%로 preview 검증). ③ **왜 크림 배경 통일** — 캐릭터 에셋 bg = 스플래시 bg = manifest background = #FFFBEB → 설치형 PWA 런치·스플래시 이음새 제거. ④ **왜 원본 다운스케일 저장** — 5MB×2 원본 커밋은 git 비대 → 1400px 참고본으로 절충(사용자 "저장" 요청 충족).
+- **검증**: 프론트 tsc·eslint·build green. 스플래시 pinwheel 위치 ImageMagick 합성 preview로 손 위치 확인. 백엔드 무변경. 실제 렌더는 Vercel 배포 후 확인.
+- **관련**: 사용자 제공 로고/로딩 · PWA(manifest·apple-touch·maskable) · CLAUDE.md §7(PWA).

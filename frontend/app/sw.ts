@@ -44,8 +44,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title ?? "그늘", {
       body: data.body ?? "새 알림이 있어요",
-      icon: "/icons/icon.svg",
-      badge: "/icons/icon.svg",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
       data: { url: data.url ?? "/" },
     }),
   );
