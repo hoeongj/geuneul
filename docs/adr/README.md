@@ -22,3 +22,4 @@
 | [0015](./0015-cloudfront-default-domain-https.md) | ALB 무료 HTTPS — CloudFront 기본 도메인(*.cloudfront.net), 커스텀 도메인·ACM 없이 | 승인(apply 완료·라이브) |
 | [0016](./0016-realtime-report-surge-listen-notify-sse.md) | 실시간 제보 급증 알림 — Postgres LISTEN/NOTIFY(멀티 인스턴스 팬아웃) → SSE, Kafka/Redis Streams 배제 | 승인 |
 | [0017](./0017-place-feature-comfort-signal.md) | 시설(place_features) → survival_score comfort 통합 — 별도 SQL 뷰 집계 + Java 단조 상승, 등급은 실시간 신호로만 게이트 | 승인 |
+| [0018](./0018-notifications-in-app-center-surge-reuse.md) | 알림 — 인앱 센터 MVP + 급증 LISTEN/NOTIFY 재사용 평가, dedup_key로 멀티 인스턴스·cooldown 1회 발송, Web Push는 stretch | 승인 |

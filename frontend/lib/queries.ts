@@ -1,15 +1,21 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { NotificationRuleType } from "@/types/notification";
 import type { MapBounds, ReportCreatePayload, Scenario } from "@/types/place";
 import type { ReviewCreatePayload } from "@/types/review";
 import {
   addBookmark,
+  createNotificationRule,
   createReport,
   createReview,
   createReviewComment,
+  deleteNotificationRule,
   fetchByBounds,
   fetchMyBookmarks,
+  fetchNotificationRules,
+  fetchNotifications,
+  markNotificationsRead,
   fetchByRadius,
   fetchMe,
   fetchNearestAny,
@@ -162,6 +168,57 @@ export function useToggleBookmark() {
     mutationFn: ({ placeId, next }: { placeId: number; next: boolean }) =>
       next ? addBookmark(placeId) : removeBookmark(placeId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
+  });
+}
+
+// 알림 센터(발송 이력) — 로그인 시에만. 폴링으로 새 알림을 주기 반영(60s).
+export function useNotifications(enabled: boolean) {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: fetchNotifications,
+    enabled,
+    staleTime: 30_000,
+    refetchInterval: enabled ? 60_000 : false,
+    retry: false,
+  });
+}
+
+// 내 알림 규칙 — 로그인 시에만.
+export function useNotificationRules(enabled: boolean) {
+  return useQuery({
+    queryKey: ["notification-rules"],
+    queryFn: fetchNotificationRules,
+    enabled,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+// 알림 규칙 생성/삭제 토글 — 성공 시 규칙 목록 무효화.
+type ToggleRuleArgs =
+  | { action: "create"; type: NotificationRuleType; lat?: number; lng?: number; radiusM?: number }
+  | { action: "delete"; id: number };
+
+export function useToggleNotificationRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: ToggleRuleArgs): Promise<void> => {
+      if (args.action === "create") {
+        await createNotificationRule({ type: args.type, lat: args.lat, lng: args.lng, radiusM: args.radiusM });
+      } else {
+        await deleteNotificationRule(args.id);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notification-rules"] }),
+  });
+}
+
+// 알림 전체 읽음 — 성공 시 센터 무효화.
+export function useMarkNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markNotificationsRead,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 }
 
