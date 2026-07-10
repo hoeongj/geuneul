@@ -110,7 +110,7 @@
 - [x] A5 popular-times 히트맵 UI — 요일선택+24h 스트립(발산 팔레트 검증). 프론트 CI green.
 - [x] A6 커뮤니티 최소 UI — 후기 댓글(지연 로드)+유용해요 토글, 최소 표면(§0-9). 프론트 CI green.
 - [x] A7 bookmarks (테이블·API·UI) — V14 + domain.bookmark + BookmarkButton/마이페이지. CI pass 후 머지.
-- [ ] A8 상권 전국 확장
+- [x] A8 상권 전국 확장 — 6대 광역시(부산·대구·인천·대전·광주·울산) 적재 완료(≈37,618행). 중소도시는 쿼터상 후속.
 - [ ] A9 Fargate cpu 512 (조건부)
 - [x] B1 알림 (ADR + 구현) — V15 + domain.notification + 급증 재사용 평가 + 인앱 센터(ADR-0018). CI pass 후 머지.
 - [x] B2 루트 (ADR + 화장실 경로 MVP) — domain.route + detour 최소 경유지(PostGIS) + 직선 MVP(ADR-0019). 도로 폴리라인은 카카오 키 후속. CI pass 후 머지.
