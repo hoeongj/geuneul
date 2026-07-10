@@ -1,6 +1,5 @@
 package com.geuneul.domain.push;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zerodeplibs.webpush.VAPIDKeyPair;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,13 +20,12 @@ import static org.mockito.Mockito.when;
 class PushServiceTest {
 
     private final PushSubscriptionRepository repository = mock(PushSubscriptionRepository.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
     private PushService serviceWith(VAPIDKeyPair keyPairOrNull) {
         ObjectProvider<VAPIDKeyPair> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(keyPairOrNull);
-        return new PushService(repository, provider, objectMapper, "mailto:test@geuneul.app");
+        return new PushService(repository, provider, "mailto:test@geuneul.app");
     }
 
     @Test

@@ -1,7 +1,5 @@
 package com.geuneul.domain.push;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zerodeplibs.webpush.PushSubscription;
 import com.zerodeplibs.webpush.VAPIDKeyPair;
 import com.zerodeplibs.webpush.httpclient.StandardHttpClientRequestPreparer;
@@ -15,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,17 +30,17 @@ public class PushService {
 
     private final PushSubscriptionRepository repository;
     private final ObjectProvider<VAPIDKeyPair> vapidKeyPair; // push.enabled=false면 비어 있음
-    private final ObjectMapper objectMapper;
     private final String subject;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
+    // ObjectMapper를 주입하지 않는다 — Boot 4는 Jackson 3(tools.jackson) 빈만 제공해
+    // com.fasterxml.jackson(Jackson 2) ObjectMapper 빈이 없다(컨텍스트 부팅 실패, CI에서만 드러남 — TS-028).
+    // 페이로드가 3필드라 버전 무관하게 직접 직렬화한다.
     public PushService(PushSubscriptionRepository repository,
                        ObjectProvider<VAPIDKeyPair> vapidKeyPair,
-                       ObjectMapper objectMapper,
                        @Value("${push.vapid.subject:mailto:admin@geuneul.app}") String subject) {
         this.repository = repository;
         this.vapidKeyPair = vapidKeyPair;
-        this.objectMapper = objectMapper;
         this.subject = subject;
     }
 
@@ -115,15 +112,38 @@ public class PushService {
         }
     }
 
-    private String toPayload(String title, String body, String url) {
-        try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "title", title == null ? "" : title,
-                    "body", body == null ? "" : body,
-                    "url", url == null ? "/" : url));
-        } catch (JsonProcessingException e) {
-            return "{\"title\":\"그늘\",\"body\":\"새 알림\",\"url\":\"/\"}";
+    /** {title, body, url} JSON. Jackson 버전 결합을 피하려 3필드를 직접 직렬화(값은 JSON 문자열 이스케이프). */
+    private static String toPayload(String title, String body, String url) {
+        return "{\"title\":\"" + esc(title) + "\",\"body\":\"" + esc(body)
+                + "\",\"url\":\"" + esc(url == null ? "/" : url) + "\"}";
+    }
+
+    /** JSON 문자열 값 이스케이프(공공데이터 장소명에 특수문자가 있어도 안전). */
+    private static String esc(String s) {
+        if (s == null) {
+            return "";
         }
+        StringBuilder sb = new StringBuilder(s.length() + 8);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 
     private static String prefix(String endpoint) {
