@@ -162,6 +162,41 @@ export async function proxy(path: string, search: string): Promise<NextResponse>
   }
 }
 
+// SSE(text/event-stream) 스트리밍 프록시 — 응답 바디를 버퍼링하지 않고 그대로 흘려보낸다(A4, ADR-0004).
+// proxy()는 res.text()로 전량 버퍼링해 SSE에 못 쓰므로 별도 경로가 필요하다. Vercel 함수 최대 실행시간에
+// 걸려 연결이 끊겨도 브라우저 EventSource가 자동 재연결하고, 스냅샷(GET /alerts/surge)이 공백을 메운다.
+// cache 무효화 헤더를 강제해 프록시/CDN 버퍼링을 끈다(SSE는 즉시 전달이 생명).
+export async function proxyStream(path: string, search: string): Promise<Response> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  try {
+    const url = `${BASE}${path}${search ? `?${search}` : ""}`;
+    const upstream = await fetch(url, {
+      headers: { accept: "text/event-stream" },
+      cache: "no-store",
+      // SSE는 장시간 열려 있어 요청 타임아웃을 걸지 않는다(끊김은 EventSource 재연결이 처리).
+    });
+    if (!upstream.ok || !upstream.body) {
+      return NextResponse.json({ error: "upstream", status: upstream.status }, { status: 502 });
+    }
+    return new Response(upstream.body, {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache, no-transform",
+        connection: "keep-alive",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
 // ALB에서 JSON을 받아 파싱하는 서버측 헬퍼(BASE 미설정/4xx·5xx는 throw).
 // 급해요의 카테고리별 nearest 팬아웃·병합은 이 헬퍼를 여러 번 호출하는 app/api/urgent/route.ts에 있다.
 export async function backendJson<T>(path: string, search: string): Promise<T> {
