@@ -6,6 +6,7 @@ import type { NotificationCenter, NotificationRule, NotificationRuleType } from 
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
 import type { ToiletRoute } from "@/types/route";
+import type { PlaceSearchResult } from "@/types/search";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
 import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
 import type { User } from "@/types/user";
@@ -63,6 +64,19 @@ export function fetchByRadius(params: { lat: number; lng: number; radius: number
 // 단건 상세.
 export function fetchPlace(id: number): Promise<Place> {
   return getJson<Place>(`/api/places/${id}`);
+}
+
+// 지정 장소 검색(N5) — 카카오 키워드(백엔드 BFF). coords가 있으면 그 좌표 기준 거리순(내 주변 우선).
+export function searchPlaces(
+  query: string,
+  coords?: { lat: number; lng: number } | null,
+): Promise<PlaceSearchResult[]> {
+  const qs = new URLSearchParams({ query });
+  if (coords) {
+    qs.set("lat", String(coords.lat));
+    qs.set("lng", String(coords.lng));
+  }
+  return getJson<PlaceSearchResult[]>(`/api/places/search?${qs}`);
 }
 
 // 급해요 = 시나리오별 nearest 팬아웃(서버 프록시가 병합·정렬).
