@@ -63,9 +63,11 @@ public class NotificationController {
         notificationService.deleteRule(principal.userId(), id);
     }
 
-    @Operation(summary = "알림 센터 — 발송 이력 + 안읽음 수 (로그인 필요)")
+    @Operation(summary = "알림 센터 — 발송 이력 + 안읽음 수 (로그인 필요)",
+            description = "열 때 활성 HEAT_ESCAPE 규칙을 온디맨드 평가한다(폭염이면 근처 쉼터 피난 1건 upsert, ADR-0020).")
     @GetMapping("/notifications")
     public NotificationResponse list(@AuthenticationPrincipal JwtService.AuthPrincipal principal) {
+        notificationService.evaluateHeatEscape(principal.userId()); // 폭염 온디맨드 평가(별도 트랜잭션) 후 목록
         return notificationService.list(principal.userId());
     }
 

@@ -53,6 +53,26 @@ public final class HeatComfort {
         return comfort;
     }
 
+    /**
+     * 체감온도(℃) — 관측값에서 계산. 기온 결측이면 null(폭염 판정 불가 → 호출부는 skip).
+     * HEAT_ESCAPE 알림 판정·문구용 공개 진입점(ADR-0020).
+     */
+    public static Double feelsLike(Weather weather) {
+        if (weather == null || weather.temperatureC() == null) {
+            return null;
+        }
+        return feelsLikeC(weather.temperatureC(), weather.humidityPct());
+    }
+
+    /**
+     * 폭염주의보(체감온도 ≥ 33℃) 여부 — HEAT_ESCAPE 알림 트리거(ADR-0020). 기온 결측이면 false(오탐 방지).
+     * 폭염특보 임계값(WARNING_C=33℃)을 comfort 매핑과 공유해 기준을 한 곳에 둔다.
+     */
+    public static boolean isHeatAdvisory(Weather weather) {
+        Double feels = feelsLike(weather);
+        return feels != null && feels >= WARNING_C;
+    }
+
     /** 체감온도(℃) — 습도 결측이거나 공식 검증 구간(20℃) 미만이면 원 기온을 그대로 반환. */
     static double feelsLikeC(double taC, Integer rhPct) {
         if (rhPct == null || taC < FORMULA_MIN_TA_C) {

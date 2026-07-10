@@ -10,4 +10,7 @@ public interface NotificationRuleRepository extends JpaRepository<NotificationRu
     List<NotificationRule> findByUserIdOrderByCreatedAtDesc(long userId);
 
     Optional<NotificationRule> findByIdAndUserId(long id, long userId);
+
+    /** HEAT_ESCAPE 온디맨드 평가용 — 유저의 활성 규칙만(ADR-0020). 보통 0~1건. */
+    List<NotificationRule> findByUserIdAndTypeAndActiveTrue(long userId, NotificationRuleType type);
 }

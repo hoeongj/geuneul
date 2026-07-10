@@ -53,6 +53,21 @@ public interface NotificationDeliveryRepository extends JpaRepository<Notificati
     int insertBookmarkSurge(@Param("placeId") long placeId,
                             @Param("title") String title, @Param("body") String body, @Param("bucket") long bucket);
 
+    /**
+     * HEAT_ESCAPE 발송 — 폭염 확인 시 규칙별 1건(ADR-0020). 급증과 달리 날씨·쉼터가 Java 계산이라
+     * 매칭 없는 단일행 INSERT다. dedup_key(heat:ruleId:bucket) UNIQUE + ON CONFLICT DO NOTHING으로
+     * 멀티 인스턴스 중복 + cooldown(bucket) + 반복 열람을 함께 막는다. @return 실제 삽입된 행 수(0 또는 1).
+     */
+    @Modifying
+    @Query(value = """
+            INSERT INTO notification_deliveries (user_id, rule_id, type, title, body, place_id, dedup_key)
+            VALUES (:userId, :ruleId, 'HEAT_ESCAPE', :title, :body, :placeId, :dedupKey)
+            ON CONFLICT (dedup_key) DO NOTHING
+            """, nativeQuery = true)
+    int insertHeatEscape(@Param("userId") long userId, @Param("ruleId") long ruleId,
+                         @Param("placeId") long placeId, @Param("title") String title,
+                         @Param("body") String body, @Param("dedupKey") String dedupKey);
+
     /** 읽음 처리 — 내 알림만(user_id 게이트). id가 null이면 전체 읽음. @return 갱신 행 수. */
     @Modifying
     @Query("UPDATE NotificationDelivery d SET d.read = true "
