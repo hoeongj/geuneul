@@ -1,5 +1,6 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { SurgeInfo } from "@/types/alert";
+import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from "@/types/community";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
@@ -138,6 +139,40 @@ export async function createReview(payload: ReviewCreatePayload): Promise<Review
   });
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<Review>;
+}
+
+// 후기 댓글 목록(공개, 오래된 순).
+export function fetchReviewComments(reviewId: number): Promise<ReviewComment[]> {
+  return getJson<ReviewComment[]>(`/api/reviews/${reviewId}/comments`);
+}
+
+// 후기 댓글 작성(로그인 필요). 401 = 미로그인 — 호출부가 안내.
+export async function createReviewComment(reviewId: number, comment: string): Promise<ReviewComment> {
+  const res = await fetch(`/api/reviews/${reviewId}/comments`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ comment }),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<ReviewComment>;
+}
+
+// 리액션 토글(유용해요). add=true면 POST(추가·멱등), false면 DELETE(취소). 응답은 {reacted,count}.
+export async function toggleReaction(params: {
+  targetType: ReactionTarget;
+  targetId: number;
+  type?: ReactionType;
+  add: boolean;
+}): Promise<ReactionState> {
+  const res = await fetch(`/api/reactions`, {
+    method: params.add ? "POST" : "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ targetType: params.targetType, targetId: params.targetId, type: params.type ?? "HELPFUL" }),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<ReactionState>;
 }
 
 // 사진 업로드 presign 발급 — S3로 직접 PUT할 URL을 받는다. purpose=review는 로그인 필요(401은 호출부가 처리).

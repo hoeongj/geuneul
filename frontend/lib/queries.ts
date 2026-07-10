@@ -6,6 +6,7 @@ import type { ReviewCreatePayload } from "@/types/review";
 import {
   createReport,
   createReview,
+  createReviewComment,
   fetchByBounds,
   fetchByRadius,
   fetchMe,
@@ -14,6 +15,7 @@ import {
   fetchPlaceReports,
   fetchPlaceReviews,
   fetchPopularTimes,
+  fetchReviewComments,
   fetchUrgent,
   logout,
 } from "./api";
@@ -96,6 +98,25 @@ export function usePlaceReviews(placeId: number | null) {
     queryFn: () => fetchPlaceReviews(placeId!),
     enabled: placeId != null,
     staleTime: 60_000,
+  });
+}
+
+// 후기 댓글 목록(2차·살, §0-9) — 펼쳤을 때만 지연 로드(enabled). 커뮤니티는 최소 표면만.
+export function useReviewComments(reviewId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["review-comments", reviewId],
+    queryFn: () => fetchReviewComments(reviewId),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+// 후기 댓글 작성(로그인 필요) — 성공 시 해당 후기의 댓글 목록 갱신.
+export function useCreateReviewComment(reviewId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (comment: string) => createReviewComment(reviewId, comment),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["review-comments", reviewId] }),
   });
 }
 
