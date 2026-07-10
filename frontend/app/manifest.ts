@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
-// PWA 매니페스트 → /manifest.webmanifest. 아이콘은 SVG(any/maskable) — 설치 가능·해상도 독립.
+// PWA 매니페스트 → /manifest.webmanifest. 아이콘은 브랜드 캐릭터 PNG(any/maskable). background_color는
+// 스플래시(크림)와 동일해 설치형 PWA 런치 시 이음새가 없다.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "그늘 — 여름 생존 지도",
@@ -10,13 +11,14 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f5f3ec",
+    background_color: "#FFFBEB",
     theme_color: "#163c2f",
     lang: "ko",
     categories: ["navigation", "utilities", "lifestyle"],
     icons: [
-      { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/icons/icon-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
