@@ -24,7 +24,16 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers(disabledWithoutDocker = true)
 // 실시간 급증 리스너(ADR-0016)는 IT에서 끈다 — 백그라운드 LISTEN 스레드가 컨텍스트 캐시 수명 내내
 // 떠 있을 필요가 없고, 급증 감지 SQL·NOTIFY 트리거는 리스너 없이 직접(서비스/JDBC) 검증한다.
-@org.springframework.test.context.TestPropertySource(properties = "geuneul.realtime.enabled=false")
+//
+// 커넥션 풀 캡(TS-030): 각 IT가 고유 프로퍼티(jwt.secret 등)로 별도 Spring 컨텍스트를 만들고, 컨텍스트마다
+// HikariCP 풀이 캐시 수명 내내 살아있어(TestContext 캐시) 단일 Testcontainers Postgres의 max_connections(기본
+// 100)를 소진한다 → 임계 근처에서 컨텍스트를 하나 더 추가하면 새 컨텍스트의 Flyway 접속이 "too many clients"로
+// 실패한다(N6 IT 추가 때 ActuatorPrometheusOptInIT에서 표면화). IT는 순차 MockMvc라 풀이 작아도 충분하므로
+// 컨텍스트 수와 무관하게 접속 총량을 억제하도록 풀을 작게 캡한다(프로덕션 풀은 무영향 — 테스트 프로퍼티만).
+@org.springframework.test.context.TestPropertySource(properties = {
+        "geuneul.realtime.enabled=false",
+        "spring.datasource.hikari.maximum-pool-size=4"
+})
 @org.springframework.context.annotation.Import({
         com.geuneul.domain.ingest.geocode.FakeGeocodingConfig.class,
         com.geuneul.domain.ingest.openapi.FakeLibraryApiConfig.class
