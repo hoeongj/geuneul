@@ -1,6 +1,7 @@
 package com.geuneul.domain.ingest;
 
 import com.geuneul.domain.ingest.openapi.PublicLibraryIngestionService;
+import com.geuneul.domain.ingest.safetydata.ShelterIngestionService;
 import com.geuneul.domain.ingest.storeapi.StoreIngestionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,9 @@ import java.time.Duration;
  *   ./gradlew bootRun --args='--ingest.source=public_toilet --ingest.file=/path/toilets.csv --ingest.charset=MS949'
  * JSON 오픈API 소스(도서관, ADR-0006) — 파일 불필요, 페이지네이션으로 전량 자체 수집:
  *   ./gradlew bootRun --args='--ingest.source=library --ingest.deactivate-stale=true'
+ * JSON 오픈API 소스(무더위쉼터, safetydata.go.kr, TS-027) — SAFETYDATA_SERVICE_KEY 필요(data.go.kr 키와 별개):
+ *   ./gradlew bootRun --args='--ingest.source=shelter --ingest.deactivate-stale=true'
+ *   deactivate-stale은 전량 수집 완료 시에만 적용(기존 100건 샘플을 실데이터로 대체).
  * 반경 오픈API 소스(상권정보 CAFE+STUDY_CAFE 동시, ADR-0006, 계약 검증 완료 TS-026):
  *   한 지역: ./gradlew bootRun --args='--ingest.source=stores --ingest.lat=37.4962 --ingest.lng=126.9573 --ingest.radius=1500'
  *   넓은 지역(bbox 격자, 한 실행으로 서울 등 커버):
@@ -52,6 +56,7 @@ public class IngestionRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionRunner.class);
     private static final String LIBRARY_CLI_NAME = "library";
+    private static final String SHELTER_CLI_NAME = "shelter";
     private static final String STORES_CLI_NAME = "stores";
     private static final String STUDY_CAFE_CLI_NAME = "study_cafe";
     private static final String CAFE_CLI_NAME = "cafe";
@@ -59,17 +64,20 @@ public class IngestionRunner implements ApplicationRunner {
     private final IngestionService ingestionService;
     private final PublicLibraryIngestionService libraryIngestionService;
     private final StoreIngestionService storeIngestionService;
+    private final ShelterIngestionService shelterIngestionService;
     private final IngestBatchLock batchLock;
     private final ConfigurableApplicationContext context;
 
     public IngestionRunner(IngestionService ingestionService,
                            PublicLibraryIngestionService libraryIngestionService,
                            StoreIngestionService storeIngestionService,
+                           ShelterIngestionService shelterIngestionService,
                            IngestBatchLock batchLock,
                            ConfigurableApplicationContext context) {
         this.ingestionService = ingestionService;
         this.libraryIngestionService = libraryIngestionService;
         this.storeIngestionService = storeIngestionService;
+        this.shelterIngestionService = shelterIngestionService;
         this.batchLock = batchLock;
         this.context = context;
     }
@@ -114,6 +122,11 @@ public class IngestionRunner implements ApplicationRunner {
             // JSON 오픈API 경로 — 파일/URL 불필요, 서비스가 자체 페이지네이션으로 전량 수집(ADR-0006).
             // P3 무인 스케줄 대상: serviceKey(DATA_GO_KR_SERVICE_KEY)만으로 다운로드까지 자족 실행.
             libraryIngestionService.ingestAll(deactivateStale);
+        } else if (SHELTER_CLI_NAME.equals(source)) {
+            // safetydata.go.kr 무더위쉼터 JSON 오픈API — 전국 페이지네이션 전량 수집(TS-027).
+            // 키는 SAFETYDATA_SERVICE_KEY(data.go.kr 키와 별개). deactivate-stale은 전량 수집 완료 시에만
+            // 실제 적용(부분 수집 사고 방지, ShelterIngestionService).
+            shelterIngestionService.ingestAll(deactivateStale);
         } else if (STORES_CLI_NAME.equals(source) || STUDY_CAFE_CLI_NAME.equals(source)
                 || CAFE_CLI_NAME.equals(source)) {
             // 반경/격자 오픈API 경로 — CAFE+STUDY_CAFE 동시 수집, soft-delete 미지원(StoreIngestionService 주석).
