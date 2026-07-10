@@ -1,12 +1,22 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { PlaceRow } from "@/components/place/PlaceRow";
 import type { Place } from "@/types/place";
 
+// 하단 시트 3단 스냅(N4): peek(핸들만 보여 지도 크게)·half(기본)·full. 드래그로 가까운 단으로,
+// 탭으로 펼침/접힘. peek는 헤더 두 줄이 안 잘리게 px로 고정하고 half/full은 컨테이너 대비 %.
+export type SheetSnap = "peek" | "half" | "full";
+
+const PEEK_PX = 96; // 핸들 + "주변 N곳" 헤더가 안 잘리는 최소 높이
+const HALF_FRACTION = 0.46;
+const FULL_FRACTION = 0.82;
+const TAP_THRESHOLD_PX = 6; // 이 이하로 움직이면 드래그가 아니라 탭으로 본다
+
 interface BottomSheetProps {
-  snap: "half" | "full";
-  onToggleSnap: () => void;
+  snap: SheetSnap;
+  onSnapChange: (next: SheetSnap) => void;
   radius: number;
   places: Place[];
   loading: boolean;
@@ -18,16 +28,85 @@ function radiusLabel(m: number): string {
   return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)}km` : `${m}m`;
 }
 
-export function BottomSheet({ snap, onToggleSnap, radius, places, loading, onSelectPlace, onWiden }: BottomSheetProps) {
+function snapHeightPx(snap: SheetSnap, containerH: number): number {
+  if (snap === "peek") return PEEK_PX;
+  return (snap === "full" ? FULL_FRACTION : HALF_FRACTION) * containerH;
+}
+
+function snapHeightCss(snap: SheetSnap): string {
+  if (snap === "peek") return `${PEEK_PX}px`;
+  return snap === "full" ? "82%" : "46%";
+}
+
+export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSelectPlace, onWiden }: BottomSheetProps) {
   const empty = !loading && places.length === 0;
+  const sheetRef = useRef<HTMLElement>(null);
+  // 드래그 세션 상태(리렌더 유발 안 하는 값은 ref로). currentH는 pointerup 시 최종 높이 판정에 쓴다.
+  const dragRef = useRef<{ startY: number; startH: number; containerH: number; currentH: number; dragged: boolean } | null>(null);
+  const [dragH, setDragH] = useState<number | null>(null); // 드래그 중 라이브 px 높이, 아니면 null
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const containerH = sheetRef.current?.parentElement?.clientHeight
+      ?? (typeof window !== "undefined" ? window.innerHeight : 800);
+    const startH = snapHeightPx(snap, containerH);
+    dragRef.current = { startY: e.clientY, startH, containerH, currentH: startH, dragged: false };
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDragH(startH);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dy = d.startY - e.clientY; // 위로 끌면 양수 → 높이 증가
+    if (Math.abs(dy) > TAP_THRESHOLD_PX) d.dragged = true;
+    const minH = snapHeightPx("peek", d.containerH);
+    const maxH = snapHeightPx("full", d.containerH);
+    const next = Math.min(maxH, Math.max(minH, d.startH + dy));
+    d.currentH = next;
+    setDragH(next);
+  };
+
+  const endDrag = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    setDragH(null);
+    if (!d) return;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    if (!d.dragged) return; // 탭이면 native click(onToggle)에 맡긴다
+    // 가장 가까운 스냅으로
+    const order: SheetSnap[] = ["peek", "half", "full"];
+    const nearest = order.reduce((best, s) =>
+      Math.abs(snapHeightPx(s, d.containerH) - d.currentH) < Math.abs(snapHeightPx(best, d.containerH) - d.currentH)
+        ? s : best, order[0]);
+    onSnapChange(nearest);
+  };
+
+  // 탭(드래그 아님) → 펼침/접힘 토글. 드래그 직후 발생하는 click은 억제.
+  const onToggle = () => {
+    if (dragRef.current?.dragged) return;
+    onSnapChange(snap === "full" ? "half" : "full");
+  };
+
+  const heightStyle = dragH != null ? `${dragH}px` : snapHeightCss(snap);
+
   return (
     <section
+      ref={sheetRef}
       className="gn-sheet absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-[22px] bg-white shadow-sheet"
-      style={{ height: snap === "full" ? "82%" : "46%" }}
+      style={{ height: heightStyle, transition: dragH != null ? "none" : "height 0.25s ease" }}
       aria-label="주변 장소 목록"
     >
-      {/* 핸들 */}
-      <button type="button" onClick={onToggleSnap} className="flex w-full justify-center pt-2.5 pb-1" aria-label={snap === "full" ? "접기" : "더보기"}>
+      {/* 핸들 — 드래그(3단 스냅)·탭(펼침/접힘) 겸용 */}
+      <button
+        type="button"
+        onClick={onToggle}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        className="flex w-full touch-none justify-center pt-2.5 pb-1"
+        aria-label={snap === "full" ? "시트 접기" : "시트 펼치기 · 드래그로 크기 조절"}
+      >
         <span className="h-[5px] w-[38px] rounded-full" style={{ background: "var(--color-sheet-handle)" }} />
       </button>
 
@@ -37,7 +116,7 @@ export function BottomSheet({ snap, onToggleSnap, radius, places, loading, onSel
           <div className="text-[16px] font-extrabold text-ink">주변 {places.length}곳</div>
           <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 지도를 움직여 탐색</div>
         </div>
-        <button type="button" onClick={onToggleSnap} className="shrink-0 text-[13px] font-bold text-teal">
+        <button type="button" onClick={onToggle} className="shrink-0 text-[13px] font-bold text-teal">
           {snap === "full" ? "접기" : "더보기"}
         </button>
       </header>
