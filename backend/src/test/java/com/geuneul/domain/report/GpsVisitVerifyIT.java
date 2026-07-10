@@ -1,6 +1,9 @@
 package com.geuneul.domain.report;
 
 import com.geuneul.AbstractIntegrationTest;
+import com.geuneul.domain.auth.AuthProvider;
+import com.geuneul.domain.auth.User;
+import com.geuneul.domain.auth.UserRepository;
 import com.geuneul.domain.place.Place;
 import com.geuneul.domain.place.PlaceCategory;
 import com.geuneul.domain.place.PlaceRepository;
@@ -38,6 +41,9 @@ class GpsVisitVerifyIT extends AbstractIntegrationTest {
     @Autowired
     PlaceRepository placeRepository;
 
+    @Autowired
+    UserRepository userRepository;
+
     private static final double LAT = 37.4986;
     private static final double LNG = 126.9531;
 
@@ -46,6 +52,7 @@ class GpsVisitVerifyIT extends AbstractIntegrationTest {
     @BeforeEach
     void setUp() {
         reportRepository.deleteAll();
+        userRepository.deleteAll();
         placeRepository.deleteAll();
         Place saved = placeRepository.save(Place.of(
                 "상도1동 무더위쉼터", PlaceCategory.COOLING_SHELTER, "서울 동작구 성대로 100",
@@ -106,5 +113,23 @@ class GpsVisitVerifyIT extends AbstractIntegrationTest {
         assertThat(a.getComfortScore()).isGreaterThan(b.getComfortScore());
         assertThat(b.getComfortScore()).isCloseTo(0.7, within(1e-9));
         assertThat(a.getComfortScore()).isCloseTo(0.91, within(1e-9));
+    }
+
+    @Test
+    @DisplayName("A2: countByUserIdAndVerifiedTrue가 유저의 인증 제보만 실 DB에서 집계한다(trust 보너스 입력)")
+    void countsVerifiedReportsPerUser() {
+        User user = userRepository.save(User.create(AuthProvider.KAKAO, "trust-kid", null, "인증러", null));
+        Long uid = user.getId();
+
+        // 인증 2건 + 비인증 1건 (모두 같은 유저)
+        reportRepository.save(Report.of(uid, placeId, ReportType.COOL, null, null, false, true,
+                OffsetDateTime.now().plusHours(1)));
+        reportRepository.save(Report.of(uid, placeId, ReportType.SEAT_OK, null, null, false, true,
+                OffsetDateTime.now().plusHours(1)));
+        reportRepository.save(Report.of(uid, placeId, ReportType.HOT, null, null, false, false,
+                OffsetDateTime.now().plusHours(1)));
+
+        assertThat(reportRepository.countByUserId(uid)).isEqualTo(3);
+        assertThat(reportRepository.countByUserIdAndVerifiedTrue(uid)).isEqualTo(2);
     }
 }
