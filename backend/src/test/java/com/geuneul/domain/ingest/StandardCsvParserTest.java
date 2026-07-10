@@ -94,4 +94,29 @@ class StandardCsvParserTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("public_toilet");
     }
+
+    // --- A3. 조건부 feature 백필(냉방기 보유 쉼터) ---
+
+    @Test
+    @DisplayName("A3: 냉방기 보유수(COLR_HOLD_ARCNDTN)>0인 쉼터만 conditionalFeatureIds에 모은다")
+    void collectsAirconEquippedShelters() throws IOException {
+        String csv = """
+                RSTR_FCLTY_NO,RSTR_NM,RN_DTL_ADRES,LA,LO,COLR_HOLD_ARCNDTN
+                AC-2,냉방쉼터,서울 동작구 성대로 1,37.50,127.00,2
+                AC-0,비냉방쉼터,서울 동작구 성대로 2,37.50,127.00,0
+                AC-blank,미상쉼터,서울 동작구 성대로 3,37.50,127.00,
+                """;
+        var result = parser.parse(new java.io.StringReader(csv), SourceSpec.COOLING_SHELTER);
+
+        assertThat(result.rows()).hasSize(3);                              // 좌표는 셋 다 유효
+        assertThat(result.conditionalFeatureIds()).containsExactly("AC-2"); // >0인 것만
+    }
+
+    @Test
+    @DisplayName("A3: 조건 컬럼이 CSV에 없으면(기존 별칭 헤더 스냅샷) conditionalFeatureIds는 비어 no-op(하위호환)")
+    void noConditionalColumnMeansEmpty() throws IOException {
+        var result = parser.parse(fixture("cooling_shelter_sample.csv"), SourceSpec.COOLING_SHELTER);
+
+        assertThat(result.conditionalFeatureIds()).isEmpty();
+    }
 }
