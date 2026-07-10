@@ -54,3 +54,8 @@ design_handoff_geuneul/
 # === OS / 기타 ===
 .DS_Store
 *.log
+CLAUDE.md
+.claude/
+AGENTS.md
+GEMINI.md
+.codex/
