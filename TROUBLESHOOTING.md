@@ -342,3 +342,27 @@ ephemeral)이며 NAT 게이트웨이는 비용상 배제 → **이 IP 잠금 키
 - **학습**: **IP 잠금 외부 API + 프라이빗 DB + 이동 IP 실행환경**은 직접 호출이 성립하지 않는다. "데이터를 가져오는 곳(등록
   IP)"과 "DB에 쓰는 곳(VPC)"이 다르면, 등록 IP에서 스냅샷을 떠서 VPC로 실어 나른다(파일/릴리즈). 키 IP 잠금 여부를 도입
   전에 확인할 것. IP 해제(allow-all)나 고정 egress(EIP/NAT)를 얻으면 직접 API + 자동 동기화가 가능해진다.
+
+## TS-028 — Boot 4 = Jackson 3(tools.jackson): Jackson-2 `ObjectMapper` 주입 시 컨텍스트 부팅 실패 (로컬 IT skip이 은폐)
+**상황**: F2 Web Push의 `PushService`가 `com.fasterxml.jackson.databind.ObjectMapper`(Jackson 2)를 생성자 주입.
+로컬 `./gradlew test` green(단위테스트만 실행) → 머지 전 CI에서 **모든 `@SpringBootTest` IT가 컨텍스트 부팅 실패**.
+에러: `Parameter 2 of constructor in com.geuneul.domain.push.PushService required a bean of type
+'com.fasterxml.jackson.databind.ObjectMapper' that could not be found` (notificationController→notificationService→
+pushService 체인, `NoSuchBeanDefinitionException`).
+
+**원인**: **Spring Boot 4는 Jackson 3(`tools.jackson`)로 이관**했다. 오토컨피그가 제공하는 ObjectMapper 빈은
+`tools.jackson.databind.ObjectMapper`이고, **`com.fasterxml.jackson.databind.ObjectMapper`(Jackson 2) 빈은 없다.**
+그래서 Jackson-2 타입을 주입하면 "no qualifying bean"으로 컨텍스트가 안 뜬다. (기존 코드가 record 역직렬화만 쓰고
+ObjectMapper를 직접 주입한 적이 없어 이 함정이 처음 드러났다.)
+
+**왜 로컬에서 못 잡았나(핵심)**: 컨텍스트 부팅 검증은 `@SpringBootTest` IT(실 PostGIS)뿐인데, 이 맥은 Testcontainers
+docker-java가 colima 소켓을 못 잡아 IT가 **전부 skip**된다(TS-009). 단위테스트는 `new PushService(...)`로 직접
+생성하므로 Spring 빈 해석을 안 타 통과. **SKIP≠통과 — 컨텍스트 부팅 회귀는 CI가 유일 게이트**임이 재확인됐다.
+
+**해결**: ObjectMapper 주입을 제거하고 3필드 페이로드({title,body,url})를 **직접 JSON 직렬화**(문자열 이스케이프
+포함). Jackson 버전 결합을 아예 끊었다. 새 외부 라이브러리/스타터를 붙일 땐 **주입 타입이 Boot 4(Jackson 3)
+빈으로 실제 존재하는지** 확인하고, 컨텍스트 부팅 영향 변경은 **머지 전 CI Backend pass를 반드시 눈으로**(TS-025).
+
+**학습**: ① Boot 4에서 Jackson을 직접 다루면 `tools.jackson`(v3)이 기본 — `com.fasterxml.jackson`(v2) 빈을 기대하지
+말 것. ② 작은 JSON은 라이브러리 결합보다 직접 직렬화가 견고할 때가 있다. ③ 빈 와이어링/컨텍스트 변경은 로컬
+단위 green을 신뢰하지 말고 CI IT를 게이트로 삼는다(TS-009·TS-025 재확인).
