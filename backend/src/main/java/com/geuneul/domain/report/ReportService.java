@@ -2,6 +2,7 @@ package com.geuneul.domain.report;
 
 import com.geuneul.domain.auth.JwtService;
 import com.geuneul.domain.auth.TrustScoreService;
+import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.report.dto.PopularTimesSlot;
 import com.geuneul.domain.report.dto.ReportCreateRequest;
@@ -26,13 +27,15 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final PlaceRepository placeRepository;
     private final TrustScoreService trustScoreService;
+    private final PhotoService photoService;
     private final Clock clock;
 
     public ReportService(ReportRepository reportRepository, PlaceRepository placeRepository,
-                         TrustScoreService trustScoreService, Clock clock) {
+                         TrustScoreService trustScoreService, PhotoService photoService, Clock clock) {
         this.reportRepository = reportRepository;
         this.placeRepository = placeRepository;
         this.trustScoreService = trustScoreService;
+        this.photoService = photoService;
         this.clock = clock;
     }
 
@@ -60,7 +63,8 @@ public class ReportService {
         if (userId != null) {
             trustScoreService.recalculate(userId);
         }
-        return ReportResponse.of(saved);
+        // 비공개 버킷이라 저장 URL은 그대로 못 본다 → 조회 시점 presigned GET으로 변환(N1, 제보 사진도 리뷰와 공유 수정).
+        return ReportResponse.of(saved, photoService.presignGet(saved.getPhotoUrl()));
     }
 
     /** 장소의 유효(미만료) 제보 최신순 — 상세 화면 "최근 제보". */
@@ -69,7 +73,8 @@ public class ReportService {
         return reportRepository
                 .findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(placeId, OffsetDateTime.now(clock))
                 .stream()
-                .map(ReportResponse::of)
+                // 첨부 사진은 presignGet으로 임시 서명해 내려준다(N1 — 비공개 S3 403 해소).
+                .map(r -> ReportResponse.of(r, photoService.presignGet(r.getPhotoUrl())))
                 .toList();
     }
 
