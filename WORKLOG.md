@@ -814,3 +814,9 @@
 - 검증: 단위 `NotificationServiceTest` — HEAT_ESCAPE 검증(lat/lng 필수 400)·폭염+쉼터→insert·폭염 아님 skip·쉼터 없음 skip·규칙 없음 no-op. 프론트 tsc green. CI 게이트(NotificationFlowIT 실 PostGIS). 마이그레이션 없음(기존 notification_deliveries·notification_rules 재사용).
 - 산출물: `HeatComfort`·`NotificationService`·`NotificationController`·`NotificationDeliveryRepository`·`NotificationRuleRepository` · 프론트 `NotificationsSection` · ADR-0020 · 테스트.
 - 관련: ADR-0020, ADR-0018(알림 본체)·ADR-0009(체감 comfort)·ADR-0001(kNN), CLAUDE.md §0-2·§6. **BACKLOG F5 완료. follow-up 없음(F2 푸시 배선 시 트리거 승격 지점만 기록됨).**
+
+## 2026-07-10 — F1: 상권 카페/스터디카페 9개 도시 확장 실행 (데이터 op)
+사용자 승인("전부 다 모두 다 해")으로 F1(A8 나머지 지역) 실행. `prod-ingest-stores.sh <bbox> 1500` 순차(IngestBatchLock 존중). data.go.kr B553077, 좌표 내장(geocoded 0).
+- **실행·결과(세션 upserted, 격자 중복 포함)**: 수원 4,000(CAFE 3,629·STUDY 371) · 성남·용인 4,055 · 창원 2,672 · 청주 2,900 · 전주 3,401 · 천안 2,479 · 포항 1,667 · 김해 1,338 · 제주 1,692 = **≈24,204행 / 9개 도시**. **쿼터 에러 0**(cells 15~56/도시). 라이브 검증: 수원·창원·전주·제주 반경 2km CAFE 100(cap 도달, 이전 0).
+- **왜 순차인가(재확인)**: `IngestBatchLock`이 동시 실행을 막아 병렬 시 뒤 태스크가 skip(exitCode 0이나 미적재, A8 6대 광역시 때 발견한 함정). 드라이버가 각 RunTask 완료(`aws ecs wait`) 후 다음을 실행. 쿼터 소진 감지(resultCode/upserted=0) 시 중단하도록 짰으나 9개 전부 여유 내 완료.
+- **커버리지 현황**: 상권 = 서울(distinct 29,886) + 6대 광역시(부산·대구·인천·대전·광주·울산) + **9개 도시(수원·성남·용인·창원·청주·전주·천안·포항·김해·제주)**. 남은 중소도시는 후속(멱등, 하루 단위로 `prod-ingest-stores.sh <bbox>` 이어서).
