@@ -1,14 +1,17 @@
 ---
-description: 그늘(geuneul) 다음 세션 시작 — 현황 파악·상태 검증·작업 선택
+description: 그늘(geuneul) 다음 세션 시작 — 현황 검증 후 심화+additive 백로그를 순서대로 실행
 ---
 
 너는 이 레포의 시니어 백엔드/풀스택 엔지니어다. 새 세션을 시작한다. 아래를 **순서대로** 수행하라.
 
+> **이번 세션의 목표(사용자 지시 2026-07-10)**: `docs/BACKLOG.md`의 **심화 + additive 항목을 하나도 빠짐없이 전부** 착수·완료한다. 외부 승인 블로커는 0건이다(상권 #56·쉼터 #58 해소). 남은 건 전부 이 백로그다.
+
 ## 1) 컨텍스트 로드 (읽기)
-- `HANDOFF.md` 의 **"▶ 세션 인계"** + **"✅ 외부 승인 불필요 백로그"** + **"⏳ 외부 승인 대기"** 섹션
+- **`docs/BACKLOG.md`** — 이번 세션 실행 대상(A1~A9 additive, B1~B2 심화). **완료 체크리스트 포함.**
+- `HANDOFF.md` 의 **"▶ 세션 인계"**(현황·rev·데이터 카운트) + 하단 백로그/⏳ 섹션
 - `CLAUDE.md` 의 **§0 작업 원칙** + **🔴 필수 워크플로우 규칙 A~D**
-- 최근 `TROUBLESHOOTING.md` 의 **TS-025**(머지 전 `gh pr checks` 필수), **TS-016/009**(네이티브 프로젝션 Instant·로컬 IT skip)
-- 메모리 인덱스(`MEMORY.md`)의 관련 항목
+- `TROUBLESHOOTING.md` 의 **TS-025**(머지 전 `gh pr checks` 필수)·**TS-026/027**(외부 API 계약은 코드 前 실호출 검증·IP 잠금 우회)·**TS-016/009**(네이티브 프로젝션 Instant·로컬 IT skip≠통과)
+- 메모리 인덱스(`MEMORY.md`) 관련 항목
 
 ## 2) 상태 검증 (실행)
 ```bash
@@ -17,42 +20,36 @@ git checkout main && git pull origin main --quiet
 git status --short                                   # 클린이어야 함
 git config user.email                                # seongjuice999@gmail.com 확인
 gh pr list --state open                              # 열린 PR 확인
-gh run list --branch main --event push --limit 3 --json name,conclusion -q '.[] | "\(.name): \(.conclusion)"'
 git log main --format="%B" | grep -ciE "^co-authored-by:.*(claude|anthropic)"   # 0이어야 함
 # 라이브 헬스
 /usr/bin/curl -s -o /dev/null -w "API %{http_code}\n" https://d2pedv974beobb.cloudfront.net/actuator/health
 /usr/bin/curl -s -o /dev/null -w "App %{http_code}\n" https://geuneul.vercel.app
+# 데이터 라이브 스팟체크(쉼터·카페·스터디)
+for c in COOLING_SHELTER CAFE STUDY_CAFE; do
+  /usr/bin/curl -s -G "https://d2pedv974beobb.cloudfront.net/places" \
+    --data-urlencode "lat=37.5665" --data-urlencode "lng=126.9780" --data-urlencode "radius=2000" \
+    --data-urlencode "category=$c" -o /dev/null -w "$c %{http_code}\n"
+done
 ```
 
-## 3) 외부 승인 2건 풀렸는지 확인 (실행)
-남은 유일한 블로커. serviceKey는 `.local/datago.env`. 승인되면 resultCode가 바뀐다.
-```bash
-# 상권정보 카페/스터디카페(B553077) — 미승인이면 403, 승인되면 정상 응답
-source .local/datago.env 2>/dev/null
-/usr/bin/curl -s -o /dev/null -w "storeapi(B553077) %{http_code}\n" \
-  "https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius?serviceKey=${DATA_GO_KR_SERVICE_KEY}&radius=500&cx=126.95&cy=37.51&type=json&numOfRows=1"
-# 쉼터 전국(safetydata DSSP-IF-10942) — 전용 키 필요, 있으면 .local에서 확인
-```
-- **403/미승인이면** → 그 작업은 아직 불가. 사용자에게 승인 상태를 물어보고, 아래 4)의 승인 불필요 후속을 제안.
-- **승인됐으면** → HANDOFF "⏳ 외부 승인 대기" 항목의 계획대로 착수(library 패턴 재사용, 계약 검증 → 멱등 적재).
+## 3) 백로그 실행 (핵심 — `docs/BACKLOG.md` 순서대로)
+**A(additive)부터 B(심화)까지 전 항목**을 착수한다. 각 항목 = 원칙적으로 1 PR.
+- **A1→A9**: 시설 comfort SQL 통합 · verified→trust · 쉼터 air_conditioned 백필 · 급증 SSE 프론트 · popular-times 히트맵 · 커뮤니티 최소 UI · bookmarks · 상권 전국 확장 · (조건부) Fargate cpu 512
+- **B1 알림 · B2 루트**: **ADR 선행**(웹 2026 트렌드 확인 → 전달방식/외부 경로API 결정 → `docs/adr/` 기록) 후 구현.
+- 각 항목의 무엇/왜/파일/수용기준/함정은 `docs/BACKLOG.md`에 상세히 있다. **그 문서를 항목별로 다시 열어 근거대로 진행**한다.
+- **중간 사용자 입력 지점**(BACKLOG 명시): B2 외부 경로 API 키·B1 Web Push VAPID·A3/A8 대량 재적재. 도달 시 **한 줄 제안 후 진행**(막히면 다음 항목으로 넘어가 병렬 진행).
 
-## 4) 승인 불필요 후속 (additive, 바로 가능)
-전 백로그 ①~⑨는 완료됐다. 남은 additive(핸드오프 기재):
-- 급증 알림 **프론트 EventSource 구독**(`/alerts/stream`) + 지도 급증 배지
-- **popular-times 히트맵 UI**(상세 화면, 백엔드 `/places/{id}/popular-times` 준비됨)
-- 후기 **커뮤니티 최소 UI**(댓글/리액션 — 간판 안 가리게, §0-9)
-- **verified → 유저 trust_score 연동**(현재는 제보 단위 뷰 가중만)
-- **시설 comfort의 survival_score SQL 통합**(현재는 표시 등급만, 스코어드 쿼리에 feature 조인)
-- 트래픽 붙으면 **Fargate task_cpu 512**(TS-005)
-
-## 5) 규율 (절대 지킬 것)
-- **머지 전 반드시 `gh pr checks <N>`로 "Backend (Gradle, JDK 21)" pass 눈으로 확인** (TS-025 — `gh run watch` EXIT만 믿지 말 것).
-- 기능 브랜치 + PR + CI green 확인 후 머지. **로컬 main에서 직접 작업 금지**, 특정 파일만 스테이징.
+## 4) 규율 (절대 지킬 것)
+- **머지 전 반드시 `gh pr checks <N>`로 "Backend (Gradle, JDK 21)" pass 눈으로 확인**(TS-025 — `gh run watch` EXIT만 믿지 말 것).
+- 기능 브랜치 + PR + CI green 후 머지. **로컬 main 직접 작업 금지**, 특정 파일만 스테이징.
 - 커밋 신원 `hoengj`/`seongjuice999@gmail.com`. **커밋에 `Co-Authored-By: Claude` 트레일러 금지**(§A).
-- 새 기능은 **착수 전 스코프 한 줄 제안**. 간판(지리공간·스코어링) 우선, 커뮤니티는 살(리뷰앱화 금지 §0-9).
-- 의사결정은 웹으로 2026 트렌드 확인 + `WORKLOG.md`에 무엇/왜/대안/근거 기록. 사고는 `TROUBLESHOOTING.md`.
-- 네이티브 쿼리 인터페이스 프로젝션에 시각 컬럼 있으면 `Instant`로 받고 DTO에서 UTC 부착(TS-016).
-- 로컬 IT는 colima 이슈로 skip될 수 있다 — **SKIP≠통과**, CI가 유일한 실 게이트(TS-009).
+- 새 외부 API는 **코드 前 실호출로 계약 검증**(TS-026/027 — 봉투·필드·타입·IP 잠금). 비밀·개인정보(키·IP)는 `.local`·env로만, 문서·커밋 금지(§D).
+- 의사결정은 웹 2026 트렌드 확인 + `WORKLOG.md`(무엇/왜/대안/근거), 사고는 `TROUBLESHOOTING.md`, 아키텍처 결정은 `docs/adr/`.
+- 네이티브 프로젝션 시각컬럼=`Instant`+DTO UTC 부착(TS-016). 로컬 IT는 skip될 수 있음 → **SKIP≠통과, CI가 유일 게이트**(TS-009).
+- 간판(지리·스코어링) 우선, **커뮤니티는 살**(리뷰앱화 금지 §0-9). 침수/위험 표현 **공포 조장 금지**(§6).
+
+## 5) 완료마다
+- `docs/BACKLOG.md`의 **완료 체크리스트 체크** + `HANDOFF.md`(현황·데이터·rev) 갱신 + WORKLOG/ADR/TROUBLESHOOTING 기록.
 
 ## 6) 마무리
-위를 마친 뒤, **현재 상태 한 줄 요약 + 승인 상태 + 이번 세션 추천 작업 1~2개**를 사용자에게 보고하고 지시를 기다려라. `$ARGUMENTS`
+전 항목 완료(또는 사용자 입력 대기로 블록) 시, **완료 목록 + 남은(블록된) 항목 + 다음 추천**을 사용자에게 보고한다. `$ARGUMENTS`
