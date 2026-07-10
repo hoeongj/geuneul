@@ -61,10 +61,11 @@ export async function proxyPost(path: string, request: Request): Promise<NextRes
   }
 }
 
-// 로그인 필요 쓰기 프록시(후기 작성 등): 세션 쿠키(httpOnly JWT)를 Bearer로 백엔드에 전달한다.
+// 로그인 필요 쓰기 프록시(후기·댓글·리액션 등): 세션 쿠키(httpOnly JWT)를 Bearer로 백엔드에 전달한다.
 // 쿠키가 없으면 백엔드까지 가지 않고 즉시 401(불필요한 왕복 방지) — /api/me와 동일 판정 기준.
 // 백엔드가 돌려주는 401(토큰 만료 등)·400(검증 실패)은 그대로 통과시켜 클라이언트가 구분할 수 있게 한다.
-export async function proxyAuthedPost(path: string, request: NextRequest): Promise<NextResponse> {
+// method로 POST/DELETE를 모두 지원한다(리액션 취소는 DELETE + body). GET body 없는 메서드는 body 생략.
+export async function proxyAuthed(method: string, path: string, request: NextRequest): Promise<NextResponse> {
   if (!BASE) {
     return NextResponse.json(
       { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
@@ -78,13 +79,13 @@ export async function proxyAuthedPost(path: string, request: NextRequest): Promi
   try {
     const body = await request.text();
     const res = await fetch(`${BASE}${path}`, {
-      method: "POST",
+      method,
       headers: {
         "content-type": "application/json",
         accept: "application/json",
         authorization: `Bearer ${token}`,
       },
-      body,
+      body: body || undefined,
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
@@ -97,6 +98,11 @@ export async function proxyAuthedPost(path: string, request: NextRequest): Promi
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
   }
+}
+
+// 후기 작성 등 로그인 POST — proxyAuthed의 얇은 래퍼(기존 호출부 호환).
+export function proxyAuthedPost(path: string, request: NextRequest): Promise<NextResponse> {
+  return proxyAuthed("POST", path, request);
 }
 
 // 사진 presign 전용 프록시: purpose=report는 익명 허용(proxyPost처럼 XFF/클라이언트IP를 보존해 백엔드

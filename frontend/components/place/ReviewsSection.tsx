@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
-import { ApiError } from "@/lib/api";
+import { ApiError, toggleReaction } from "@/lib/api";
 import { useToast } from "@/lib/context/toast";
 import { usePhotoUpload } from "@/lib/hooks";
-import { useCreateReview, useMe, usePlaceReviews } from "@/lib/queries";
+import {
+  useCreateReview,
+  useCreateReviewComment,
+  useMe,
+  usePlaceReviews,
+  useReviewComments,
+} from "@/lib/queries";
 import { formatRelativeTime } from "@/lib/reports";
 
 // 별점 표시/입력 공용 — 채움은 Icon의 filled 오버라이드로 별마다 개별 제어(별점 인풋에는 onSelect로 클릭 가능하게).
@@ -26,8 +32,130 @@ function Stars({ value, size = 14, onSelect }: { value: number; size?: number; o
   );
 }
 
+// "유용해요" 리액션 토글(2차·살, §0-9 — 최소 표면). 초기 상태는 백엔드가 후기에 안 실어 주므로
+// 상호작용 기반이다: 클릭 시 POST(추가)/DELETE(취소)의 응답 {reacted,count}로 표시를 갱신한다.
+// 비로그인은 클릭 시 안내만(백엔드까지 안 감). 커뮤니티는 간판이 아니라 살이라 카운트를 과시하지 않는다.
+function HelpfulToggle({ reviewId, loggedIn }: { reviewId: number; loggedIn: boolean }) {
+  const { show } = useToast();
+  const [state, setState] = useState<{ reacted: boolean; count: number } | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const onClick = async () => {
+    if (!loggedIn) {
+      show("로그인이 필요해요");
+      return;
+    }
+    if (pending) return;
+    const add = !(state?.reacted ?? false);
+    setPending(true);
+    try {
+      const next = await toggleReaction({ targetType: "REVIEW", targetId: reviewId, add });
+      setState(next);
+    } catch (err) {
+      show(err instanceof ApiError && err.status === 401 ? "로그인이 필요해요" : "잠시 후 다시 시도해 주세요");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const reacted = state?.reacted ?? false;
+  const count = state?.count ?? 0;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={reacted}
+      className={
+        "flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold " +
+        (reacted ? "bg-mint-2 text-teal-deep" : "bg-cream text-muted")
+      }
+    >
+      <span aria-hidden>👍</span>
+      유용해요{count > 0 ? ` ${count}` : ""}
+    </button>
+  );
+}
+
+// 후기 댓글 — 펼쳤을 때만 지연 로드. 작성은 로그인 필요. 커뮤니티가 전면에 나오지 않게 기본 접힘(§0-9).
+function ReviewComments({ reviewId, loggedIn }: { reviewId: number; loggedIn: boolean }) {
+  const { show } = useToast();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const { data, isLoading } = useReviewComments(reviewId, open);
+  const mutation = useCreateReviewComment(reviewId);
+
+  const submit = () => {
+    const comment = text.trim();
+    if (!comment || mutation.isPending) return;
+    mutation.mutate(comment, {
+      onSuccess: () => setText(""),
+      onError: (err) =>
+        show(err instanceof ApiError && err.status === 401 ? "로그인이 필요해요" : "댓글 등록에 실패했어요"),
+    });
+  };
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[12px] font-bold text-muted"
+      >
+        💬 댓글{data && data.length > 0 ? ` ${data.length}` : ""}
+      </button>
+
+      {open && (
+        <div className="mt-2 flex flex-col gap-2">
+          {isLoading ? (
+            <p className="text-[12px] text-muted">댓글을 불러오는 중…</p>
+          ) : !data || data.length === 0 ? (
+            <p className="text-[12px] text-muted">아직 댓글이 없어요</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {data.map((c) => (
+                <li key={c.id} className="text-[12.5px] text-ink-3">
+                  <span className="font-bold text-ink">{c.nickname}</span>{" "}
+                  <span>{c.comment}</span>{" "}
+                  <span className="text-[10.5px] text-muted-3">{formatRelativeTime(c.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {loggedIn ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value.slice(0, 300))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submit();
+                }}
+                placeholder="댓글 달기"
+                aria-label="댓글 입력"
+                maxLength={300}
+                className="min-w-0 flex-1 rounded-[8px] border border-line-cream bg-white px-2.5 py-1.5 text-[12.5px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!text.trim() || mutation.isPending}
+                className="shrink-0 rounded-[8px] bg-forest px-3 py-1.5 text-[12px] font-bold text-cream disabled:opacity-40"
+              >
+                등록
+              </button>
+            </div>
+          ) : (
+            <p className="text-[11.5px] text-muted-2">로그인하면 댓글을 남길 수 있어요</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 후기 목록 — 공개 조회, 최신순. 제보(RecentReports)와 대칭 패턴.
-function ReviewList({ placeId }: { placeId: number }) {
+function ReviewList({ placeId, loggedIn }: { placeId: number; loggedIn: boolean }) {
   const { data, isLoading, isError } = usePlaceReviews(placeId);
   if (isLoading) {
     return <p className="py-1 text-[12.5px] text-muted">후기를 불러오는 중…</p>;
@@ -51,6 +179,13 @@ function ReviewList({ placeId }: { placeId: number }) {
             <span className="shrink-0 text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
           </div>
           {r.comment && <p className="mt-1 text-[12.5px] text-ink-3">{r.comment}</p>}
+          {/* 2차 커뮤니티(살) — 유용해요 + 댓글. 최소 표면(§0-9). */}
+          <div className="mt-2 flex items-start gap-2">
+            <HelpfulToggle reviewId={r.id} loggedIn={loggedIn} />
+            <div className="min-w-0 flex-1">
+              <ReviewComments reviewId={r.id} loggedIn={loggedIn} />
+            </div>
+          </div>
         </li>
       ))}
     </ul>
@@ -171,7 +306,7 @@ export function ReviewsSection({ placeId }: { placeId: number }) {
         </Link>
       )}
 
-      <ReviewList placeId={placeId} />
+      <ReviewList placeId={placeId} loggedIn={!!me} />
     </section>
   );
 }
