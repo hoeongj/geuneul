@@ -986,3 +986,13 @@
 - **왜(why)**: ① **왜 지금 백로그를 박나** — 사용자가 다음 세션 일괄 실행 의사를 밝힘. N1~N9 백로그가 "진단·수정위치까지 박아 재조사 불필요"였던 성공 패턴을 재현(HANDOFF 근거). ② **왜 워크플로로 스펙** — 4항목 조사가 독립·병렬이고, 파일/엔드포인트 정확성이 다음 세션 속도를 좌우 → fan-out으로 실코드 대조. ③ **왜 규칙1/2 준수** — 이건 "버그"가 아니라 의도적 2차/심화라 임의로 당기지 않고, 사용자 결정(다음 세션 일괄)에 맞춰 **백로그+커맨드로 준비만** 함. C4는 §0-2로 경유지1곳에 고정(라우팅 재랭크 creep 배제), C3는 §9로 기존 규칙 병합(기능 증식 배제).
 - **검증**: 커맨드 description이 C1~C4로 갱신됨(스킬 목록 반영 확인). 문서 간 정합(BACKLOG↔HANDOFF↔커맨드 동일 C1~C4·동일 결정). 다음 세션은 `/geuneul-finish`로 바로 착수 가능.
 - **관련**: 스펙 워크플로 wf_7ace2caa · [[geuneul-current-state]] · CLAUDE.md 규칙1(MVP 우선)·2(스코프)·§9·§0-2 · docs/BACKLOG.md C1~C4.
+
+## 2026-07-11 — C2 a11y 심화: 오버레이 Tab 포커스 트랩 + 검색 콤보박스 화살표 nav (BACKLOG C2)
+`/geuneul-finish` 사이클 첫 항목(완성도·프론트 전용·저위험부터). #94가 오버레이 role=dialog+포커스 인/복귀+Esc까지, #92가 검색 Enter/Esc까지 해뒀고, 감사가 "스코프 확장"으로 미룬 두 조각(Tab 순환 가두기·화살표 콤보박스)을 마감.
+- **무엇**:
+  - **`lib/hooks.ts` 공유 훅 2개 신설**. `useDialogFocusTrap(panelRef, active, close, {trapTab})` — 기존 두 오버레이의 Esc+focus-move+restore를 한 훅으로 DRY 통합 + `trapTab`이면 Tab/Shift+Tab을 패널 안에서만 순환(포커서블 수집→가시 필터(offsetParent)→first↔last 래핑, 헤더 '뒤로' 버튼이 first 보장). `useIsLg()` — `matchMedia('(min-width:1024px)')`를 `useSyncExternalStore`로 구독(SSR 스냅샷 false, 하이드레이션 미스매치·set-state-in-effect 회피).
+  - **`PlaceDetailOverlay`·`UserProfileOverlay`** — 각자의 두 useEffect(Esc·focus)를 `useDialogFocusTrap` 호출 한 줄로 대체. 트랩 범위 `trapTab: !(onMap && isLg)`.
+  - **`SearchBar`** — `useId`로 인스턴스별 listbox id, `active` 하이라이트 상태, ArrowUp/Down(순환)·Enter(하이라이트 우선, 없으면 첫 결과)·Esc, input `role=combobox`+`aria-expanded/controls/activedescendant/autocomplete`, ul `role=listbox`+id, 각 option `role=option`+id+`aria-selected`+`tabIndex=-1`+하이라이트 배경, onPointerMove로 마우스와 동기화, 하이라이트 scrollIntoView. onChange·디바운스 성공/실패·clear·닫힘(바깥클릭/pick)에서 `setActive(-1)`.
+- **왜(why)**: ① **왜 트랩 범위 `!(onMap && isLg)`** — 데스크톱 지도 탭('/')에선 오버레이가 400px 좌측 패널이고 옆 지도·NavRail이 살아 있어(뒤가 inert 아님) 하드 트랩하면 키보드 사용자를 보이는 UI에서 격리 → 해로움. 모바일 전 탭·데스크톱 비지도 탭은 전체를 덮으므로 트랩이 옳다. 그래서 `onMap`(usePathname==='/')·`isLg`(matchMedia)를 함께 봐 지도탭+데스크톱만 비트랩. ② **왜 useSyncExternalStore** — matchMedia 반응 구독의 2026 표준 이디엄(set-state-in-effect 린트·SSR 미스매치 회피, React 19). ③ **왜 콤보박스는 button에 role=option+tabIndex=-1** — aria-activedescendant 패턴(옵션이 탭 스톱이면 화살표 nav와 충돌). 이 프로젝트 eslint는 no-interactive-element-to-noninteractive-role 미활성이라 `<button role=option>` 안전, 단 role-has-required-aria-props가 combobox의 aria-expanded를 요구해 반드시 포함(BACKLOG C2 린트 근거).
+- **검증**: 프론트 tsc·eslint·build(next --webpack) 전부 green. 마이그레이션·외부 API 없음(TS-016·TS-026 비해당). 모바일 무변경(트랩 판단만 추가, 레이아웃·마우스·터치·디바운스 동작 불변). 프론트 테스트 인프라 없음 → 키보드 워크스루로 확인(비지도/모바일 오버레이 Tab 첫↔마지막 순환·Esc 복귀, 데스크톱 지도탭 의도적 비트랩, 검색 화살표 하이라이트·Enter 선택).
+- **관련**: CLAUDE.md §6(MVP 화면)·규칙2(스코프) · #92·#94 후속 · BACKLOG C2 · [[geuneul-current-state]].
