@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useSelectedPlace } from "@/lib/context/selected";
@@ -16,6 +16,7 @@ export function UserProfileOverlay() {
   const { id, close } = useSelectedUser();
   const { data: profile, isLoading, isError } = useUserProfile(id);
   const { data: me } = useMe();
+  const panelRef = useRef<HTMLDivElement>(null);
   // 데스크톱 좌측 패널화는 지도 탭('/')에서만.
   const onMap = usePathname() === "/";
 
@@ -29,10 +30,24 @@ export function UserProfileOverlay() {
     return () => document.removeEventListener("keydown", onKey);
   }, [id, close]);
 
+  // 열릴 때 패널로 포커스 이동, 닫힐 때 직전 포커스 복귀.
+  useEffect(() => {
+    if (id == null) return;
+    const prev = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [id]);
+
   if (id == null) return null;
 
   return (
-    <div className={`gn-overlay absolute inset-0 z-50 flex flex-col overflow-y-auto bg-cream${onMap ? " lg:right-auto lg:w-[400px] lg:border-r lg:border-line-cream lg:shadow-[0_0_40px_rgba(0,0,0,0.14)]" : ""}`}>
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label="작성자 프로필"
+      tabIndex={-1}
+      className={`gn-overlay absolute inset-0 z-50 flex flex-col overflow-y-auto bg-cream focus:outline-none${onMap ? " lg:right-auto lg:w-[400px] lg:border-r lg:border-line-cream lg:shadow-[0_0_40px_rgba(0,0,0,0.14)]" : ""}`}
+    >
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line-cream bg-cream px-2 py-2">
         <button type="button" onClick={close} aria-label="뒤로" className="flex h-[38px] w-[38px] items-center justify-center rounded-full text-ink transition-colors lg:hover:bg-line-cream">
           <Icon name="chevLeft" size={22} />
