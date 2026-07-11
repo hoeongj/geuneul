@@ -11,7 +11,8 @@
 > - **C1 신고/모더레이션(#97, 프론트)**: `types/flag.ts`+BFF 프록시 3개(admin GET은 searchParams 직접 결합)+api/queries+`FlagButton`(사유 라디오+코멘트 모달)+후기/제보 최소 배치+`admin/flags` 큐(role 게이트·상태탭·페이저)+mypage 조건부 링크. 백엔드 완비·마이그레이션0·§9 최소. **리뷰 확정**: 중첩 다이얼로그 Esc 이중닫힘·admin 페이지네이션.
 > - **C3 관심장소 알림(#98, ADR-0026)**: `ReportNotificationListener`가 모든 제보 NOTIFY마다 급증과 독립 격리로 `onBookmarkStatus` 무조건 호출 → `findRecentMeaningfulReports`(FLOOD·SLIPPERY·`DISTINCT ON`·`MeaningfulReportView` Instant) → 제보 created_at dedup 버킷 → `insertBookmarkStatusReturning`(RETURNING user_id, EntityManager 커스텀 조각) → 삽입 유저만 push. 기존 BOOKMARK_SURGE 재사용·마이그레이션0. **리뷰 확정 3건**: 재알림(sliding since↔epoch bucket)·타입유실(LIMIT 1)·푸시 누락/중복(사전 SELECT+가드).
 > - **C4 그늘 경유 경로(#99, ADR-0027)**: `findBestToiletWaypoint`→`findBestWaypointByCategories`(ANY(string_to_array)+category 프로젝션) 일반화·대체·`RouteWaypointView.getCategory`·`RouteService.viaRoute`(toilet=TOILET·shade=SHADE_CATEGORIES)·`GET /routes/shade`·`RouteStop.category`. 프론트 `fetchRoute(via)`·`ToiletRoute→RouteResult`·`/api/routes/shade`·"그늘 경유" 버튼·미니맵 category 아이콘. F3 대칭·자체 라우팅 없음(§0-2)·마이그레이션0. 리뷰 0건.
-> - **라이브 검증(2026-07-11)**: `/flags`·`/admin/flags`·`/notifications` 401(보호·존재) · `/routes/toilet` 200 · **`/routes/shade` 200(waypoint category·shadeSpots)** · App 200. ADR 최신 **0027**. 남은 백로그·사용자 액션 **없음**.
+> - **라이브 검증(2026-07-11)**: `/flags`·`/admin/flags`·`/notifications` 401(보호·존재) · `/routes/toilet` 200 · **`/routes/shade` 200(waypoint category·shadeSpots)** · App 200. ADR 최신 **0027**.
+> - **다음 = `docs/BACKLOG.md`의 D1~D5(포트폴리오 마무리 + 무료 출시)**. **기능 개발은 동결**(사용자 합의) — 간판·심화·완결성 충분. 남은 건 **채용 자산화 + $0 배포**(규칙B 2026 웹검증 반영): **D1** README 30초 케이스 스터디 · **D2** 무료 install 페이지(안드로이드 WebAPK/TWA APK·iOS 홈화면 추가 — 스토어·$25·$99 스킵) · **D3** 아키텍처 다이어그램·데모 GIF · **D4** 면접 STAR 8~10개(ADR/TS) · **D5** 타깃 JD 정렬. **`/geuneul-finish`로 다음 세션 일괄 구동.** 외부 블로커 0(계정·비용 불요).
 
 > ── 이하 라인은 **이전 세션 기록(2026-07-11 주간 이전, 히스토리·참고용)** ──
 
@@ -156,7 +157,7 @@ docs/       adr/0001~0025 · design-brief.md
 
 ## 다음 할 일 (우선순위)
 
-> 🎯 **현재 남은 할 일 = 없음.** F1~F6·N1~N9·데스크톱 반응형(#92~#94) + **C1~C4(2차·심화 마무리, #96~#99)** 전량 완료·머지·라이브. Flyway V18·ADR 0027. 계획+2차/심화 스코프 소진. 새 요구가 생기면 `docs/BACKLOG.md`에 백로그를 정의하고 `/geuneul-finish`로 구동. 아래는 **완료 히스토리(참고)**.
+> 🎯 **현재 다음 할 일 = [`docs/BACKLOG.md`](./docs/BACKLOG.md)의 D1~D5(포트폴리오 마무리 + 무료 출시)**. 기능 개발은 완료·동결(F1~N9·데스크톱·C1~C4 라이브, V18·ADR 0027). 남은 건 채용 자산화·$0 배포(README 케이스스터디·무료 install 페이지·데모·면접 STAR·JD 정렬). **`/geuneul-finish`로 일괄 구동.** 아래는 **완료 히스토리(참고)**.
 
 ### ✅ 심화+additive 완주 (2026-07-10, PR #61~#69)
 - A1 시설 comfort SQL 통합(V13, ADR-0017) · A2 verified→trust · A3 쉼터 냉방 백필(57,070 실적재) · A4 급증 SSE 프론트 · A5 popular-times 히트맵 · A6 커뮤니티 최소 UI · A7 bookmarks(V14) · A8 상권 6대 광역시 · B1 알림(V15, ADR-0018) · B2 루트(ADR-0019). 라이브 rev56.
