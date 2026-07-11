@@ -1078,3 +1078,10 @@ D2에서 보류했던 "다운로드받아 설치하는 .apk"를 사용자 요청
 - **함정 해결**: ① Bubblewrap SDK 검증이 구 레이아웃(`$sdk/tools` 또는 `$sdk/bin`) 기대 → cmdline-tools/latest/bin으로 심링크. ② twa-manifest에 `splashScreenFadeOutDuration` 누락 시 생성된 build.gradle에 빈 값→Groovy 파싱 에러 → 300 명시. ③ node 24에서 대화형 위저드 ERR_USE_AFTER_CLOSE → config.json 사전 시드로 비대화형화.
 - **검증**: `apksigner verify` 서명 cert SHA-256=keystore fingerprint 일치 ✔. `aapt dump badging`: package `app.vercel.geuneul.twa`·label '그늘' ✔. 프론트 tsc·eslint·build green. keystore·비번 커밋 안 됨(check-ignore 확인). **keystore 분실 시 APK 업데이트 불가 → `.local` 백업 필수.**
 - **관련**: BACKLOG D2(보류→완료) · [[frontend-live-deployment]] · ADR-0022(Web Push, TWA도 웹푸시 동작) · [[geuneul-current-state]].
+
+## 2026-07-11 — 문서 정합 마감: TS-033 기록 + 전 문서 수치·참조 동기화 (자산화 사이클 완결)
+D2 후속(다운로드 TWA APK, #107)까지 반영해 모든 문서를 정합화. **코드·마이그레이션 0**(문서 전용).
+- **무엇**: ① `TROUBLESHOOTING.md` **TS-033 신규**(Bubblewrap TWA 빌드 3함정: node24 위저드 ERR_USE_AFTER_CLOSE→config 사전시드 / 신 cmdline-tools 레이아웃 미인식→심링크 / `splashScreenFadeOutDuration` 누락→build.gradle 빈 Groovy값 파싱에러). ② **TS 카운트 32→33 동기화**: README 배지·`INTERVIEW.md`(intro·footer TS-001~033). ③ **APK/assetlinks 참조 추가**: README(P5·자산화 사이클 라인), `architecture.md`(배포 §), HANDOFF(#107 완료·라이브 실측). ④ HANDOFF `/routes/shade`=API 경로 주석(프론트 직접 404 정상). ⑤ BACKLOG 상태 배너 #107·#108 반영.
+- **왜(why)**: ① **TS-033은 CLAUDE.md 규칙 C 필수 산출물** — TWA 빌드에서 실제 겪은 문제→원인→해결→학습이라 기록해야 완결. ② **수치는 실측·정합** — TS 파일 카운트 실제 33(과장 0), 링크 전수 확인으로 데드링크 0. ③ **`/routes/shade` 404 오해 문서화** — API 경로와 프론트 페이지 구분을 HANDOFF에 남겨 재질문 방지.
+- **검증**: README 내부 파일링크 전수 resolve(BROKEN 0), TS 33·ADR 27 카운트 일치, 잔여 'TS 32' 없음(HANDOFF의 '문서 32건 개선'은 별개 과거 감사 사실이라 유지). mermaid 미변경.
+- **관련**: TS-033 · BACKLOG D2 후속 · [[geuneul-current-state]]. **자산화 사이클(D1~D5 + TWA APK + 문서 정합) 완결 — 남은 백로그 0.**

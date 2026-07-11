@@ -1,6 +1,6 @@
 # 면접 STAR — 그늘(Geuneul)
 
-> 27개 ADR · 32개 트러블슈팅(`TROUBLESHOOTING.md`) 중, **면접에서 30초에 꺼낼 수 있는** 9개를 STAR(Situation·Task·Action·Result)로 정리했다.
+> 27개 ADR · 33개 트러블슈팅(`TROUBLESHOOTING.md`) 중, **면접에서 30초에 꺼낼 수 있는** 9개를 STAR(Situation·Task·Action·Result)로 정리했다.
 > 그늘 **고유 축(지리공간·멱등 ETL·실시간·동시성·검증 회복력)** 위주 — 분산/AI/K8s 축은 다른 프로젝트에서 다룬다.
 > 각 항목의 원 서사는 괄호 안 `TS-0xx`/`ADR-00xx`에 있다.
 
@@ -102,4 +102,4 @@
 
 위 3·5·8번은 **적대적 리뷰 워크플로**로 잡았다: 여러 렌즈(correctness·security·concurrency·repro)로 결함 후보를 **생성**하고, 각 후보를 독립 에이전트가 **반증(refute) 시도** → 반증을 못 넘긴 것만 확정으로 수용한다(TS-008은 14건 발견 중 확정 5건, 9건은 거짓양성으로 배제). 이 방식이 **순차 테스트로는 안 드러나는 동시성·신뢰경계 결함**을 커밋 전에 잡아준다. 확정분은 회귀 테스트로 고정하고, 회귀 없는 점진 활성화(예: 시크릿 미설정=기존 동작)로 무중단 배포한다.
 
-> 원 서사·코드 위치는 [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)(TS-001~032)와 [`docs/adr/`](./adr)(ADR 0001~0027)에.
+> 원 서사·코드 위치는 [`TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)(TS-001~033)와 [`docs/adr/`](./adr)(ADR 0001~0027)에.

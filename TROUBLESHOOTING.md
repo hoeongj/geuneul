@@ -449,3 +449,39 @@ null 바디는 합법이라 throw 없음. 4개 프록시 헬퍼(proxyPost/proxyA
 **학습**: ① **204/205/304 응답을 프록시/재구성할 때 바디는 반드시 null** — 빈 문자열도 Response 생성자가 거부한다.
 ② "백엔드는 성공인데 프론트만 실패"는 **응답 파이프라인(프록시·직렬화)** 을 의심하라(비즈니스 로직이 아니라).
 ③ TS-029에서 "동기→비동기"만 보고 204 재구성 함정은 못 봤다 — 같은 증상(배너는 옴/프론트 실패)이 원인이 둘이었다.
+
+## TS-033 — Bubblewrap(TWA) 서명 APK를 비대화형 환경에서 빌드: node24 위저드 크래시 + 구 SDK 레이아웃 + 빈 Groovy 값
+**상황**: D2 후속으로 다운로드 설치용 **서명 TWA APK**를 Bubblewrap 1.24.1로 빌드하려는데, 대화형 없는(비-TTY)
+셸에서 3연속 벽에 막혔다. ① 첫 실행이 "Do you want Bubblewrap to install the JDK?" 프롬프트에서 즉시
+`Error [ERR_USE_AFTER_CLOSE]: readline was closed`로 죽음(node 24). ② JDK/SDK를 직접 물려주자 `ERROR The
+provided androidSdk isn't correct.` ③ 그다음엔 Gradle이 `build file 'app/build.gradle': 44: Unexpected input:
+',' @ line 44, column 34` (Groovy 파싱 실패)로 BUILD FAILED.
+
+**원인**:
+- **① node24 위저드 크래시**: Bubblewrap은 `~/.bubblewrap/config.json`이 없으면 첫 실행에 JDK/SDK 설치 위저드
+  (inquirer)를 띄운다. 비-TTY 환경에선 stdin이 즉시 EOF → inquirer가 `ERR_USE_AFTER_CLOSE`. 즉 **에러 메시지는
+  readline이지만 진짜 원인은 "대화형 위저드가 자동화 환경과 안 맞음"**.
+- **② SDK 레이아웃 불일치**: 요즘 Android `commandlinetools`는 `$SDK/cmdline-tools/latest/bin`에 풀리는데,
+  Bubblewrap 1.24의 `AndroidSdkTools.validatePath`는 **구 레이아웃**(`$SDK/tools` 또는 `$SDK/bin`)만 확인한다
+  (`existsSync(toolsPath) || existsSync(binPath)`). 신 레이아웃엔 둘 다 없어 "isn't correct".
+- **③ 빈 Groovy 값**: `twa-manifest.json`에 `splashScreenFadeOutDuration`을 안 넣으면, Bubblewrap이 생성하는
+  `app/build.gradle` 템플릿의 `splashScreenFadeOutDuration: ,`가 **값 없이** 찍혀 Groovy 문법 오류. 템플릿이
+  누락 필드에 기본값을 안 채우고 그대로 비운다.
+
+**해결**:
+- **①** 위저드를 우회 — 이미 있는 JDK17(mise 17.0.2)·직접 설치한 Android SDK 경로를 `~/.bubblewrap/config.json`
+  (`{"jdkPath":...,"androidSdkPath":...}`)에 **사전 시드**. config가 있으면 위저드를 건너뛴다. 서명 비번은
+  `BUBBLEWRAP_KEYSTORE_PASSWORD`/`BUBBLEWRAP_KEY_PASSWORD` env로 넘겨 `build`도 완전 비대화형.
+- **②** `$SDK/bin`·`$SDK/tools/bin`을 `cmdline-tools/latest/bin`으로 **심링크**(구 검증 통과 + sdkmanager 경로도
+  성립). SDK 자체는 `sdkmanager`로 `platform-tools`·`platforms;android-34`·`build-tools;34.0.0`를 무인 라이선스
+  수락(`yes | sdkmanager --licenses`)으로 설치.
+- **③** `twa-manifest.json`에 `splashScreenFadeOutDuration: 300` 명시 → `bubblewrap update`로 프로젝트 재생성 →
+  `bubblewrap build --skipPwaValidation`. `apksigner verify`로 APK 서명 cert SHA-256 = keystore fingerprint
+  일치 확인(assetlinks와 동일 지문이어야 TWA 주소창이 사라짐).
+
+**학습**: ① **자동화(CI/샌드박스)에서 CLI 첫 실행 위저드는 config 사전 시드로 무력화** — "readline closed"류 에러는
+대개 대화형 프롬프트가 비-TTY를 만난 신호다. ② **도구의 경로 검증이 최신 배포 레이아웃을 못 따라올 수 있다**
+(Bubblewrap이 신 cmdline-tools 레이아웃 미지원) → 심링크로 기대 구조를 만들어준다. ③ **코드 생성기가 누락 필드를
+빈 값으로 찍으면 하위 컴파일에서 터진다** — 생성 입력(twa-manifest.json)을 완전하게 채우는 게 근본. ④ 서명 키
+분실 = APK 업데이트 영구 불가 → keystore·비번은 `.local`(§D)에 두고 백업(assetlinks 지문도 이 키에 묶임).
+**관련**: `frontend/public/geuneul.apk`, `frontend/public/.well-known/assetlinks.json`, WORKLOG 2026-07-11 D2 후속. 계열: TS-009(도구 하네스가 죽어도 목표를 직접 공략)·TS-020(생성 입력 형식 정확성).
