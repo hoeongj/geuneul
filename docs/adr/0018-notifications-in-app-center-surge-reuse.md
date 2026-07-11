@@ -2,7 +2,7 @@
 
 - 상태: 승인(구현 반영, 2026-07-10)
 - 관련: `V15__notifications.sql`(신규), `domain.notification`(신규), `domain.alert`(급증 LISTEN/NOTIFY 재사용,
-  ADR-0016), `bookmarks`(A7·V14), `domain.weather`(폭염 트리거 — stretch), CLAUDE.md §3(알림)·§6(공포 조장 금지)·§9
+  ADR-0016), `bookmarks`(A7·V14), `domain.weather`(폭염 트리거 — stretch), SPEC.md §3(알림)·§6(공포 조장 금지)·§9
 
 ## 문제(Context)
 

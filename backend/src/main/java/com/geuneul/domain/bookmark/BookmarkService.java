@@ -3,7 +3,9 @@ package com.geuneul.domain.bookmark;
 import com.geuneul.domain.bookmark.dto.BookmarkResponse;
 import com.geuneul.domain.bookmark.dto.BookmarkToggleResponse;
 import com.geuneul.domain.place.PlaceRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,15 +29,15 @@ public class BookmarkService {
     }
 
     /** 저장(멱등 upsert). 없는 장소는 404(FK 위반 500 대신 명확한 신호). */
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BookmarkToggleResponse add(long userId, long placeId, String memo) {
-        if (!placeRepository.existsById(placeId)) {
+        if (!placeRepository.existsByIdAndDeletedAtIsNull(placeId)) {
             throw new ResponseStatusException(NOT_FOUND, "place not found: " + placeId);
         }
         bookmarkRepository.findByUserIdAndPlaceId(userId, placeId)
                 .ifPresentOrElse(
-                        b -> b.updateMemo(memo), // 재저장 = memo 갱신(더티체킹으로 flush)
-                        () -> bookmarkRepository.save(Bookmark.of(userId, placeId, memo)));
+                        b -> updateMemo(b, memo), // 재저장 = memo 갱신
+                        () -> insertOrUpdateAfterRace(userId, placeId, memo));
         return BookmarkToggleResponse.of(placeId, true);
     }
 
@@ -52,5 +54,20 @@ public class BookmarkService {
         return bookmarkRepository.findBookmarksWithPlace(userId).stream()
                 .map(BookmarkResponse::of)
                 .toList();
+    }
+
+    private void insertOrUpdateAfterRace(long userId, long placeId, String memo) {
+        try {
+            bookmarkRepository.save(Bookmark.of(userId, placeId, memo));
+        } catch (DataIntegrityViolationException race) {
+            Bookmark existing = bookmarkRepository.findByUserIdAndPlaceId(userId, placeId)
+                    .orElseThrow(() -> race);
+            updateMemo(existing, memo);
+        }
+    }
+
+    private void updateMemo(Bookmark bookmark, String memo) {
+        bookmark.updateMemo(memo);
+        bookmarkRepository.save(bookmark);
     }
 }

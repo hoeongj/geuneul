@@ -1,4 +1,4 @@
-# S3 버킷 — 제보/후기 사진(P2 presigned PUT 업로드, CLAUDE.md §7·§9 POST /photos/presign).
+# S3 버킷 — 제보/후기 사진(P2 presigned PUT 업로드, docs/SPEC.md §7·§9 POST /photos/presign).
 # 파일은 백엔드를 거치지 않는다: 브라우저가 S3Presigner가 서명한 URL로 직접 PUT한다.
 #
 # 비공개 원칙: 퍼블릭 액세스 완전 차단 + ACL 비활성(BucketOwnerEnforced). MVP는 오브젝트 URL을 그대로

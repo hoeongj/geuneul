@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 급증 안내 문구 매핑 단위테스트 — 표현 규율(CLAUDE.md §6): 공포 조장 금지.
+ * 급증 안내 문구 매핑 단위테스트 — 표현 규율(docs/SPEC.md §6): 공포 조장 금지.
  * 위험 계열(침수·미끄럼)도 "위험!"이 아니라 순화 문구여야 한다.
  */
 class SurgeInfoTest {

@@ -1,9 +1,12 @@
 package com.geuneul.domain.search;
 
+import com.geuneul.domain.report.ExternalApiRateLimiter;
+import com.geuneul.domain.report.ProxyClientResolver;
 import com.geuneul.domain.search.dto.PlaceSearchResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 /**
  * 지정 장소 검색 API (N5) — 카카오 REST 키를 클라이언트에 노출하지 않도록 백엔드(BFF)가 대신 호출한다.
@@ -26,11 +30,17 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 public class KeywordSearchController {
 
     static final int DEFAULT_SIZE = 10;
+    static final int PER_MINUTE = 60;
 
     private final KakaoKeywordClient keywordClient;
+    private final ExternalApiRateLimiter rateLimiter;
+    private final ProxyClientResolver clientResolver;
 
-    public KeywordSearchController(KakaoKeywordClient keywordClient) {
+    public KeywordSearchController(KakaoKeywordClient keywordClient, ExternalApiRateLimiter rateLimiter,
+                                   ProxyClientResolver clientResolver) {
         this.keywordClient = keywordClient;
+        this.rateLimiter = rateLimiter;
+        this.clientResolver = clientResolver;
     }
 
     @Operation(summary = "지정 장소 검색(카카오 키워드)",
@@ -41,7 +51,11 @@ public class KeywordSearchController {
             @Parameter(description = "검색어(필수, 공백 불가)") @RequestParam String query,
             @Parameter(description = "위치 바이어스 위도(선택)") @RequestParam(required = false) Double lat,
             @Parameter(description = "위치 바이어스 경도(선택)") @RequestParam(required = false) Double lng,
-            @Parameter(description = "최대 결과 수, 기본 10, 최대 15") @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "최대 결과 수, 기본 10, 최대 15") @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest http) {
+        if (!rateLimiter.tryAcquire("places-search", clientResolver.resolve(http), PER_MINUTE)) {
+            throw new ResponseStatusException(TOO_MANY_REQUESTS, "검색 요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.");
+        }
         String q = query == null ? "" : query.strip();
         if (q.isEmpty()) {
             throw new ResponseStatusException(BAD_REQUEST, "검색어를 입력해 주세요.");

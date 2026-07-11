@@ -103,13 +103,14 @@ function RuleToggle({
 }) {
   const { show } = useToast();
   const geo = useGeo();
-  const { data: rules } = useNotificationRules(true);
+  const { data: rules, isLoading: rulesLoading, isFetching: rulesFetching } = useNotificationRules(true);
   const toggle = useToggleNotificationRule();
   const existing = rules?.find((r) => r.type === type);
   const on = !!existing;
+  const disabled = rulesLoading || rulesFetching || toggle.isPending;
 
   const onClick = () => {
-    if (toggle.isPending) return;
+    if (disabled) return;
     if (on) {
       toggle.mutate({ action: "delete", id: existing!.id }, { onSuccess: () => show("알림을 껐어요") });
     } else if (type === "SURGE_NEARBY") {
@@ -147,7 +148,7 @@ function RuleToggle({
         type="button"
         onClick={onClick}
         aria-pressed={on}
-        disabled={toggle.isPending}
+        disabled={disabled}
         className={
           "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 " +
           (on ? "bg-forest" : "bg-line-chip")

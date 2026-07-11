@@ -66,6 +66,7 @@ public class PushService {
     /** 구독 저장(재구독 upsert). 키 비활성이어도 저장은 한다(나중에 켜면 발송 대상). */
     @Transactional
     public void subscribe(long userId, String endpoint, String p256dh, String auth) {
+        PushEndpointValidator.requireValid(endpoint);
         repository.upsert(userId, endpoint, p256dh, auth);
     }
 

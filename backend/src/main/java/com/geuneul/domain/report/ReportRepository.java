@@ -9,6 +9,9 @@ import java.util.List;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
+    /** 공개 가능한 제보 존재 확인 — hidden 제보는 리액션 대상에서 404로 취급한다. */
+    boolean existsByIdAndHiddenFalse(long id);
+
     /**
      * 장소의 유효(미만료·미숨김) 제보 최신순. idx_reports_place_created 경로.
      * 상세 화면 "최근 제보"용 — 20개면 충분(P3 freshness 스코어도 최근분만 본다).

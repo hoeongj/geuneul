@@ -11,7 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 
 /**
- * 후기 댓글(CLAUDE.md §8 2차·살) — 후기(review)에 달리는 댓글. 스키마 소유권은 Flyway V11.
+ * 후기 댓글(docs/SPEC.md §8 2차·살) — 후기(review)에 달리는 댓글. 스키마 소유권은 Flyway V11.
  * 로그인 필요(user_id NOT NULL). survival_score(간판)와 무관한 커뮤니티 콘텐츠(§0-9).
  */
 @Entity

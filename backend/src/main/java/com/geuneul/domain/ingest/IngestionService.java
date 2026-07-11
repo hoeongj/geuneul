@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 재실행하면 수렴하므로 파일 단위 원자성은 불필요 (ADR-0002 개정).
  *
  * 지오코딩 재사용: 이미 geocoded=true로 저장된 행은 주소가 안 바뀌었으면 건너뛴다
- * → 재적재가 카카오 쿼터를 다시 태우지 않는다 (CLAUDE.md §7 "결과 좌표는 저장").
+ * → 재적재가 카카오 쿼터를 다시 태우지 않는다 (docs/SPEC.md §7 "결과 좌표는 저장").
  */
 @Service
 public class IngestionService {

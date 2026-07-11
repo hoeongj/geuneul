@@ -23,7 +23,7 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 /**
- * 휘발성 제보 API (CLAUDE.md §9). 익명 제보 허용 + 장소별 최근 제보 조회.
+ * 휘발성 제보 API (docs/SPEC.md §9). 익명 제보 허용 + 장소별 최근 제보 조회.
  * POST /reports는 permitAll(SecurityConfig)이라 로그인은 선택이다 — Authorization 헤더가 있으면
  * {@code principal}이 채워져 trust_score 가중 대상이 되고(P2), 없으면 기존과 동일하게 완전 익명이다.
  * 사진 presign·신고 큐는 후속.

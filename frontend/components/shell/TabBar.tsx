@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useSelectedPlace } from "@/lib/context/selected";
+import { useSelectedUser } from "@/lib/context/selectedUser";
 
 export const TABS = [
   { href: "/", label: "지도", icon: "mapicon" },
@@ -14,7 +15,12 @@ export const TABS = [
 
 export function TabBar({ className = "" }: { className?: string }) {
   const pathname = usePathname();
-  const { close } = useSelectedPlace();
+  const selectedPlace = useSelectedPlace();
+  const selectedUser = useSelectedUser();
+  const closeOverlays = () => {
+    selectedPlace.close();
+    selectedUser.close();
+  };
 
   return (
     <nav
@@ -28,7 +34,7 @@ export function TabBar({ className = "" }: { className?: string }) {
           <Link
             key={tab.href}
             href={tab.href}
-            onClick={close}
+            onClick={closeOverlays}
             aria-current={active ? "page" : undefined}
             className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1"
           >

@@ -1,12 +1,12 @@
 # ADR-0006. 공부 가능 공간(공공 + 카페) 데이터 커버리지 확장 — "여름 실내 오래 버티기" survival 레이어
 
 - 상태: **Accepted(구현 반영)** — 카테고리(CAFE/STUDY_CAFE)·스키마(is_commercial/deleted_at)·파서·인제스천 코드 완료(2026-07-09). **상권정보(STUDY_CAFE/CAFE) 오픈API 계약 검증 완료(2026-07-10)** — 활용신청 승인 확인(resultCode 00) 후 실호출로 응답 계약·업종코드 확정(아래 "구현 정정(2026-07-10)"·TS-026). 프로덕션 실적재는 머지→배포 후 `infra/scripts/prod-ingest-stores.sh`로 실행.
-- 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), `domain.ingest.openapi`(도서관)·`domain.ingest.storeapi`(상권정보) 신설, Flyway V5, ADR-0002(멱등)·ADR-0003(지오코딩), CLAUDE.md §3(커버리지 원칙)·§9(간판 vs 살)
+- 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), `domain.ingest.openapi`(도서관)·`domain.ingest.storeapi`(상권정보) 신설, Flyway V5, ADR-0002(멱등)·ADR-0003(지오코딩), SPEC.md §3(커버리지 원칙)·§9(간판 vs 살)
 - 근거 조사: 다중 에이전트 리서치(공공 공부공간 데이터셋·노들서가류·카페 데이터·모델링) — wf_e524daf8. 구현 단계에서 도서관 오픈API 실호출로 원안의 핵심 가정 하나를 정정함(아래).
 
 ## 구현 정정(2026-07-09) — 원안과 다르게 간 지점
 
-원안(위 "결정" 섹션, 착수 시점 문서)은 소스별 접근 방식을 추정으로 정했으나, 실제 구현 중 **실 API 호출로 검증**한 결과 한 가지가 정정됐다(CLAUDE.md §B 의사결정 프로토콜 — 검증 후 재확정):
+원안(위 "결정" 섹션, 착수 시점 문서)은 소스별 접근 방식을 추정으로 정했으나, 실제 구현 중 **실 API 호출로 검증**한 결과 한 가지가 정정됐다(SPEC.md §B 의사결정 프로토콜 — 검증 후 재확정):
 
 - **전국도서관표준데이터 = CSV 다운로드가 아니라 JSON 오픈API로 적재.** 원안은 "오픈API는 경기도만 제공, CSV 다운로드가 전국"이라 추정했다(HANDOFF 메모 근거). 그러나 `https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api` 를 확보된 `.local/datago.env`의 `DATA_GO_KR_SERVICE_KEY`로 실호출한 결과 **지역 파라미터 없이 pageNo/numOfRows 페이지네이션만으로 전국 3,555건**을 반환했다(광주·서울 등 여러 시도 확인, `totalCount=3555`). CSV 다운로드보다 훨씬 단순하고(수동 파일 확보 불필요), 레코드마다 열람좌석수(`seatCo`)를 직접 제공해 ADR 원안의 "열람좌석수>0만 백필" 조건부 규칙을 CSV 경로의 균일 근사 없이 **그대로 정밀 구현**할 수 있었다(`domain.ingest.openapi.PublicLibraryIngestionService`).
 - **상권정보(STUDY_CAFE/CAFE)는 계약 미검증(2026-07-09) → 계약 검증 완료(2026-07-10).** 같은 계정 키로 상가업소정보 오픈API(`B553077/api/open/sdsc2`)를 호출했으나 승인 전엔 **403** — 도서관 API와 달리 별도 승인 절차가 있다. 행정동코드 열거가 필요한 `storeListInDong` 대신 우리 PostGIS 반경검색과 동일한 정신모델인 **반경 검색(`storeListInRadius`)**을 택했다(격자 좌표 순회로 전국 커버). 승인 후 실호출로 추정 계약을 **3군데 정정**했다(TS-026): ① 응답 봉투는 도서관 API 같은 `{response:{…}}` 래퍼가 **아니라 `{header,body}` 최상위**, ② 좌표(lon/lat)·페이지네이션(totalCount)은 문자열이 아니라 **JSON 숫자**, ③ 업종 소분류코드 확정 = **카페 `I21201`, 독서실/스터디카페 `R10202`**(추정 `I56191` 폐기). 코드 확정으로 (a) 분류명 텍스트 매칭 → **코드 기반 확정 분류**(`StoreCategoryMapper.classifyByCode`) 승격, (b) `indsSclsCd` **서버측 필터**로 대상 업종만 페이지네이션(전체 상가 수신 → 클라 필터의 호출량 낭비 제거). 격자 커버리지는 `StoreIngestionService.ingestArea(bbox,radius)`로 구현.
@@ -23,7 +23,7 @@
 
 ## 문제(Context)
 
-"공부 가능한 **카페** + 공공기관 중 공부 가능한 **공간**(예: 노들서가)을 전부 넣고 싶다"는 요구. 이는 UGC 기능이 아니라 **데이터 커버리지 확장**이며, CLAUDE.md §3 커버리지 원칙("공공데이터가 있는 곳 전부 적재")과 정합하고 **간판(PostGIS 대용량 지리검색 + idempotent ETL)을 직접 강화**한다. 다만 4가지 설계 리스크:
+"공부 가능한 **카페** + 공공기관 중 공부 가능한 **공간**(예: 노들서가)을 전부 넣고 싶다"는 요구. 이는 UGC 기능이 아니라 **데이터 커버리지 확장**이며, SPEC.md §3 커버리지 원칙("공공데이터가 있는 곳 전부 적재")과 정합하고 **간판(PostGIS 대용량 지리검색 + idempotent ETL)을 직접 강화**한다. 다만 4가지 설계 리스크:
 1. **정체성** — "여름 생존"이 "연중 카페 추천앱"으로 번질 위험(§9).
 2. **카테고리 남발** — 종류마다 enum을 늘리면 지도 필터·색상만 복잡해짐.
 3. **커먼스 희석** — 상업 POI(카페) 대량 유입이 "공개 커먼스" 성격을 흐림.
@@ -70,7 +70,7 @@
 
 - `places` 볼륨: 화장실 6만 + 카페 9만 + 도서관 1.5만 = **15만+** → PostGIS 반경/kNN 성능·k6 부하테스트(P4)의 실전 소재.
 - **블로커**: 대량 적재는 **공공데이터포털 오픈API serviceKey(무료)** 또는 다운로드한 CSV가 필요. serviceKey면 P3 무인화(EventBridge→ECS RunTask 주기 동기화 + soft-delete diff)까지 한 번에 연결됨.
-- 착수 전 소규모 결정(enum·필터·명소 시드·soft-delete)은 WORKLOG에 why/대안 기록(CLAUDE.md §C).
+- 착수 전 소규모 결정(enum·필터·명소 시드·soft-delete)은 WORKLOG에 why/대안 기록(SPEC.md §C).
 - **미확정(실제 파일 필요)**: 각 CSV의 정확한 컬럼 헤더·charset, 상권정보 업종 소분류 코드값(2023 개편 — 하드코딩 금지, 업종코드 매핑표 15067631로 실측 확정).
 
 ## 착수 순서(Recommended Order) — 진행 상황(2026-07-09)
@@ -87,4 +87,4 @@
 ## 근거(References)
 - 리서치: 전국도서관표준데이터(15013109)·전국공공시설개방정보표준데이터(15013117)·소상공인 상가(상권)정보(15083033/15012005)·노들섬 노들서가(nodeul.org)·서울열린데이터(OA-15480/OA-21062)
 - 카페 study_ok 크라우드소싱 벤치마크: 카공맵·카공지도(100% UGC)
-- CLAUDE.md §3(전국 표준데이터 그대로 적재)·§9(간판 vs 살)·로드맵 P3(soft-delete)
+- SPEC.md §3(전국 표준데이터 그대로 적재)·§9(간판 vs 살)·로드맵 P3(soft-delete)

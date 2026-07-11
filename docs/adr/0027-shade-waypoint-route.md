@@ -3,7 +3,7 @@
 - 상태: 승인(구현 반영, 2026-07-11)
 - 관련: ADR-0019(경로 MVP·경유지 detour-min), ADR-0021(도로 폴리라인 Kakao navi 키 재사용), ADR-0024(그늘/비 corridor 오버레이 N8),
   `RouteService.shadeRoute`/`viaRoute`, `PlaceRepository.findBestWaypointByCategories`, `RouteController` GET /routes/shade,
-  `RouteResponse.RouteStop.category`·`RouteWaypointView.getCategory`, CLAUDE.md §0-2(자체 라우팅 지양)·§3/§10(루트 3종)
+  `RouteResponse.RouteStop.category`·`RouteWaypointView.getCategory`, SPEC.md §0-2(자체 라우팅 지양)·§3/§10(루트 3종)
 - 후속: BACKLOG C4
 
 ## 문제(Context)

@@ -2,7 +2,7 @@
 
 - 상태: 승인(구현 반영, 2026-07-10)
 - 관련: `domain/alert/*`(신규), `V9__report_surge_notify_trigger.sql`(신규), ADR-0007(place_report_signals 시공간 신호),
-  ADR-0013(ECS Service Auto Scaling — min1/**max3**), CLAUDE.md §7("Redis Streams / Postgres LISTEN·NOTIFY로.
+  ADR-0013(ECS Service Auto Scaling — min1/**max3**), SPEC.md §7("Redis Streams / Postgres LISTEN·NOTIFY로.
   Kafka 등 과설계 금지"), 로드맵 P4("실시간 이벤트(제보 급증 알림)")
 
 ## 문제(Context)
@@ -11,7 +11,7 @@
 (예: 갑작스런 침수·러브버그 대발생·화장실 고장) 그 신호를 지도/구독자에게 **즉시** 띄운다. 두 개의 독립된 질문이 있다.
 
 1. **급증을 무엇으로 판정하나(detection)** — "최근 N분 안에 유효 제보 ≥ K건"을 어느 레이어에서 계산하나.
-   간판 규율(CLAUDE.md §5: "시공간 랭킹은 DB 레이어에서")과 정합해야 한다.
+   간판 규율(SPEC.md §5: "시공간 랭킹은 DB 레이어에서")과 정합해야 한다.
 2. **급증을 어떻게 실시간으로 전파하나(transport)** — 감지된 순간 브라우저까지 밀어 넣는 경로. 폴링/롱폴/SSE/WebSocket과
    그 뒤의 인스턴스 간 팬아웃(Kafka/Redis Streams/LISTEN·NOTIFY) 중 무엇을 쓰나.
 
@@ -21,7 +21,7 @@
 
 급증 판정은 **DB에서** 한다 — `reports`를 시간창(`created_at >= now() - :window`)·유효성(`expires_at > now()`)으로
 필터해 장소별 count를 낸다. bounds 뷰포트 급증 목록은 여기에 `places`를 공간조인(`geom && ST_MakeEnvelope`,
-V2 GiST 경로)한다. 앱 전체스캔이 아니라 인덱스(`idx_reports_place_created`·GiST) 경로를 타는 것이 CLAUDE.md
+V2 GiST 경로)한다. 앱 전체스캔이 아니라 인덱스(`idx_reports_place_created`·GiST) 경로를 타는 것이 SPEC.md
 §0.4와 정합한다. 임계값(window=10분, minReports=3)은 설정(`geuneul.realtime.*`)으로 뺐다 — 시딩 밀도에 따라
 현장에서 조정(P5).
 
@@ -41,7 +41,7 @@ survival_score의 `place_report_signals` 뷰(ADR-0007)를 재사용하지 않고
 전파되지 않는다. LISTEN/NOTIFY는 **어느 인스턴스가 insert하든 전 인스턴스가 알림을 받으므로** 이 팬아웃을
 공짜로 해결한다 — 이미 있는 RDS 하나로, 새 인프라 0.
 
-**왜 Kafka/Redis Streams가 아닌가** — CLAUDE.md §7이 명시적으로 "Redis Streams / Postgres LISTEN·NOTIFY로.
+**왜 Kafka/Redis Streams가 아닌가** — SPEC.md §7이 명시적으로 "Redis Streams / Postgres LISTEN·NOTIFY로.
 Kafka 등 과설계 금지 — 필요 입증 후에만". Kafka는 브로커 운영 부담이 저빈도 알림에 과하다. Redis Streams도
 후보였으나, ① Redis는 현재 `CacheErrorHandler`로 **지워도 서비스가 도는 선택적 캐시**(HANDOFF·ADR-0009)라
 알림을 Redis에 결합시키면 그 "선택적" 성질이 깨지고, ② 소스오브트루스인 Postgres에 트리거로 거는 편이
@@ -66,7 +66,7 @@ HTTP라 BFF 프록시(ADR-0004)·CloudFront(ADR-0015)를 그대로 통과하며 
 
 | 대안 | 기각 이유 |
 |---|---|
-| Kafka 토픽으로 제보 이벤트 팬아웃 | 브로커 운영 부담이 저빈도 알림에 과설계 — CLAUDE.md §7이 명시적으로 금지("필요 입증 후에만") |
+| Kafka 토픽으로 제보 이벤트 팬아웃 | 브로커 운영 부담이 저빈도 알림에 과설계 — SPEC.md §7이 명시적으로 금지("필요 입증 후에만") |
 | Redis Streams | Redis가 "지워도 되는 선택적 캐시"(ADR-0009)라 결합 시 그 성질이 깨짐. 소스오브트루스(PG)에 트리거로 거는 편이 제보 트랜잭션과 원자적 |
 | 인프로세스 ApplicationEvent만 | min1/**max3** 오토스케일링(ADR-0013)에서 다른 인스턴스 구독자에게 전파 안 됨 — 실시간의 의미가 깨짐 |
 | WebSocket | 급증 알림은 단방향(서버→클라)이라 양방향 프로토콜은 과설계. SSE가 HTTP라 BFF·CloudFront 통과·자동 재연결 |
@@ -78,7 +78,7 @@ HTTP라 BFF 프록시(ADR-0004)·CloudFront(ADR-0015)를 그대로 통과하며 
 - `GET /alerts/surge?bounds=` (폴백/스냅샷) + `GET /alerts/stream` (SSE 실시간)이 추가된다. 둘 다 permitAll
   (공개 커먼스 — 알림은 로그인 불필요).
 - 새 인프라 0 — 이미 있는 RDS의 LISTEN/NOTIFY만 쓴다. 트리거는 Flyway V9로 스키마에 포함되므로 재현 가능.
-- 표현 규율(CLAUDE.md §6): 급증 알림 문구는 공포 조장 금지 — "위험!"이 아니라 "최근 제보가 몰리고 있어요"
+- 표현 규율(SPEC.md §6): 급증 알림 문구는 공포 조장 금지 — "위험!"이 아니라 "최근 제보가 몰리고 있어요"
   톤으로 프론트(⑧)에서 렌더한다. 백엔드는 사실(place_id·count·대표 타입)만 싣는다.
 - LISTEN/NOTIFY는 "구독 중일 때만" 받는다 — 리스너 재연결 공백에 발생한 급증은 놓칠 수 있으나, 다음 제보나
   폴백 폴링이 복구하므로 알림 유실이 데이터 유실은 아니다(제보 자체는 트랜잭션으로 안전 저장).
@@ -86,7 +86,7 @@ HTTP라 BFF 프록시(ADR-0004)·CloudFront(ADR-0015)를 그대로 통과하며 
 ## 근거(References)
 
 - PostgreSQL 공식 문서 §NOTIFY/LISTEN — 트리거에서 `pg_notify()`, 페이로드 8000바이트 제한, "구독 중 세션만 수신".
-- CLAUDE.md §7(실시간: Redis Streams / Postgres LISTEN·NOTIFY, Kafka 과설계 금지), §5(시공간 랭킹은 DB 레이어).
+- SPEC.md §7(실시간: Redis Streams / Postgres LISTEN·NOTIFY, Kafka 과설계 금지), §5(시공간 랭킹은 DB 레이어).
 - ADR-0013(ECS Auto Scaling min1/max3 — 다중 인스턴스 팬아웃이 LISTEN/NOTIFY를 정당화), ADR-0007(시공간 신호 뷰),
   ADR-0009(Redis는 지워도 되는 선택적 캐시), ADR-0004(BFF 프록시 — SSE가 HTTP라 통과).
 - 2026-07 웹 확인: SSE가 단방향 서버푸시의 표준(WebSocket 대비 경량), 브라우저 `EventSource` 자동 재연결 내장.

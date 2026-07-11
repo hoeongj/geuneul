@@ -3,7 +3,7 @@
 - 상태: 승인(구현 반영, 2026-07-10)
 - 관련: `domain.notification`(B1, ADR-0018 확장), `domain.weather`(`HeatComfort`·`WeatherService`, ADR-0009),
   `domain.place`(kNN `findNearest`, 간판 공간쿼리), `notification_deliveries`(V15, dedup 재사용),
-  CLAUDE.md §3(알림)·§6(공포 조장 금지)·§0-2(범위/과설계 금지)
+  SPEC.md §3(알림)·§6(공포 조장 금지)·§0-2(범위/과설계 금지)
 - 후속: BACKLOG F5
 
 ## 문제(Context)

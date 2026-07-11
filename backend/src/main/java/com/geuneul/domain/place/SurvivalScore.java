@@ -1,7 +1,7 @@
 package com.geuneul.domain.place;
 
 /**
- * survival_score("지금 갈만함 점수") — CLAUDE.md §5 공식의 최종 조립 (ADR-0007).
+ * survival_score("지금 갈만함 점수") — docs/SPEC.md §5 공식의 최종 조립 (ADR-0007).
  *
  * <p>시공간 신호(거리·최근성·편의·리스크)는 DB(PostGIS/SQL, place_report_signals 뷰 + ST_Distance)가 계산하고,
  * 이 순수 값 객체가 <b>문서화된 가중치로 조립 + 등급화</b>한다 — DB 없이 단위테스트되는 결정 로직.

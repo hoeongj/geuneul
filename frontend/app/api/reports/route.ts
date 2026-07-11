@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
-import { proxyPost } from "@/lib/backend";
+import { proxyOptionalAuthedPost } from "@/lib/backend";
 
-// POST /api/reports → ALB /reports (익명 휘발성 제보). 클라이언트 IP를 XFF로 보존.
+// POST /api/reports → ALB /reports (익명 허용, 로그인 시 인증 전달). 클라이언트 IP를 XFF로 보존.
 export function POST(request: NextRequest) {
-  return proxyPost("/reports", request);
+  return proxyOptionalAuthedPost("/reports", request);
 }

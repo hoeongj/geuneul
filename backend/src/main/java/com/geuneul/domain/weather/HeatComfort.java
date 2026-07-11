@@ -15,7 +15,7 @@ package com.geuneul.domain.weather;
  * (어차피 25℃ 이하는 {@link #mapTemperature} 매핑에서 쾌적 상한 1.0으로 고정돼 정밀도가 결과를 안 바꾼다).
  *
  * <p><b>comfort 매핑 앵커</b>: 2026-07 확인한 기상청 폭염특보 체감온도 임계값에 그대로 앵커했다(추측값 대신
- * 공식 기준선 사용 — CLAUDE.md §0-B 방어 가능성 원칙):
+ * 공식 기준선 사용 — docs/SPEC.md §0-B 방어 가능성 원칙):
  * <ul>
  *   <li>≤25℃ 쾌적 → comfort 1.0</li>
  *   <li>33℃ 폭염주의보(이틀 이상 예상 시 발효 기준) → comfort 0.4</li>

@@ -7,7 +7,7 @@ import type { MapBounds } from "@/types/place";
 import { fetchSurge } from "./api";
 
 function within(bounds: MapBounds | null, lat: number, lng: number): boolean {
-  if (!bounds) return true;
+  if (!bounds) return false;
   return lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east;
 }
 
@@ -62,7 +62,5 @@ export function useSurgeAlerts(bounds: MapBounds | null, onNew?: (s: SurgeInfo) 
     return [...map.values()].filter((s) => within(bounds, s.lat, s.lng));
   }, [snapshot.data, live, bounds]);
 
-  const placeIds = useMemo(() => new Set(surges.map((s) => s.placeId)), [surges]);
-
-  return { surges, placeIds };
+  return { surges };
 }

@@ -56,12 +56,8 @@ public class KakaoDirectionsProvider implements DirectionsProvider {
     private final boolean keyPresent;
 
     @Autowired
-    public KakaoDirectionsProvider(@Value("${kakao.rest-api-key:}") String restApiKey) {
-        this(restApiKey, RestClient.builder());
-    }
-
-    /** 테스트용 — MockRestServiceServer 바인딩 builder를 주입해 실제 파싱 경로를 검증한다. */
-    KakaoDirectionsProvider(String restApiKey, RestClient.Builder builder) {
+    public KakaoDirectionsProvider(@Value("${kakao.rest-api-key:}") String restApiKey,
+                                   RestClient.Builder builder) {
         this.keyPresent = restApiKey != null && !restApiKey.isBlank();
         this.restClient = builder
                 .baseUrl("https://apis-navi.kakaomobility.com")

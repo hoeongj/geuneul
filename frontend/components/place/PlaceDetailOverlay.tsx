@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
@@ -77,7 +77,12 @@ function RecentReports({ placeId }: { placeId: number }) {
               </div>
               {r.photoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element -- 제보 첨부 사진(S3 오브젝트, 원격 도메인)
-                <img src={r.photoUrl} alt="" className="h-[42px] w-[42px] shrink-0 rounded-[8px] object-cover" />
+                <img
+                  src={r.photoUrl}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-[42px] w-[42px] shrink-0 rounded-[8px] object-cover"
+                />
               )}
             </li>
           ))}
@@ -101,6 +106,11 @@ export function PlaceDetailOverlay() {
   // Esc 닫기 + 포커스 이동/복귀 + Tab 트랩(C2). 데스크톱 지도 탭은 옆 지도·NavRail이 살아 있어(뒤 inert 아님)
   // 하드 트랩을 끈다 — 그 외(모바일 전 탭·데스크톱 비지도 탭)는 전체를 덮으므로 트랩이 옳다.
   useDialogFocusTrap(panelRef, id != null, close, { trapTab: !(onMap && isLg) });
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 장소 전환 시 이전 경로 폴리라인이 새 장소에 남지 않게 즉시 비운다.
+    setRoute(null);
+  }, [id]);
 
   if (id == null) return null;
 

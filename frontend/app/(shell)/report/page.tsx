@@ -9,8 +9,8 @@ import { iconForCategory } from "@/lib/categories";
 import { useGeo } from "@/lib/context/geo";
 import { useToast } from "@/lib/context/toast";
 import { DEFAULT_RADIUS } from "@/lib/geo";
-import { usePhotoUpload } from "@/lib/hooks";
-import { useCreateReport, useNearestPlace, useRadiusPlaces } from "@/lib/queries";
+import { useDialogFocusTrap, usePhotoUpload } from "@/lib/hooks";
+import { useCreateReport, useMe, useNearestPlace, useRadiusPlaces } from "@/lib/queries";
 import { REPORT_GRID, REPORT_META } from "@/lib/reports";
 import type { Place, ReportTypeKey } from "@/types/place";
 
@@ -25,8 +25,18 @@ function PlacePicker({
   onClose: () => void;
 }) {
   const { data, isLoading } = useRadiusPlaces(coords, DEFAULT_RADIUS);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(panelRef, true, onClose);
+
   return (
-    <div className="absolute inset-0 z-40 flex flex-col justify-end" role="dialog" aria-label="제보할 장소 선택">
+    <div
+      ref={panelRef}
+      className="absolute inset-0 z-40 flex flex-col justify-end focus:outline-none"
+      role="dialog"
+      aria-label="제보할 장소 선택"
+      aria-modal="true"
+      tabIndex={-1}
+    >
       <button type="button" className="flex-1 bg-black/25" onClick={onClose} aria-label="닫기" />
       <div className="gn-overlay max-h-[70%] rounded-t-[22px] bg-white shadow-sheet lg:mx-auto lg:mb-6 lg:max-w-[460px] lg:rounded-[22px]">
         <div className="flex w-full justify-center pt-2.5 pb-1">
@@ -66,8 +76,11 @@ export default function ReportPage() {
   const [done, setDone] = useState(false);
 
   const mutation = useCreateReport();
+  const { data: me, isLoading: meLoading } = useMe();
   const photo = usePhotoUpload("report");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const anonDisabled = meLoading || !me;
+  const effectiveAnon = me ? anon : true;
 
   // done 상태의 라벨은 제출 버튼 JSX에서 별도 처리 → 여기선 미제출 경로만.
   const submitLabel = mutation.isPending
@@ -84,7 +97,7 @@ export default function ReportPage() {
         reportType: status,
         comment: comment.trim() || undefined,
         photoUrl: photo.objectUrl ?? undefined,
-        anonymous: anon,
+        anonymous: effectiveAnon,
         // 실측 GPS일 때만 좌표를 실어 보낸다(폴백 센터는 실위치가 아니라 verified 오판 방지).
         // 장소 100m 이내면 백엔드가 "방문 인증"(verified) 처리(ADR-0005 §④).
         ...(!geo.isFallback ? { lat: coords.lat, lng: coords.lng } : {}),
@@ -191,7 +204,7 @@ export default function ReportPage() {
         >
           {photo.previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- presigned S3 오브젝트라 next/image 도메인 화이트리스트 불필요한 blob/원격 URL 혼재
-            <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+            <img src={photo.previewUrl} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
           ) : (
             <>
               <Icon name="camera" size={20} />
@@ -226,19 +239,25 @@ export default function ReportPage() {
       <div className="mb-5 flex items-center justify-between rounded-[14px] border border-line-cream bg-white px-3.5 py-3">
         <div className="min-w-0">
           <div className="text-[14px] font-bold text-ink">익명으로 제보</div>
-          <div className="text-[11px] text-muted">로그인하면 신뢰도 배지가 붙어요</div>
+          <div className="text-[11px] text-muted">
+            {me ? "익명 해제 시 신뢰도 배지가 붙어요" : "로그인해야 익명을 해제할 수 있어요"}
+          </div>
         </div>
         <button
           type="button"
           role="switch"
-          aria-checked={anon}
-          onClick={() => setAnon((v) => !v)}
-          className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-          style={{ background: anon ? "var(--color-teal)" : "var(--color-toggle-off)" }}
+          aria-checked={effectiveAnon}
+          onClick={() => {
+            if (anonDisabled) return;
+            setAnon((v) => !v);
+          }}
+          disabled={anonDisabled}
+          className="relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50"
+          style={{ background: effectiveAnon ? "var(--color-teal)" : "var(--color-toggle-off)" }}
         >
           <span
             className="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
-            style={{ left: 2, transform: anon ? "translateX(20px)" : "translateX(0)" }}
+            style={{ left: 2, transform: effectiveAnon ? "translateX(20px)" : "translateX(0)" }}
           />
         </button>
       </div>

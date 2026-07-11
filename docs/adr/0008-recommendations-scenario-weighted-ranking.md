@@ -6,7 +6,7 @@
 
 ## 문제(Context)
 
-survival_score(P3, ADR-0007)까지 라이브가 됐고, CLAUDE.md §9의 남은 P3 조각은
+survival_score(P3, ADR-0007)까지 라이브가 됐고, SPEC.md §9의 남은 P3 조각은
 `GET /recommendations?scenario=rest30|restroom|rain` — "지금 30분 버틸 곳 / 화장실 급할 때 / 비 피할 곳"이다.
 HANDOFF이 명시한 "콘솔 없이 바로 가능한 다음"이자, survival_score에 **시나리오 가중을 얹는 자연스러운 다음 조각**.
 
@@ -82,4 +82,4 @@ pool은 limit×5(최소 50, 최대 200) — 거리순 선필터가 "가깝지만
   검색 랭킹의 표준 2단 구조 — 후보를 top-K로 선필터하고 재랭커가 후보별 근거로 재점수한다.
   [Contextual Retrieval & Context-Aware Ranking (EmergentMind)](https://www.emergentmind.com/topics/contextual-retrieval-and-context-aware-ranking)
 - 공간 선필터 후 재랭킹도 인덱스(&&/ST_DWithin) 선필터가 정석 — [Crunchy Data: PostGIS Performance Indexing & EXPLAIN](https://www.crunchydata.com/blog/postgis-performance-indexing-and-explain)
-- 공식·제약: CLAUDE.md §5(survival_score)·§6(공포 조장 금지)·§9(recommendations API)
+- 공식·제약: SPEC.md §5(survival_score)·§6(공포 조장 금지)·§9(recommendations API)

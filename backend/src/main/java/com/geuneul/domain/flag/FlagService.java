@@ -19,12 +19,17 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
- * 신고/모더레이션 큐 오케스트레이션 (CLAUDE.md §0-7, §9 POST /flags·GET /admin/flags/pending).
+ * 신고/모더레이션 큐 오케스트레이션 (docs/SPEC.md §0-7, §9 POST /flags·GET /admin/flags/pending).
  * target은 REPORT|REVIEW 다형 참조라 존재 검증·요약 조립에 ReportRepository/ReviewRepository를
  * 함께 참조한다(ReviewService가 PlaceRepository/UserRepository를 참조하는 것과 같은 크로스 도메인
  * 의존 패턴 — 모더레이션은 원래 여러 도메인을 가로지르는 관심사).
@@ -47,7 +52,7 @@ public class FlagService {
     }
 
     /**
-     * 신고 접수. 같은 유저가 같은 대상을 다시 신고하면 409(스팸 신고 억제, CLAUDE.md 작업 지시).
+     * 신고 접수. 같은 유저가 같은 대상을 다시 신고하면 409(스팸 신고 억제, docs/SPEC.md 작업 지시).
      * 대상(report/review)이 존재하지 않으면 404 — 유령 대상에 큐가 쌓이지 않게.
      */
     @Transactional
@@ -81,7 +86,8 @@ public class FlagService {
     public FlagPendingListResponse byStatus(FlagStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Flag> found = flagRepository.findByStatusOrderByCreatedAtAsc(status, pageable);
-        Page<FlagPendingItemResponse> mapped = found.map(this::withTargetSummary);
+        TargetSummaries summaries = loadTargetSummaries(found.getContent());
+        Page<FlagPendingItemResponse> mapped = found.map(flag -> withTargetSummary(flag, summaries));
         return FlagPendingListResponse.of(mapped);
     }
 
@@ -125,10 +131,30 @@ public class FlagService {
         }
     }
 
-    private FlagPendingItemResponse withTargetSummary(Flag flag) {
+    private TargetSummaries loadTargetSummaries(Collection<Flag> flags) {
+        Set<Long> reportIds = new LinkedHashSet<>();
+        Set<Long> reviewIds = new LinkedHashSet<>();
+        for (Flag flag : flags) {
+            switch (flag.getTargetType()) {
+                case REPORT -> reportIds.add(flag.getTargetId());
+                case REVIEW -> reviewIds.add(flag.getTargetId());
+            }
+        }
+        Map<Long, String> reports = new HashMap<>();
+        if (!reportIds.isEmpty()) {
+            reportRepository.findAllById(reportIds).forEach(r -> reports.put(r.getId(), summarize(r)));
+        }
+        Map<Long, String> reviews = new HashMap<>();
+        if (!reviewIds.isEmpty()) {
+            reviewRepository.findAllById(reviewIds).forEach(r -> reviews.put(r.getId(), summarize(r)));
+        }
+        return new TargetSummaries(reports, reviews);
+    }
+
+    private FlagPendingItemResponse withTargetSummary(Flag flag, TargetSummaries summaries) {
         String summary = switch (flag.getTargetType()) {
-            case REPORT -> reportRepository.findById(flag.getTargetId()).map(this::summarize).orElse(null);
-            case REVIEW -> reviewRepository.findById(flag.getTargetId()).map(this::summarize).orElse(null);
+            case REPORT -> summaries.reports().get(flag.getTargetId());
+            case REVIEW -> summaries.reviews().get(flag.getTargetId());
         };
         return FlagPendingItemResponse.of(flag, summary != null, summary);
     }
@@ -147,5 +173,8 @@ public class FlagService {
         if (detail == null) return null;
         String trimmed = detail.strip();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private record TargetSummaries(Map<Long, String> reports, Map<Long, String> reviews) {
     }
 }

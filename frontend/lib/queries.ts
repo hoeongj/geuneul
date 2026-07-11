@@ -301,6 +301,20 @@ export function useLogout() {
     mutationFn: logout,
     onSuccess: () => {
       queryClient.setQueryData(["me"], null);
+      const privateQueryKeys = [
+        ["bookmarks"],
+        ["notifications"],
+        ["notification-rules"],
+        ["me-reviews"],
+        ["me-comments"],
+        ["me-reactions"],
+        ["me-following"],
+        ["user-profile"],
+        ["admin-flags"],
+      ] as const;
+      for (const queryKey of privateQueryKeys) {
+        queryClient.removeQueries({ queryKey });
+      }
     },
   });
 }

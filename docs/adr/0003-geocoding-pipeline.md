@@ -45,4 +45,4 @@
 
 - [Kakao Local API — 주소 검색](https://developers.kakao.com/docs/latest/ko/local/dev-guide) (x=경도, y=위도)
 - 실측: 공중화장실정보.csv 59,768행 — 좌표 컬럼 0, 주소 결측 0, 관리번호 중복 0 (2026-07-02)
-- CLAUDE.md §7 "결과 좌표는 저장(멱등·rate limit 회피)"
+- SPEC.md §7 "결과 좌표는 저장(멱등·rate limit 회피)"

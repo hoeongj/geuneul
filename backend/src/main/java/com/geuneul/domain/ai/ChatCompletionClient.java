@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -18,7 +17,7 @@ import java.util.Optional;
 /**
  * 프로바이더 중립 OpenAI 호환 Chat Completions 클라이언트 — 장소 AI 한줄 요약 전용(P3, 곁다리).
  *
- * <p><b>Anthropic(Claude API) 대신 OpenAI 호환 REST 프로바이더를 쓰는 이유</b>(CLAUDE.md §8 "AI는 Claude API
+ * <p><b>Anthropic(Claude API) 대신 OpenAI 호환 REST 프로바이더를 쓰는 이유</b>(docs/SPEC.md §8 "AI는 Claude API
  * 기본" 이탈, §0-B 의사결정 프로토콜에 따라 기록): 이 환경에 Anthropic API 키가 없다. 사용자가 보유한
  * 멀티프로바이더 무료/저가 폴백 키체인(base-url·key·model 전부 설정값이라 프로바이더 교체가 config만으로
  * 가능) 중 현재는 Mistral을 프라이머리로 쓴다. 근거는 WORKLOG·ADR-0010에 상세 기록.
@@ -27,15 +26,13 @@ import java.util.Optional;
  * <ul>
  *   <li>키 미설정이면 호출 자체를 생략(Optional.empty)</li>
  *   <li>모든 예외(타임아웃 포함)를 여기서 삼키고 empty로 반환 — 절대 500을 내지 않는다</li>
- *   <li>타임아웃은 짧게(연결 1.5s·읽기 2.5s) — AI는 곁다리라 상세 조회를 느리게 만들면 안 된다</li>
+ *   <li>타임아웃은 공통 RestClient.Builder 설정(연결 3s·읽기 10s)을 따른다</li>
  * </ul>
  */
 @Component
 public class ChatCompletionClient {
 
     private static final Logger log = LoggerFactory.getLogger(ChatCompletionClient.class);
-    private static final int CONNECT_TIMEOUT_MS = 1_500;
-    private static final int READ_TIMEOUT_MS = 2_500;
     private static final int MAX_TOKENS = 150;
     private static final double TEMPERATURE = 0.3;
 
@@ -47,24 +44,13 @@ public class ChatCompletionClient {
     @Autowired
     public ChatCompletionClient(
             @Value("${ai.summary.api-key:}") String apiKey,
+            @Value("${ai.summary.model:mistral-small-latest}") String model,
             @Value("${ai.summary.base-url:https://api.mistral.ai/v1}") String baseUrl,
-            @Value("${ai.summary.model:mistral-small-latest}") String model) {
-        this(apiKey, model, baseUrl, defaultBuilder());
-    }
-
-    /** 테스트용 — MockRestServiceServer를 바인딩한 builder를 주입해 실제 요청/파싱 계약을 검증한다(TS-004 교훈). */
-    ChatCompletionClient(String apiKey, String model, String baseUrl, RestClient.Builder builder) {
+            RestClient.Builder builder) {
         this.apiKey = apiKey == null ? "" : apiKey;
         this.model = model;
         this.keyPresent = !this.apiKey.isBlank();
         this.restClient = builder.baseUrl(baseUrl).build();
-    }
-
-    private static RestClient.Builder defaultBuilder() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(CONNECT_TIMEOUT_MS);
-        factory.setReadTimeout(READ_TIMEOUT_MS);
-        return RestClient.builder().requestFactory(factory);
     }
 
     /**

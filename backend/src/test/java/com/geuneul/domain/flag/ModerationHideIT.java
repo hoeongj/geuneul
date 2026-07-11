@@ -80,6 +80,7 @@ class ModerationHideIT extends AbstractIntegrationTest {
         userToken = jwtService.issue(user);
         User admin = userRepository.save(User.create(AuthProvider.GOOGLE, "google-mod-a", "a@t.com", "관리자", null));
         setRole(admin, Role.ADMIN);
+        admin = userRepository.save(admin); // ADMIN은 DB role이 진실 — 필터가 토큰 role을 DB로 재확인한다
         adminToken = jwtService.issue(admin);
     }
 

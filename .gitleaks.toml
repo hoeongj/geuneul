@@ -5,7 +5,7 @@ title = "geuneul gitleaks"
 useDefault = true
 
 [allowlist]
-description = "예시 env·플레이스홀더(실제 비밀 아님). 실제 비밀은 .local/·.env(gitignore)로만."
-paths = [
-  '''\.env\.example$''',
+description = "예시 파일의 placeholder만 허용(실제 비밀 아님). 파일 전체 제외가 아니라 값 패턴만 — 예시 파일에 실수로 진짜 키를 붙여 넣으면 여전히 잡힌다. 실제 비밀은 .local/·.env(gitignore)로만."
+regexes = [
+  '''CHANGE-ME[\w가-힣.-]*''',
 ]

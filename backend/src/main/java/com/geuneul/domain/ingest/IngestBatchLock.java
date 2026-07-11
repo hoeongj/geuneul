@@ -16,7 +16,7 @@ import java.util.concurrent.Callable;
  *
  * Postgres 세션 수준 advisory lock({@code pg_try_advisory_lock})으로 구현한다 — 월 1회 저빈도
  * 스케줄이 새 인프라(SQS 잠금 서비스 등) 없이 "이미 있는 DB 하나"로 상호배제를 얻을 수 있어
- * CLAUDE.md §0.2(과설계 금지)와 정합한다. 스케줄이 겹치거나(예: 실행 지연) 사람이 수동으로
+ * docs/SPEC.md §0.2(과설계 금지)와 정합한다. 스케줄이 겹치거나(예: 실행 지연) 사람이 수동으로
  * {@code prod-ingest.sh}를 동시에 돌려도, 나중 실행은 즉시(논블로킹) 포기하고 다음 스케줄을 기다린다
  * — "실패"가 아니라 "건너뜀"으로 취급해 exitCode=0 유지(불필요한 배포 알림/재시도 노이즈 방지).
  *
@@ -84,10 +84,9 @@ public class IngestBatchLock {
             ps.setLong(1, LOCK_KEY);
             ps.execute();
         } catch (SQLException e) {
-            // 명시적 해제 실패는 로그만 — 이 메서드를 호출한 커넥션이 곧 close()되며(try-with-resources),
-            // 풀이 물리 커넥션을 재사용하는 한 최악의 경우 다음 실행이 그 커넥션을 다시 집을 때까지
-            // 락이 남을 수 있지만 영구 누수는 아니다(위 클래스 주석의 크래시 안전성과 동일 논리).
-            log.warn("[ingest] advisory unlock 실패(무시 가능) — 커넥션 회수 시 정리됨", e);
+            // 명시적 해제 실패는 로그만 — 풀 환경에서 close()는 물리 세션 종료가 아니라 반환일 수 있어
+            // 락이 남으면 다음 실행이 skip될 수 있다. 다만 물리 커넥션이 실제 종료되면 Postgres가 세션 락을 정리한다.
+            log.warn("[ingest] advisory unlock 실패 — 풀 반환만으로는 세션 락이 해제되지 않을 수 있음", e);
         }
     }
 }

@@ -20,7 +20,7 @@ import static com.geuneul.domain.place.PlaceCategory.UNDERGROUND;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * 추천 시나리오 (CLAUDE.md §9 recommendations, ADR-0008).
+ * 추천 시나리오 (docs/SPEC.md §9 recommendations, ADR-0008).
  *
  * <p>추천 = <b>survival_score에 시나리오별 가중을 얹은 랭킹</b>이다. 각 시나리오는
  * <ul>

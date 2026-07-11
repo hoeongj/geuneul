@@ -10,10 +10,21 @@ const BASE = RAW_BASE.replace(/\/$/, "");
 
 const TIMEOUT_MS = 10_000;
 
-async function backendFetch(path: string, search: string): Promise<Response> {
+async function backendFetch(path: string, search: string, request?: NextRequest): Promise<Response> {
   const url = `${BASE}${path}${search ? `?${search}` : ""}`;
+  // 레이트리밋 대상 GET(검색·경로)은 원 클라이언트 신원을 보존해야 유저별 버킷으로 잡힌다 —
+  // 안 보내면 백엔드 ProxyClientResolver가 ALB 최우측 XFF(=Vercel egress IP)로 키잉해 전 유저가 버킷을 공유한다.
+  const identity: Record<string, string> = {};
+  if (request) {
+    const xff = request.headers.get("x-forwarded-for") ?? "";
+    const clientIp = request.headers.get("x-real-ip") ?? xff.split(",")[0].trim();
+    const proxySecret = process.env.GEUNEUL_PROXY_SECRET ?? "";
+    if (xff) identity["x-forwarded-for"] = xff;
+    if (clientIp) identity["x-client-ip"] = clientIp;
+    if (proxySecret) identity["x-proxy-auth"] = proxySecret;
+  }
   return fetch(url, {
-    headers: { accept: "application/json" },
+    headers: { accept: "application/json", ...identity },
     signal: AbortSignal.timeout(TIMEOUT_MS),
     // 백엔드 Redis 가 캐시를 담당하므로 프록시는 항상 신선하게 통과(체감 상태의 freshness 우선).
     cache: "no-store",
@@ -52,6 +63,47 @@ export async function proxyPost(path: string, request: Request): Promise<NextRes
     });
     const resBody = await res.text();
     // 빈 바디는 null로(204/205/304 null-body status에 "" 주면 Response 생성자가 TypeError→502 오변환, 푸시 test 실패 오탐).
+    return new NextResponse(resBody || null, {
+      status: res.status,
+      headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "upstream_unreachable", message }, { status: 502 });
+  }
+}
+
+// 익명 허용 쓰기 프록시: 세션 쿠키나 Authorization 헤더가 있으면 백엔드에 전달하고, 없으면 익명 요청으로 통과한다.
+// 제보처럼 "로그인 시 신뢰도/작성자 맥락은 살리되 비로그인 제출도 허용"하는 엔드포인트용.
+export async function proxyOptionalAuthedPost(path: string, request: NextRequest): Promise<NextResponse> {
+  if (!BASE) {
+    return NextResponse.json(
+      { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
+      { status: 500 },
+    );
+  }
+  try {
+    const body = await request.text();
+    const xff = request.headers.get("x-forwarded-for") ?? "";
+    const clientIp = request.headers.get("x-real-ip") ?? xff.split(",")[0].trim();
+    const proxySecret = process.env.GEUNEUL_PROXY_SECRET ?? "";
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
+    const authorization = token ? `Bearer ${token}` : (request.headers.get("authorization") ?? "");
+    const res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        ...(xff ? { "x-forwarded-for": xff } : {}),
+        ...(clientIp ? { "x-client-ip": clientIp } : {}),
+        ...(proxySecret ? { "x-proxy-auth": proxySecret } : {}),
+        ...(authorization ? { authorization } : {}),
+      },
+      body,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    const resBody = await res.text();
     return new NextResponse(resBody || null, {
       status: res.status,
       headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
@@ -183,7 +235,7 @@ export async function proxyPhotoPresign(request: NextRequest): Promise<NextRespo
 }
 
 // path 예: "/places", "/places/nearest", "/places/12"
-export async function proxy(path: string, search: string): Promise<NextResponse> {
+export async function proxy(path: string, search: string, request?: NextRequest): Promise<NextResponse> {
   if (!BASE) {
     return NextResponse.json(
       { error: "config", message: "GEUNEUL_API_BASE is not configured on the server." },
@@ -191,7 +243,7 @@ export async function proxy(path: string, search: string): Promise<NextResponse>
     );
   }
   try {
-    const res = await backendFetch(path, search);
+    const res = await backendFetch(path, search, request);
     const body = await res.text();
     return new NextResponse(body, {
       status: res.status,

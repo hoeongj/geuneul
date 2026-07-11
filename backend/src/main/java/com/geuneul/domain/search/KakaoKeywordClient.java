@@ -39,14 +39,10 @@ public class KakaoKeywordClient {
     private final RestClient restClient;
     private final boolean keyPresent;
 
-    // 생성자 2개(운영/테스트) — @Autowired로 운영 생성자를 명시(없으면 컨텍스트 생성 실패, KakaoGeocodingClient와 동일).
+    // 운영은 공통 타임아웃이 설정된 RestClient.Builder를 주입받는다.
     @Autowired
-    public KakaoKeywordClient(@Value("${kakao.rest-api-key:}") String restApiKey) {
-        this(restApiKey, RestClient.builder());
-    }
-
-    /** 테스트용 — MockRestServiceServer를 바인딩한 builder로 실 파싱 경로를 검증한다. */
-    KakaoKeywordClient(String restApiKey, RestClient.Builder builder) {
+    public KakaoKeywordClient(@Value("${kakao.rest-api-key:}") String restApiKey,
+                              RestClient.Builder builder) {
         this.keyPresent = restApiKey != null && !restApiKey.isBlank();
         this.restClient = builder
                 .baseUrl("https://dapi.kakao.com")

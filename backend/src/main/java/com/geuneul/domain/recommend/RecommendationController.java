@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 추천 API (CLAUDE.md §9, ADR-0008) — survival_score에 시나리오 가중을 얹은 랭킹.
+ * 추천 API (docs/SPEC.md §9, ADR-0008) — survival_score에 시나리오 가중을 얹은 랭킹.
  * "지금 30분 버틸 곳 / 화장실 급할 때 / 비 피할 곳"을 현재 위치 기준으로 정렬해 준다.
  */
 @Tag(name = "Recommendations", description = "시나리오 추천 — survival_score 시나리오 가중 랭킹(rest30 · restroom · rain · focus · longstay)")

@@ -1,7 +1,7 @@
 # perf/ — 간판 성능 실증 (k6 부하테스트 + EXPLAIN 인덱스 튜닝, P4)
 
-CLAUDE.md §10 P4·§11(간판=PostGIS 대용량 지리검색)의 성능 실증 자산. 결정·분석은
-[docs/adr/0010](../docs/adr/0012-k6-load-explain-index-tuning.md), 실행계획 결과는
+docs/SPEC.md §10 P4·§11(간판=PostGIS 대용량 지리검색)의 성능 실증 자산. 결정·분석은
+[docs/adr/0012](../docs/adr/0012-k6-load-explain-index-tuning.md), 실행계획 결과는
 [explain/RESULTS.md](explain/RESULTS.md).
 
 ```
@@ -14,7 +14,7 @@ perf/
 ```
 
 ## 🔴 방침
-- **부하는 로컬 docker-compose(PostGIS)에만** 건다. 프로덕션 ALB 고부하 금지(CLAUDE.md).
+- **부하는 로컬 docker-compose(PostGIS)에만** 건다. 프로덕션 ALB 고부하 금지(docs/SPEC.md).
 - 로컬 PostGIS 이미지는 amd64라 arm64 맥에서 **qemu 에뮬레이트** → 절대 지연(ms)은 부풀려짐. 읽을 값은
   **실행계획(인덱스 사용)**, **before/after 비율**, **동일 환경 처리량 상한/포화 곡선**. 프로덕션 수치는 추정 금지.
 
