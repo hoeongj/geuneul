@@ -11,7 +11,7 @@
 [![Radius p95](https://img.shields.io/badge/반경검색_p95-~1.4s-17957e)](./docs/adr/0012-k6-load-explain-index-tuning.md)
 [![Coverage](https://img.shields.io/badge/JaCoCo-71%25-17957e)](#기술-스택)
 [![ADR](https://img.shields.io/badge/ADR-27-informational)](./docs/adr/README.md)
-[![Troubleshooting](https://img.shields.io/badge/Troubleshooting-32건-informational)](./TROUBLESHOOTING.md)
+[![Troubleshooting](https://img.shields.io/badge/Troubleshooting-33건-informational)](./TROUBLESHOOTING.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
 
 [![CI](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml)
@@ -144,7 +144,8 @@ GET /alerts/stream            # text/event-stream (SSE)
 - **데이터 커버리지(2026-07)** — 화장실 52,334 · **무더위쉼터 60,297**(safetydata, 냉방 정보 57,070, TS-027) · **상권 카페/스터디카페**(서울 distinct 29,886 + 6대 광역시 + 9개 도시) · 도서관 3,551. **총 15만+곳.** 외부 승인 블로커 0건.
 - **심화+additive(PR #61~#69)** — 시설 comfort SQL 통합(V13, [ADR-0017](./docs/adr/0017-place-feature-comfort-signal.md)) · verified→trust · 쉼터 냉방 백필(57,070) · 급증 SSE 프론트 · popular-times 히트맵 · 커뮤니티 최소 UI · **bookmarks**(V14) · **알림**(V15, 급증 재사용+인앱 센터, [ADR-0018](./docs/adr/0018-notifications-in-app-center-surge-reuse.md)) · **화장실 포함 경로**([ADR-0019](./docs/adr/0019-routes-toilet-waypoint-external-directions.md)).
 - **F1~F5 · N1~N9 · 데스크톱 반응형(#92) · C1~C4(#96~#99)** — 상권 9도시·화장실 도로 폴리라인([ADR-0021](./docs/adr/0021-road-polyline-kakao-navi-key-reuse.md)) · **Web Push**([ADR-0022](./docs/adr/0022-web-push-zerodep-vapid-feature-gated.md)) · 사진 presigned-GET·커뮤니티 UX·팔로우(V17·[ADR-0023](./docs/adr/0023-commons-safe-follow.md))·그늘/비 corridor([ADR-0024](./docs/adr/0024-shade-rain-route-corridor-overlay.md))·대규모 대비(V18·[ADR-0025](./docs/adr/0025-scale-prep-load-based-tuning.md)) · 데스크톱 지도앱 3분할 · **신고/모더레이션 프론트** · a11y 포커스 트랩 · **관심장소 상태변화 알림**([ADR-0026](./docs/adr/0026-bookmark-status-change-notification.md)) · **그늘 경유 경로**([ADR-0027](./docs/adr/0027-shade-waypoint-route.md)).
-- **P5 · 무료 배포** — PWA 설치([/install](https://geuneul.vercel.app/install)) — 안드로이드 WebAPK 원탭 + iOS 홈 화면 추가(스토어·비용 0).
+- **P5 · 무료 배포** — PWA 설치([/install](https://geuneul.vercel.app/install)) — 안드로이드 **WebAPK 원탭**(브라우저가 진짜 설치 앱 생성) + **다운로드 서명 APK**([`/geuneul.apk`](https://geuneul.vercel.app/geuneul.apk), Bubblewrap TWA + [`/.well-known/assetlinks.json`](https://geuneul.vercel.app/.well-known/assetlinks.json) 도메인 검증) + iOS 홈 화면 추가. **스토어·비용 0.**
+- **자산화 사이클(D1~D5, #102~#107)** — README 30초 케이스 스터디 · [아키텍처 다이어그램](./docs/architecture.md) · 라이브 데모 스크린샷 · [면접 STAR](./docs/INTERVIEW.md) · 타깃 JD 정렬 · 무료 배포(WebAPK+TWA APK).
 
 </details>
 
