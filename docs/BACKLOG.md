@@ -11,7 +11,7 @@
 
 ## ✅ 완료: 자산화 사이클 (D1~D5) — 포트폴리오 마무리 + 무료 출시 (2026-07-11)
 
-> **전량 완료·머지·라이브.** D5 타깃 JD 정렬(#102) → D3 아키텍처 다이어그램·라이브 데모 스크린샷(#103) → D2 /install WebAPK 원탭+iOS 홈화면 안내(#104, 프로덕션 실측) → D1 README 30초 케이스 스터디(#105) → D4 면접 STAR 9개(#106, `docs/INTERVIEW.md`). 각 항목 기능 브랜치→PR→`gh pr checks` pass 눈확인(TS-025)→squash 머지. **코드/문서 작업이라 마이그레이션·백엔드 무변경**(D2 install 페이지만 프론트 신규). 결정: **TWA 서명 APK는 후속 additive로 보류**(WebAPK 원탭이 수용기준 충족). 아래 스펙은 이력·참고용.
+> **전량 완료·머지·라이브.** D5 타깃 JD 정렬(#102) → D3 아키텍처 다이어그램·라이브 데모 스크린샷(#103) → D2 /install WebAPK 원탭+iOS 홈화면 안내(#104, 프로덕션 실측) → D1 README 30초 케이스 스터디(#105) → D4 면접 STAR 9개(#106, `docs/INTERVIEW.md`). 각 항목 기능 브랜치→PR→`gh pr checks` pass 눈확인(TS-025)→squash 머지. **코드/문서 작업이라 마이그레이션·백엔드 무변경**(D2 install 페이지만 프론트 신규). **D2 후속(사용자 요청)**: 다운로드 TWA 서명 APK(`/geuneul.apk`)+`.well-known/assetlinks.json` 완료 — Bubblewrap 1.24.1, keystore는 `.local`(§D), WebAPK가 여전히 메인·APK는 보조. 아래 스펙은 이력·참고용.
 
 <details><summary>D1~D5 원 스펙(참고용)</summary>
 >
