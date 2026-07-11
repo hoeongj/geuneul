@@ -1056,3 +1056,9 @@ README·install에 박을 시각 자산 확보. **코드·마이그레이션 0**
 - **범위 결정**: **TWA 서명 APK(보조 아티팩트)는 이번 스코프 보류.** 근거 — WebAPK 원탭이 이미 D2 수용기준("/install→원탭 설치→런처 아이콘·전체화면")을 충족(경고 0·규제 자유·1순위). TWA는 keystore 생성·Bubblewrap·서명비밀(.local) 호스팅·assetlinks SHA-256 정합이 필요한 "여력되면" 항목이라, 자산화 사이클(D1 README·D4 STAR) 우선. 후속 additive로 남김(BACKLOG 갱신).
 - **검증**: 프론트 `tsc --noEmit` 0 · `eslint`(신규 5파일) 0 · `pnpm build` green(`/install` static prerender 확인). manifest 설치요건 충족(name·standalone·192/512+maskable 아이콘·SW·HTTPS). ToastHost는 (shell) 전용이라 install 피드백은 인라인 status로(셸 의존 0). 모바일 무변경(신규 라우트만, 기존 셸/레이아웃 불변).
 - **관련**: BACKLOG D2 · manifest.ts · [[frontend-live-deployment]] · [[geuneul-current-state]].
+## 2026-07-11 — D1 README 쇼케이스화: 채용담당자 30초 케이스 스터디 (BACKLOG D1, 자산화 사이클)
+status·구조 위주 README를 30초에 판독되는 미니 케이스 스터디로 재설계. **코드·마이그레이션 0**(문서·배지·이미지).
+- **무엇**: 첫 화면에 ① 정체성 1문장(D5 헤드라인: "PostGIS 대용량 지리검색 + 실시간 UGC 시공간 스코어링") ② **라이브/설치 배지 행 맨 위**(App·API·Swagger·/install) + **정량 지표 배지 행**(공공데이터 150k+ · 반경 p95 ~1.4s · JaCoCo 71% · ADR 27 · TS 32) ③ **히어로 데모 이미지**(그늘 경유 경로, D3) ④ **증명한 것 3불릿**(공간 엔지니어링/멱등 ETL+지오코딩/실시간 UGC 스코어링) ⑤ 인라인 mermaid 요약 다이어그램(전체는 docs/architecture.md). ERD·구현 이력은 `<details>`로 접음.
+- **왜(why) + 웹검증(규칙B)**: ① **라이브 데모 결정적**(채용담당자 84%가 동작앱 원함) → 링크·설치·스크린샷을 최상단. ② **지리공간을 DB 엔지니어링으로 프레이밍**(GiST 인덱스·kNN `<->`·EXPLAIN·k6 p95 튜닝) — JD가 원하는 건 "지도 그림"이 아니라 대용량 공간검색(D5). ③ **정량 지표는 실측만** — JaCoCo 71%는 build.gradle 실측(LINE 71.0%·게이트 0.70), 반경 p95 ~1.4s는 perf/README.md(k6 실측), ADR 27·TS 32는 파일 카운트. 과장 0.
+- **검증**: README 인라인 mermaid `mmdc` 렌더 에러 0. **내부 링크 전수 확인** — ADR 파일 22개 링크 실경로 매칭(0021~0025 파일명 오타 5건 교정), 히어로 이미지 경로(docs/media, D3 머지분) 존재, 앵커(#데이터--etl·#기술-스택) 정합. 라이브 배지 대상(App·API·shade 경로) 200 확인. INTERVIEW.md 링크는 D4에서 추가(선참조 데드링크 방지).
+- **관련**: BACKLOG D1 · D3(데모 이미지·architecture.md)·D5(헤드라인) 연동 · [[geuneul-current-state]].
