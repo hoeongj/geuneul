@@ -18,6 +18,7 @@ import { GRADE_META, gradeOf } from "@/lib/survival";
 import type { Place } from "@/types/place";
 import type { ToiletRoute } from "@/types/route";
 import { BookmarkButton } from "./BookmarkButton";
+import { FlagButton } from "./FlagButton";
 import { DetailMiniMap } from "./DetailMiniMap";
 import { RouteMiniMap } from "./RouteMiniMap";
 import { FeaturePills } from "./FeaturePills";
@@ -69,6 +70,8 @@ function RecentReports({ placeId }: { placeId: number }) {
                     </span>
                   )}
                   {r.anonymous && <span className="text-[10px] text-muted-3">익명</span>}
+                  {/* 신고 진입점(C1) — §9 최소·비노출. 제보(휘발성)도 허위·스팸 신고 대상. */}
+                  <FlagButton targetType="REPORT" targetId={r.id} className="ml-auto shrink-0 text-[10.5px] text-muted-3 active:underline lg:hover:text-muted" />
                 </div>
                 {r.comment && <p className="truncate text-[12.5px] text-ink-3">{r.comment}</p>}
               </div>

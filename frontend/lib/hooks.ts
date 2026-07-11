@@ -122,6 +122,10 @@ export function useDialogFocusTrap(
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
+      // 중첩 모달(예: 상세 오버레이 위 신고 시트, aria-modal)이 이 패널 안에 열려 있으면 Esc·Tab을 그쪽이
+      // 소유한다 — 부모 트랩은 양보한다(C1 리뷰: 한 번의 Esc가 부모까지 닫아 지도로 튕기던 버그). FlagSheet가
+      // 이 panel의 DOM 자손이라(fixed여도 트리상 자손) querySelector로 깔끔히 감지된다.
+      if (panelRef.current?.querySelector('[aria-modal="true"]')) return;
       if (e.key === "Escape") {
         close();
         return;

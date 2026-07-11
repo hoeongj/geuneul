@@ -1,6 +1,7 @@
 // 클라이언트 fetch 계층. 브라우저는 항상 동일 오리진 /api/* 프록시만 호출한다(ALB 직접 호출 금지).
 import type { MyComment, MyReaction, MyReview } from "@/types/activity";
 import type { SurgeInfo } from "@/types/alert";
+import type { AdminFlagList, Flag, FlagCreatePayload, FlagStatus } from "@/types/flag";
 import type { Bookmark, BookmarkToggle } from "@/types/bookmark";
 import type { ReactionState, ReactionTarget, ReactionType, ReviewComment } from "@/types/community";
 import type { Following, FollowResult, UserProfile } from "@/types/follow";
@@ -249,6 +250,38 @@ export async function deleteNotificationRule(id: number): Promise<void> {
 // 로그아웃 — 세션 쿠키 삭제(서버 무상태).
 export async function logout(): Promise<void> {
   await fetch(`/api/auth/logout`, { method: "POST", signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
+}
+
+// 신고 접수(C1) — 로그인 필요. 201=접수, 409=이미 신고한 항목, 404=대상 없음, 401=비로그인.
+// 호출부(FlagButton)가 ApiError.status로 안내 문구를 분기한다(§6 중립 톤).
+export async function createFlag(payload: FlagCreatePayload): Promise<Flag> {
+  const res = await fetch(`/api/flags`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<Flag>;
+}
+
+// 관리자 검수 큐(C1) — ADMIN 전용. 비관리자(403)·비로그인(401)은 ApiError로 던져 호출부가 우아하게 처리한다
+// (admin 화면은 useMe role로 선게이팅하지만, 방어적으로 403/401도 구분해 안내). status 기본 PENDING.
+export function fetchAdminFlags(status: FlagStatus = "PENDING", page = 0): Promise<AdminFlagList> {
+  const qs = new URLSearchParams({ status, page: String(page), size: "20" });
+  return getJson<AdminFlagList>(`/api/admin/flags?${qs}`);
+}
+
+// 신고 처리(C1) — ADMIN 전용. RESOLVED면 대상 콘텐츠 숨김, DISMISSED면 무처리 종결. 이미 처리건은 409.
+export async function resolveFlag(id: number, status: "RESOLVED" | "DISMISSED"): Promise<Flag> {
+  const res = await fetch(`/api/admin/flags/${id}/resolve`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status }),
+    signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<Flag>;
 }
 
 // 휘발성 제보 생성(익명 허용). 429 = 레이트리밋 — 메시지로 안내.

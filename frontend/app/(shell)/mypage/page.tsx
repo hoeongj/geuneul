@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FollowingSection } from "@/components/mypage/FollowingSection";
 import { MyActivitySection } from "@/components/mypage/MyActivitySection";
@@ -119,6 +120,20 @@ function Profile({ user }: { user: User }) {
       <FollowingSection />
 
       <BookmarksSection />
+
+      {/* 관리자 전용 진입점(C1) — role===ADMIN일 때만. §9대로 하단 탭 신설 없이 여기 조건부 링크로만 노출. */}
+      {user.role === "ADMIN" && (
+        <Link
+          href="/admin/flags"
+          className="flex items-center justify-between rounded-[14px] border border-line-cream bg-white px-4 py-3.5 text-[14px] font-bold text-ink-2"
+        >
+          <span className="flex items-center gap-2">
+            <Icon name="eyeoff" size={17} className="text-teal" />
+            신고 검수 큐
+          </span>
+          <Icon name="chev" size={16} className="text-muted-3" />
+        </Link>
+      )}
 
       <button
         type="button"
