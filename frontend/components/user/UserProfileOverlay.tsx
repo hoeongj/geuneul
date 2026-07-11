@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useSelectedPlace } from "@/lib/context/selected";
 import { useSelectedUser } from "@/lib/context/selectedUser";
@@ -14,13 +16,25 @@ export function UserProfileOverlay() {
   const { id, close } = useSelectedUser();
   const { data: profile, isLoading, isError } = useUserProfile(id);
   const { data: me } = useMe();
+  // 데스크톱 좌측 패널화는 지도 탭('/')에서만.
+  const onMap = usePathname() === "/";
+
+  // Esc로 닫기 — 열려 있을 때만 리스너.
+  useEffect(() => {
+    if (id == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [id, close]);
 
   if (id == null) return null;
 
   return (
-    <div className="gn-overlay absolute inset-0 z-50 flex flex-col overflow-y-auto bg-cream">
+    <div className={`gn-overlay absolute inset-0 z-50 flex flex-col overflow-y-auto bg-cream${onMap ? " lg:right-auto lg:w-[400px] lg:border-r lg:border-line-cream lg:shadow-[0_0_40px_rgba(0,0,0,0.14)]" : ""}`}>
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line-cream bg-cream px-2 py-2">
-        <button type="button" onClick={close} aria-label="뒤로" className="flex h-[38px] w-[38px] items-center justify-center text-ink">
+        <button type="button" onClick={close} aria-label="뒤로" className="flex h-[38px] w-[38px] items-center justify-center rounded-full text-ink transition-colors lg:hover:bg-line-cream">
           <Icon name="chevLeft" size={22} />
         </button>
         <h1 className="text-[15px] font-extrabold text-ink">작성자</h1>
