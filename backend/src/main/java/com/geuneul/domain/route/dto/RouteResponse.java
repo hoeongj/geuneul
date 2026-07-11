@@ -34,15 +34,16 @@ public record RouteResponse(
     public record RouteStop(
             @Schema(description = "위도") double lat,
             @Schema(description = "경도") double lng,
-            @Schema(description = "장소 ID(경유 화장실만)", nullable = true) Long placeId,
-            @Schema(description = "이름(경유 화장실만)", nullable = true) String name
+            @Schema(description = "장소 ID(경유지만)", nullable = true) Long placeId,
+            @Schema(description = "이름(경유지만)", nullable = true) String name,
+            @Schema(description = "카테고리 enum name(경유지만 — 미니맵 아이콘 구분용, C4)", nullable = true) String category
     ) {
         public static RouteStop coord(double lat, double lng) {
-            return new RouteStop(lat, lng, null, null);
+            return new RouteStop(lat, lng, null, null, null);
         }
 
-        public static RouteStop place(double lat, double lng, long placeId, String name) {
-            return new RouteStop(lat, lng, placeId, name);
+        public static RouteStop place(double lat, double lng, long placeId, String name, String category) {
+            return new RouteStop(lat, lng, placeId, name, category);
         }
     }
 }

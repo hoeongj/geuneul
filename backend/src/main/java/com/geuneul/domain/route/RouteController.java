@@ -33,6 +33,16 @@ public class RouteController {
         return routeService.toiletRoute(fromLat, fromLng, toLat, toLng);
     }
 
+    @Operation(summary = "그늘 경유 경로",
+            description = "출발·도착 사이 우회 최소 쿨링쉼터/도서관/지하상가 1곳을 경유지로 끼운 경로(C4). /routes/toilet과 동일 스키마.")
+    @GetMapping("/routes/shade")
+    public RouteResponse shadeRoute(@RequestParam double fromLat, @RequestParam double fromLng,
+                                    @RequestParam double toLat, @RequestParam double toLng) {
+        requireKorea(fromLat, fromLng);
+        requireKorea(toLat, toLng);
+        return routeService.shadeRoute(fromLat, fromLng, toLat, toLng);
+    }
+
     /** 국내 좌표 범위 방어(PlaceController와 동일 규약) — 뒤집힌 lat/lng·해외 좌표를 400으로 막는다. */
     private static void requireKorea(double lat, double lng) {
         if (lat < 33 || lat > 39 || lng < 124 || lng > 132) {
