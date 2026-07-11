@@ -5,6 +5,17 @@
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
 
+> 🎉 **2026-07-11 야간 세션 완료 — `docs/BACKLOG.md` N1~N9 전량 구현·머지·라이브(PR #81~#88) + 브랜딩(#86).**
+> 각 기능 브랜치 → PR → **`gh pr checks` Backend pass 눈확인(TS-025)** → squash 머지 → 프로덕션 배포·라이브 검증. 커밋 신원 `ghdtjdwn`, Co-Authored-By 없음.
+> - **N1** 사진 표시(#81): `PhotoService.presignGet` 비공개 S3 조회 시점 presigned-GET(리뷰·제보 공유) + ReviewsSection `<img>`. **N2** 댓글 UX(#81, 자동펼침·affordance). **N3** 제보 capture 제거(#81).
+> - **N4** 하단시트 3단 스냅+드래그(#82, Pointer Events). **N5** 지정 장소 검색(#83, 카카오 keyword.json BFF, TS-026 계약검증). **N6** 내 글 관리(#84, `/me/reviews·comments·reactions`).
+> - **N7** 커먼스세이프 팔로우(#85, `domain.follow`·V17·`/users/{id}`·팔로워 수만 공개·ADR-0023). **N8** 그늘/비 경로(#87, corridor ST_DWithin 오버레이·ADR-0024). **N9** 대규모 대비(#88, **task_cpu 0.5vCPU**·**V18 인덱스**·ADR-0025).
+> - **부수**: TS-030(IT HikariCP 풀 캡 — 컨텍스트 다수 커넥션 소진), TS-031(멱등삽입 catch 후 같은 tx SELECT=PG 25P02 → NOT_SUPPORTED tx 분리, Follow·Reaction 둘 다), 브랜딩 로고·앱아이콘·회전 스플래시(#86).
+> - **라이브 현황(2026-07-11)**: 태스크데프 **rev68(cpu=512, N9)**, Flyway **V18**. API·App 200. 라이브 검증: `/places/search`(성균관대) · `/users/1` 200 · `/me/*` 401 · `/routes/toilet` shadeSpots 15 · 파비콘/아이콘/manifest(신규 PNG·bg #FFFBEB). **k6 재부하: 반경 p95 2.68s→1.39s·부팅 93s→70s**(perf/k6/n9-results.md). ADR 최신 **0025**.
+> - **남은 것**: BACKLOG 빈 상태(N1~N9 소진). 사용자 액션 = ① F2 실기기 PWA 푸시 최종 확인(선택) ② 실사용 후 새 피드백 수집. **다음 세션 = 새 백로그 정의부터**.
+
+> ── 이하 라인은 **이전 세션 기록(2026-07-10 이전, 히스토리·참고용)** ──
+
 > 🎯 **2026-07-10 심화+additive 세션 완료** — `docs/BACKLOG.md`의 **A1~A7 additive + B1~B2 심화를 전부 구현·머지**(PR #61~#69, 9개). 각 기능 브랜치 → CI Backend(Gradle) pass 눈확인(TS-025) → squash 머지. Flyway **V13(시설 comfort)·V14(bookmarks)·V15(notifications)** 프로덕션 자동 적용. 라이브 실측: `/me/bookmarks`·`/notifications` 401(존재·보호), `/routes/toilet` 200(경유 화장실). ADR **0017~0019** 신규.
 > - **완료(코드)**: A1 시설 comfort SQL 통합(V13·ADR-0017) · A2 verified→trust · A3 쉼터 냉방 조건부 백필(코드) · A4 급증 SSE 프론트 · A5 popular-times 히트맵 · A6 커뮤니티 최소 UI · A7 bookmarks(V14) · B1 알림(V15·ADR-0018, 급증 재사용+인앱 센터) · B2 루트(ADR-0019, detour 최소 경유지+직선 MVP).
 > - **데이터 op 실행 완료(2026-07-10, 사용자 승인)**: **A3 쉼터 냉방 실 재적재** — safetydata 냉방 컬럼 포함 CSV 재생성→재적재, `featuresBackfilled=57,070`(쉼터 95%), 상세 air_conditioned 칩 + 무제보 comfortScore 0.35 실측(A1+A3 합작). **A8 상권 6대 광역시 확장** — 부산·대구·인천·대전·광주·울산 ≈37,618행(멱등, `IngestBatchLock`으로 순차 실행). **B1 Web Push VAPID 키 생성**(`.local/webpush.env`).
