@@ -918,3 +918,13 @@
 - **왜(why)**: ADR-0024 상세. ① **왜 corridor 오버레이(자체 라우팅 대신)** — §0-2 과설계 지양, 간판(PostGIS)만 재사용. ② **왜 쉼터·도서관·지하상가** — 셋 다 실내/지붕이라 **그늘(폭염)+비(장마) 동시 해결**("그늘/비"). 야외(음수대·공원)는 비 못 피해 제외. ③ **왜 폴리라인 LINESTRING corridor(중점 원 대신)** — F4는 경로 전 구간 주변을 봐야 하므로 라인 거리(ST_DWithin line)가 정확. WKT는 doubles로만 만들고 파라미터 바인딩(인젝션 안전)·Locale.ROOT(소수점 '.' 고정). ④ **400m·15개** — 도보 5분 우회 + 미니맵 혼잡 방지.
 - **검증**: 백엔드 `RouteServiceTest`(shadeSpots 조립 + 기존 waypoint/폴백) 로컬 green + `RouteToiletIT`(실 Postgres, corridor 쿼리 실행, CI). 프론트 tsc·eslint·build green. **마이그레이션 없음**(places·V3 인덱스 재사용).
 - **관련**: BACKLOG N8 · ADR-0024 · ADR-0021(F3)·0019(경로) · CLAUDE.md §0-2·§3.
+
+## 2026-07-11 — N9: 대규모 대비 — 부하 기반 튜닝 (PR #88, ADR-0025)
+- **무엇**: k6 재부하로 병목을 실측하고 데이터 근거로 튜닝. 프로덕션 반영·재측정까지.
+  - **① k6 gentle 부하**(프로덕션, PEAK_VUS 4, read-only) → **반경 스코어드 쿼리 p95 2.68s**가 병목(나머지 수백 ms).
+  - **② task_cpu 0.25→0.5 vCPU 승격**(구 F6, TS-005) — 라이브 태스크데프 describe→cpu=512→register(rev67)→update-service, deploy.yml describe 기반이라 이후 배포에도 보존. terraform 기본값도 512. **결과: 반경 p95 2.68s→1.39s(−48%)·kNN 238→98ms·bounds 395→210ms·처리량 ×2.1·부팅 93s→70s.** 병목이 인덱스가 아니라 CPU였음을 실증.
+  - **③ EXPLAIN 재튜닝 → Flyway V18**: 로컬 실 PostGIS(docker)에 V1~V17 + 합성 시드 후 EXPLAIN → **N6 `/me/comments`·`/me/reactions`가 user_id 인덱스 부재로 seq scan**. `idx_review_comments_user`·`idx_reactions_user` 추가 → Bitmap Index Scan(증빙 `perf/explain/n9-me-activity-tuning.txt`). /me/reviews(V6)·/me/following(V17)·공간쿼리(V3 GIST)는 이미 인덱스.
+  - **④ 오토스케일링·풀 점검**: min1/max3·CPU 60%·HikariCP 10 **유지**(근거: task_cpu가 용량 레버, 풀 30<RDS ~87 여유, 부하 병목은 CPU였음). 데이터가 병목으로 안 가리키면 안 건드림.
+- **왜(why)**: ADR-0025 상세. 핵심 = **"추측 말고 측정 후 튜닝"**. 부하가 CPU를 가리켜 task_cpu를 올렸고, EXPLAIN이 seq scan을 딱 두 쿼리에서만 잡아 인덱스도 그 둘만 추가. 오토스케일링/풀은 데이터가 병목으로 안 가리켜 근거 있게 유지(모든 노브를 돌리는 게 튜닝이 아님).
+- **검증**: k6 before/after(`perf/k6/n9-results.md`) + EXPLAIN before/after(`perf/explain/`) 문서화. V18은 로컬 실 PostGIS에 적용해 인덱스 스캔 확인 + CI Testcontainers가 게이트. task_cpu 512 프로덕션 라이브(rev67)·health 200·k6 재측정 완료. 부팅 70.09s 로그 확인.
+- **관련**: BACKLOG N9 · ADR-0025 · ADR-0012·0013 · TS-005. Flyway V18. **N1~N9 전량 완료.**

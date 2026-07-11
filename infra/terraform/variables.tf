@@ -103,9 +103,9 @@ variable "github_repo" {
 }
 
 variable "task_cpu" {
-  description = "Fargate CPU (256 = 0.25 vCPU, 비용 최소)"
+  description = "Fargate CPU (512 = 0.5 vCPU). N9 부하테스트로 0.25→0.5 vCPU 승격 — 반경 p95 2.68s→1.39s·부팅 93s→70s(ADR-0025, perf/k6/n9-results.md). 라이브 태스크데프는 deploy.yml describe 기반이라 cpu가 보존됨."
   type        = string
-  default     = "256"
+  default     = "512"
 }
 
 variable "task_memory" {

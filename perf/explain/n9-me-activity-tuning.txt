@@ -1,0 +1,46 @@
+N9 대규모 대비 — EXPLAIN 재튜닝 증빙 (2026-07-11, ADR-0025 / Flyway V18)
+=======================================================================
+환경: 로컬 postgis/postgis:16-3.4 (docker), 전 마이그레이션 V1~V17 적용 후 합성 시드
+      users 2,000 · places 200 · reviews 8,000 · review_comments 15,000 · reactions 8,000 · follows 2,000, ANALYZE 후.
+대상: N6 "내 글 관리"가 추가한 유저필터 조인 조회 2종. user_id 인덱스 부재로 seq scan이던 것을 인덱스로.
+     (/me/reviews=idx_reviews_user(V6), /me/following=idx_follows_follower(V17)는 이미 인덱스 경로 — 재확인만.)
+
+------------------------------------------------------------------------
+[1] /me/comments  —  SELECT ... FROM review_comments c JOIN reviews rv .. JOIN places p .. WHERE c.user_id=? ORDER BY c.created_at DESC
+------------------------------------------------------------------------
+BEFORE (인덱스 없음):
+  ->  Seq Scan on review_comments c  (cost=0.00..312.50 rows=7 width=30) (actual time=0.971..9.492 rows=5 loops=1)
+  ->  Index Scan using reviews_pkey on reviews rv  (loops=5)
+  ->  Index Scan using places_pkey on places p  (loops=5)
+  Execution Time: 14.403 ms          ← review_comments 전 15,000행 스캔
+
+AFTER (V18 idx_review_comments_user(user_id, created_at DESC)):
+  ->  Bitmap Index Scan on idx_review_comments_user  (cost=0.00..4.34 rows=7) (actual time=0.475..0.508 rows=5 loops=1)
+  Execution Time: 6.526 ms           ← 해당 유저 행만 인덱스로 진입
+
+------------------------------------------------------------------------
+[2] /me/reactions  —  SELECT ... FROM reactions rx JOIN reviews rv .. JOIN places p .. WHERE rx.user_id=? AND rx.target_type='REVIEW' ORDER BY rx.created_at DESC
+------------------------------------------------------------------------
+BEFORE (인덱스 없음):
+  ->  Seq Scan on reactions rx  (cost=0.00..195.00 rows=4 width=24) (actual time=2.830..5.707 rows=5 loops=1)
+  Execution Time: 10.422 ms          ← reactions 전 8,000행 스캔
+
+AFTER (V18 idx_reactions_user(user_id, target_type, created_at DESC)):
+  ->  Bitmap Index Scan on idx_reactions_user  (cost=0.00..4.32 rows=4) (actual time=0.908..0.950 rows=5 loops=1)
+  Execution Time: 6.790 ms
+
+------------------------------------------------------------------------
+[3] 재확인 — 이미 인덱스 경로(무변경)
+------------------------------------------------------------------------
+/me/reviews  (WHERE r.user_id=? AND NOT r.hidden):
+  ->  Bitmap Index Scan on idx_reviews_user (V6)          ← 인덱스 OK
+/me/following (WHERE f.follower_id=? ORDER BY f.created_at DESC):
+  ->  Index Scan Backward using idx_follows_follower (V17) ← 인덱스 OK, 정렬까지 커버
+
+------------------------------------------------------------------------
+결론
+------------------------------------------------------------------------
+seq scan 비용은 테이블 크기에 선형으로 증가한다(15k에선 ~14ms지만 수백만 행이면 초 단위). 인덱스는 log에
+머문다 → V18로 /me/comments·/me/reactions를 seq scan에서 제거. 대용량에서 마이 활동 조회가 무너지지 않게
+"대규모 대비"의 일부로 선제 튜닝. (반경/kNN/bounds/corridor는 V3 GIST(geography) 함수 인덱스로 이미 인덱스 경로 —
+ADR-0012·0024, perf/explain 기존 문서 참고.)
