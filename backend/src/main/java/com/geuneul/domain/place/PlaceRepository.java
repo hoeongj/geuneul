@@ -173,18 +173,20 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                                                @Param("meters") double meters);
 
     /**
-     * 화장실 포함 경로(B2)의 경유지 선택 — 출발→화장실→도착의 <b>우회(detour) 최소</b> 화장실 1곳.
-     * 중심(midpoint) 기준 corridor(ST_DWithin, V3 GIST 함수 인덱스 경로)로 후보를 좁힌 뒤,
-     * (출발거리+도착거리) 합이 최소인 화장실을 고른다. 표시/정렬 거리는 전부 ST_Distance(geography) 타원체.
-     * 화장실이 corridor 안에 없으면 빈 Optional(호출부가 경유지 없는 직선 경로로 폴백).
+     * 경로 경유지 선택(B2 화장실·C4 그늘) — 출발→경유지→도착의 <b>우회(detour) 최소</b> 장소 1곳을, 허용 카테고리
+     * (CSV) 안에서 고른다. 중심(midpoint) 기준 corridor(ST_DWithin, V3 GIST 함수 인덱스 경로)로 후보를 좁힌 뒤,
+     * (출발거리+도착거리) 합이 최소인 곳을 고른다. 표시/정렬 거리는 전부 ST_Distance(geography) 타원체.
+     * category는 {@code = ANY(string_to_array(:categories, ','))}로 IN 필터(파라미터 바인딩이라 인젝션 안전) —
+     * TOILET(F3) / COOLING_SHELTER·LIBRARY·UNDERGROUND(C4) 등 시나리오별 재사용. corridor 안에 없으면 빈 Optional(직선 폴백).
      */
     @Query(value = """
-            SELECT p.id AS "placeId", p.name AS "name", ST_Y(p.geom) AS "lat", ST_X(p.geom) AS "lng",
-                   p.address AS "address",
+            SELECT p.id AS "placeId", p.name AS "name", p.category AS "category",
+                   ST_Y(p.geom) AS "lat", ST_X(p.geom) AS "lng", p.address AS "address",
                    ST_Distance(geography(p.geom), geography(ST_SetSRID(ST_MakePoint(:fromLng, :fromLat), 4326))) AS "distFromM",
                    ST_Distance(geography(p.geom), geography(ST_SetSRID(ST_MakePoint(:toLng, :toLat), 4326)))   AS "distToM"
             FROM places p
-            WHERE p.deleted_at IS NULL AND p.category = 'TOILET'
+            WHERE p.deleted_at IS NULL
+              AND p.category = ANY(string_to_array(:categories, ','))
               AND ST_DWithin(
                     geography(p.geom),
                     geography(ST_SetSRID(ST_MakePoint(:midLng, :midLat), 4326)),
@@ -195,11 +197,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
                 ) ASC
             LIMIT 1
             """, nativeQuery = true)
-    java.util.Optional<com.geuneul.domain.route.RouteWaypointView> findBestToiletWaypoint(
+    java.util.Optional<com.geuneul.domain.route.RouteWaypointView> findBestWaypointByCategories(
             @Param("fromLat") double fromLat, @Param("fromLng") double fromLng,
             @Param("toLat") double toLat, @Param("toLng") double toLng,
             @Param("midLat") double midLat, @Param("midLng") double midLng,
-            @Param("corridorM") double corridorM);
+            @Param("corridorM") double corridorM, @Param("categories") String categories);
 
     /**
      * 경로 폴리라인 corridor(F4, N8) — 경로 라인에서 bufferM 이내의 그늘/실내 피난처(카테고리 CSV, enum name).

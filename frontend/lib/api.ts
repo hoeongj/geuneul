@@ -8,7 +8,7 @@ import type { Following, FollowResult, UserProfile } from "@/types/follow";
 import type { NotificationCenter, NotificationRule, NotificationRuleType } from "@/types/notification";
 import type { MapBounds, Place, Report, ReportCreatePayload, Scenario } from "@/types/place";
 import type { PopularTimesSlot } from "@/types/popular";
-import type { ToiletRoute } from "@/types/route";
+import type { RouteResult } from "@/types/route";
 import type { PlaceSearchResult } from "@/types/search";
 import type { PhotoPresignResult, PhotoPurpose } from "@/types/photo";
 import type { Review, ReviewCreatePayload, ReviewListResponse } from "@/types/review";
@@ -112,20 +112,18 @@ export function fetchPopularTimes(placeId: number): Promise<PopularTimesSlot[]> 
   return getJson<PopularTimesSlot[]>(`/api/places/${placeId}/popular-times`);
 }
 
-// 화장실 포함 경로 — 출발→경유 화장실→도착(B2). 경유 화장실 선택은 백엔드 PostGIS(우회 최소).
-export function fetchToiletRoute(params: {
-  fromLat: number;
-  fromLng: number;
-  toLat: number;
-  toLng: number;
-}): Promise<ToiletRoute> {
+// 경유지 경로 — 출발→경유지→도착. via=toilet(화장실, F3) | shade(쿨링쉼터/실내, C4). 경유지 선택은 백엔드 PostGIS(우회 최소).
+export function fetchRoute(
+  params: { fromLat: number; fromLng: number; toLat: number; toLng: number },
+  via: "toilet" | "shade",
+): Promise<RouteResult> {
   const qs = new URLSearchParams({
     fromLat: String(params.fromLat),
     fromLng: String(params.fromLng),
     toLat: String(params.toLat),
     toLng: String(params.toLng),
   });
-  return getJson<ToiletRoute>(`/api/routes/toilet?${qs}`);
+  return getJson<RouteResult>(`/api/routes/${via}?${qs}`);
 }
 
 // 뷰포트 내 제보 급증 스냅샷(폴백/초기 상태). SSE(/api/alerts/stream)가 공백을 실시간으로 메운다.

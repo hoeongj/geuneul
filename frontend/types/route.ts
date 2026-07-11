@@ -1,9 +1,10 @@
-// 화장실 포함 경로(B2, ADR-0019) — 백엔드 GET /routes/toilet. mode=straight(직선 MVP)|road(외부 API 후속).
+// 경유지 경로(B2/F3 화장실·C4 그늘) — 백엔드 GET /routes/{toilet,shade}, 동일 스키마. mode=straight(직선 MVP)|road(외부 API).
 export interface RouteStop {
   lat: number;
   lng: number;
-  placeId: number | null; // 경유 화장실만 non-null
+  placeId: number | null; // 경유지만 non-null
   name: string | null;
+  category: string | null; // 경유지 카테고리 enum name(미니맵 아이콘 구분용, C4). 출발/도착은 null.
 }
 
 export interface LatLng {
@@ -20,9 +21,10 @@ export interface ShadeSpot {
   lng: number;
 }
 
-export interface ToiletRoute {
+// 경유지 경로 응답(화장실·그늘 공용). 이전 이름 ToiletRoute → 시나리오 확장(C4)으로 RouteResult로 일반화.
+export interface RouteResult {
   origin: RouteStop;
-  waypoint: RouteStop | null; // 경유 화장실(없으면 null)
+  waypoint: RouteStop | null; // 경유지(없으면 null — 직선/도로 폴백)
   destination: RouteStop;
   polyline: LatLng[];
   mode: "straight" | "road";

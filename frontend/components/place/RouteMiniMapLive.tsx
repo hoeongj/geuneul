@@ -3,16 +3,16 @@
 import { Map, MapMarker, Polyline } from "react-kakao-maps-sdk";
 import { iconForCategory } from "@/lib/categories";
 import { markerImage } from "@/lib/marker";
-import type { ToiletRoute } from "@/types/route";
+import type { RouteResult } from "@/types/route";
 import type { Category } from "@/types/place";
 
-// 화장실 포함 경로(B2/F3) 미니맵: 출발→(경유 화장실)→도착 폴리라인 + 마커.
+// 경유지 경로(B2/F3 화장실·C4 그늘) 미니맵: 출발→(경유지)→도착 폴리라인 + 마커.
 // mode=road(카카오 도로 경로, 실선 파랑) | straight(직선 폴백, 점선 회색). 폴리라인 전체가 보이게 bounds fit.
 export default function RouteMiniMapLive({
   route,
   destCategory,
 }: {
-  route: ToiletRoute;
+  route: RouteResult;
   destCategory: Category;
 }) {
   const path = route.polyline.map((p) => ({ lat: p.lat, lng: p.lng }));
@@ -43,11 +43,11 @@ export default function RouteMiniMapLive({
       />
       {/* 출발(현재 위치) */}
       <MapMarker position={{ lat: route.origin.lat, lng: route.origin.lng }} image={markerImage("locate", false)} />
-      {/* 경유 화장실 */}
+      {/* 경유지(화장실 or 쿨링쉼터/실내) — 카테고리별 아이콘(C4). 카테고리 없으면 toilet 폴백(F3 호환). */}
       {route.waypoint && (
         <MapMarker
           position={{ lat: route.waypoint.lat, lng: route.waypoint.lng }}
-          image={markerImage("toilet", true)}
+          image={markerImage(route.waypoint.category ? iconForCategory(route.waypoint.category as Category) : "toilet", true)}
         />
       )}
       {/* 경로 주변 그늘/실내 피난처(F4) — 쉼터·도서관·지하상가 오버레이("더울 때 피할 곳") */}
