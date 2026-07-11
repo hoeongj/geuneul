@@ -13,6 +13,11 @@ export function formatDistance(m: number | null | undefined): string | null {
   return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`;
 }
 
+// 반경 표기: >=1km 는 딱 떨어지면 정수 km, 아니면 소수1자리 km, 그 외 m. (바텀시트·사이드바 공용)
+export function radiusLabel(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)}km` : `${m}m`;
+}
+
 // 도보 예상: round(distanceM / 67)분, 최소 1분. (README/프로토타입 규칙)
 export function walkMinutes(m: number | null | undefined): number | null {
   if (m == null) return null;

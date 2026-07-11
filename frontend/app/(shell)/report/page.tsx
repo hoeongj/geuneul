@@ -114,7 +114,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="relative h-full overflow-y-auto px-4 pt-5 pb-6">
+    <div className="relative h-full overflow-y-auto px-4 pt-5 pb-6 lg:mx-auto lg:max-w-[720px] lg:px-8 lg:pt-8">
       <header className="mb-4">
         <h1 className="text-[23px] font-extrabold tracking-[-0.4px] text-ink">제보하기</h1>
         <p className="mt-1 text-[13px] text-ink-3">한 탭이면 끝. 지금 상태를 알려주세요.</p>

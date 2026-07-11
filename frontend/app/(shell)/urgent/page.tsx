@@ -16,7 +16,7 @@ export default function UrgentPage() {
   const query = useUrgent(scenario, { lat: geo.lat, lng: geo.lng });
 
   return (
-    <div className="h-full overflow-y-auto px-4 pt-5 pb-6">
+    <div className="h-full overflow-y-auto px-4 pt-5 pb-6 lg:mx-auto lg:max-w-[720px] lg:px-8 lg:pt-8">
       <header className="mb-4">
         <h1 className="text-[23px] font-extrabold tracking-[-0.4px] text-ink">지금 급해요</h1>
         <p className="mt-1 text-[13px] text-ink-3">상황을 고르면 거리와 실시간 상태를 함께 따져 지금 갈만한 순으로 알려드려요.</p>

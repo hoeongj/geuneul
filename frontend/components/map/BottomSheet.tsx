@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
-import { PlaceRow } from "@/components/place/PlaceRow";
+import { PlaceListBody } from "@/components/map/PlaceListBody";
+import { radiusLabel } from "@/lib/geo";
 import type { Place } from "@/types/place";
 
 // 하단 시트 3단 스냅(N4): peek(핸들만 보여 지도 크게)·half(기본)·full. 드래그로 가까운 단으로,
@@ -24,10 +25,6 @@ interface BottomSheetProps {
   onWiden: () => void;
 }
 
-function radiusLabel(m: number): string {
-  return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)}km` : `${m}m`;
-}
-
 function snapHeightPx(snap: SheetSnap, containerH: number): number {
   if (snap === "peek") return PEEK_PX;
   return (snap === "full" ? FULL_FRACTION : HALF_FRACTION) * containerH;
@@ -39,7 +36,6 @@ function snapHeightCss(snap: SheetSnap): string {
 }
 
 export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSelectPlace, onWiden }: BottomSheetProps) {
-  const empty = !loading && places.length === 0;
   const sheetRef = useRef<HTMLElement>(null);
   // 드래그 세션 상태(리렌더 유발 안 하는 값은 ref로). currentH는 pointerup 시 최종 높이 판정에 쓴다.
   const dragRef = useRef<{ startY: number; startH: number; containerH: number; currentH: number; dragged: boolean } | null>(null);
@@ -92,7 +88,7 @@ export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSel
   return (
     <section
       ref={sheetRef}
-      className="gn-sheet absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-[22px] bg-white shadow-sheet"
+      className="gn-sheet absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-[22px] bg-white shadow-sheet lg:hidden"
       style={{ height: heightStyle, transition: dragH != null ? "none" : "height 0.25s ease" }}
       aria-label="주변 장소 목록"
     >
@@ -134,29 +130,8 @@ export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSel
             </button>
           </header>
 
-          {/* 리스트 / 상태 */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-            {loading && places.length === 0 ? (
-              <div className="flex h-full items-center justify-center py-10 text-[13px] text-muted">주변 장소를 불러오는 중…</div>
-            ) : empty ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-mint text-status">
-                  <Icon name="mapicon" size={26} />
-                </div>
-                <div className="text-[15px] font-bold text-ink">이 근처엔 아직 정보가 없어요</div>
-                <div className="text-[12.5px] text-ink-3">필터를 바꾸거나 반경을 넓혀보세요.</div>
-                <button
-                  type="button"
-                  onClick={onWiden}
-                  className="mt-2 rounded-[12px] bg-forest px-4 py-2.5 text-[13px] font-bold text-cream"
-                >
-                  반경 넓히기
-                </button>
-              </div>
-            ) : (
-              places.map((p) => <PlaceRow key={p.id} place={p} onClick={() => onSelectPlace(p)} />)
-            )}
-          </div>
+          {/* 리스트 / 상태 — 데스크톱 사이드바와 공유(PlaceListBody) */}
+          <PlaceListBody places={places} loading={loading} onSelectPlace={onSelectPlace} onWiden={onWiden} />
         </>
       )}
     </section>

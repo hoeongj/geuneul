@@ -941,3 +941,17 @@
   "지도만 크게"를 원했는데 peek 96px가 과함 → 얇은 바로 지도 최대 노출, 재열기 affordance는 유지.
 - **검증**: `node -e 'new Response("",{status:204})'`로 TypeError 재현·null은 통과 확인. 프론트 tsc·eslint·build green. 백엔드 무변경.
 - **관련**: TS-032·TS-029(같은 증상 다른 원인) · BACKLOG N4 · CLAUDE.md §7(PWA 푸시).
+
+## 2026-07-11 — 데스크톱 반응형 — 풀 지도 + 좌측 사이드바 + 좌측 레일 (프론트 전용)
+사용자 피드백: "모바일은 완벽한데 컴퓨터로 들어가면 어플처럼(430px 폰 컬럼이 베이지 여백에 떠 있음)만 뜬다." → 데스크톱(≥lg=1024px)에서만 **지도앱 표준 3분할**로 분기. 모바일(<lg)은 100% 무변경.
+- **무엇**:
+  - `app/(shell)/layout.tsx`: `<lg` 폰 컬럼(max-w-430 중앙) 유지, `≥lg`는 `NavRail`(좌측 세로 레일) + 폭 제한 없는 콘텐츠(`lg:max-w-none lg:flex-1`). 하단 `TabBar`는 `lg:hidden`.
+  - `components/shell/NavRail.tsx`(신규): 데스크톱 좌측 레일(76px). 브랜드 마크(그늘=`tree` 아이콘 forest 사각)+ TabBar와 **단일 소스 TABS 공유**(export)로 4탭 세로.
+  - `app/(shell)/page.tsx`: 지도 페이지가 콘텐츠 안에서 `lg:flex`로 **좌측 사이드바(`MapSidebar`, 400px 고정) + 풀블리드 지도(`lg:flex-1`)** 분기. 모바일 상단 검색/필터 오버레이는 `lg:hidden`, 급증 배너는 데스크톱에선 지도 상단 중앙에 별도 렌더. 검색 bias 좌표·선택 핸들러는 모바일/데스크톱 공유(중복 제거).
+  - `components/map/MapSidebar.tsx`(신규)·`PlaceListBody.tsx`(신규): 바텀시트의 목록 본문을 `PlaceListBody`로 추출해 **모바일 시트 + 데스크톱 사이드바가 동일 목록 UI 공유**. `radiusLabel`도 `lib/geo`로 승격 공유. `BottomSheet`는 `lg:hidden`.
+  - `CurrentLocationFab`: 인라인 `style` bottom(=`calc(46%+12px)`, 시트 위)을 동일값 Tailwind 클래스로 옮기고 `lg:bottom-6 lg:right-6`(시트 없는 데스크톱은 지도 우하단) 추가.
+  - 오버레이(`PlaceDetailOverlay`·`UserProfileOverlay`): `<lg` 전체 덮기, `≥lg`는 `lg:w-[400px] lg:right-auto` **좌측 패널**로 좁혀 지도를 가리지 않음(카카오맵 상세 패널 감성).
+  - 콘텐츠 페이지(urgent·mypage·report): `lg:mx-auto lg:max-w-[720px]`로 데스크톱 가독 폭 중앙 정렬.
+- **왜(why)**: ① **왜 3분할(풀지도+사이드바+레일)** — 지도 제품 데스크톱 표준(카카오/네이버/구글맵 전부 지도 풀스크린 + 좌측 목록 패널). 국내 타깃이라 카카오/네이버맵 UX와 정렬이 가장 방어적. 사용자에게 3안(3분할/단일컬럼 넓히기/폰프레임+배경) 제시→**3분할 선택**. ② **왜 lg(1024) 분기** — 노트북/데스크톱 표준 임계. 태블릿(768~1023)은 폰 컬럼 유지(저위험). ③ **왜 모바일 무변경 보장** — 신규 요소는 전부 `hidden lg:flex`/`lg:hidden`/`lg:` 오버라이드, 기존 base 클래스는 FAB 인라인→클래스 이동(값 동일)과 목록 추출(마크업 동일)뿐. ④ **왜 목록/라벨 공유 추출** — 시트와 사이드바가 같은 목록을 그려 중복·드리프트 제거.
+- **검증**: 프론트 tsc·eslint·build(next --webpack) 전부 green. `next start` SSR HTML에 레일(`그늘 홈`)·데스크톱 클래스(`hidden lg:flex`·`lg:flex-1`·`lg:w-[400px]`·`lg:hidden`) 렌더 확인. **헤드리스 Chrome 1440×900 스크린샷으로 3분할 실물 확인**(레일+사이드바 실데이터 목록+지도영역+우하단 FAB). 로컬은 `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` 부재라 지도 영역이 placeholder("지도를 불러오지 못했어요")로 뜨지만 **라이브(Vercel)는 키 등록돼 있어 지도가 그 영역을 채움**. 빌드 CSS에서 FAB `calc(46% + 12px)`(Tailwind v4가 공백 정규화·유효) 확인 → 모바일 위치 무회귀. 백엔드 무변경·마이그레이션 없음.
+- **관련**: 사용자 실사용 피드백 · CLAUDE.md §6(MVP 화면 홈 지도)·§7(프론트 Next/PWA) · 미배포(커밋·배포는 사용자 승인 후).

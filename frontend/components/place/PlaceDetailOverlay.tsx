@@ -139,7 +139,7 @@ export function PlaceDetailOverlay() {
   };
 
   return (
-    <div className="gn-overlay absolute inset-0 z-40 flex flex-col overflow-y-auto bg-cream">
+    <div className="gn-overlay absolute inset-0 z-40 flex flex-col overflow-y-auto bg-cream lg:right-auto lg:w-[400px] lg:border-r lg:border-line-cream lg:shadow-[0_0_40px_rgba(0,0,0,0.14)]">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line-cream bg-cream px-2 py-2">
         <button type="button" onClick={close} aria-label="뒤로" className="flex h-[38px] w-[38px] items-center justify-center text-ink">

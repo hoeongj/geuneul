@@ -5,20 +5,20 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useSelectedPlace } from "@/lib/context/selected";
 
-const TABS = [
+export const TABS = [
   { href: "/", label: "지도", icon: "mapicon" },
   { href: "/urgent", label: "급해요", icon: "bolt" },
   { href: "/report", label: "제보", icon: "pen" },
   { href: "/mypage", label: "내 정보", icon: "user" },
 ] as const;
 
-export function TabBar() {
+export function TabBar({ className = "" }: { className?: string }) {
   const pathname = usePathname();
   const { close } = useSelectedPlace();
 
   return (
     <nav
-      className="flex shrink-0 border-t border-line-white bg-white px-2 pt-2 pb-1.5"
+      className={"flex shrink-0 border-t border-line-white bg-white px-2 pt-2 pb-1.5 " + className}
       style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}
     >
       {TABS.map((tab) => {

@@ -5,6 +5,7 @@ import { BottomSheet, type SheetSnap } from "@/components/map/BottomSheet";
 import { CurrentLocationFab } from "@/components/map/CurrentLocationFab";
 import { FilterChips } from "@/components/map/FilterChips";
 import { MapCanvas } from "@/components/map/MapCanvas";
+import { MapSidebar } from "@/components/map/MapSidebar";
 import { SearchBar } from "@/components/map/SearchBar";
 import { SurgeBanner } from "@/components/map/SurgeBanner";
 import { useGeo } from "@/lib/context/geo";
@@ -16,6 +17,7 @@ import { useBoundsPlaces, useRadiusPlaces } from "@/lib/queries";
 import { useSurgeAlerts } from "@/lib/surge";
 import type { SurgeInfo } from "@/types/alert";
 import type { Category, MapBounds, Place } from "@/types/place";
+import type { PlaceSearchResult } from "@/types/search";
 
 function byCategories(places: Place[], cats: Category[]): Place[] {
   if (cats.length === 0) return places;
@@ -76,47 +78,72 @@ export default function MapPage() {
     show(geo.isFallback ? "현재 위치 권한을 확인해 주세요" : "현재 위치로 이동했어요");
   };
 
+  // 검색 bias 좌표(폴백이면 없음) + 선택 핸들러 — 모바일 오버레이·데스크톱 사이드바가 공유.
+  const searchCoords = geo.isFallback ? null : coords;
+  const onSearchSelect = (r: PlaceSearchResult) => {
+    setSearchPin({ lat: r.lat, lng: r.lng, name: r.name });
+    show(`${r.name} 주변으로 이동했어요`);
+  };
+
   return (
-    <div className="relative h-full w-full">
-      <MapCanvas
-        center={coords}
-        current={{ lat: geo.lat, lng: geo.lng, isFallback: geo.isFallback }}
-        places={markers}
-        selectedId={selected.id}
-        onSelect={selected.open}
-        onBoundsChange={onBoundsChange}
-        recenterKey={recenterKey}
-        searchPin={searchPin}
-      />
-
-      {/* 상단 검색 + 필터 + 급증 배너(A4) */}
-      <div className="pointer-events-none absolute inset-x-0 top-3 z-20 space-y-2.5 px-3">
-        <div className="pointer-events-auto">
-          <SearchBar
-            coords={geo.isFallback ? null : coords}
-            onSelect={(r) => {
-              setSearchPin({ lat: r.lat, lng: r.lng, name: r.name });
-              show(`${r.name} 주변으로 이동했어요`);
-            }}
-          />
-        </div>
-        <div className="pointer-events-auto">
-          <FilterChips selected={cats} onToggle={toggleCat} onClear={() => setCats([])} />
-        </div>
-        <SurgeBanner surges={surges} onSelect={selected.open} />
-      </div>
-
-      <CurrentLocationFab hidden={snap === "full"} onClick={recenter} />
-
-      <BottomSheet
-        snap={snap}
-        onSnapChange={setSnap}
+    <div className="relative h-full w-full lg:flex">
+      {/* 데스크톱 좌측 사이드바 — 검색·필터·주변 목록(모바일에선 hidden, 대신 바텀시트) */}
+      <MapSidebar
+        coords={searchCoords}
         radius={radius}
         places={listPlaces}
         loading={radiusQuery.isLoading}
+        cats={cats}
+        onToggleCat={toggleCat}
+        onClearCats={() => setCats([])}
+        onSearchSelect={onSearchSelect}
         onSelectPlace={selected.open}
         onWiden={widen}
       />
+
+      {/* 지도 영역 — 데스크톱에선 사이드바 오른쪽을 꽉 채운다 */}
+      <div className="relative h-full w-full lg:min-w-0 lg:flex-1">
+        <MapCanvas
+          center={coords}
+          current={{ lat: geo.lat, lng: geo.lng, isFallback: geo.isFallback }}
+          places={markers}
+          selectedId={selected.id}
+          onSelect={selected.open}
+          onBoundsChange={onBoundsChange}
+          recenterKey={recenterKey}
+          searchPin={searchPin}
+        />
+
+        {/* 모바일 상단 오버레이 — 검색 + 필터 + 급증 배너(A4). 데스크톱에선 사이드바로 옮겨 숨김 */}
+        <div className="pointer-events-none absolute inset-x-0 top-3 z-20 space-y-2.5 px-3 lg:hidden">
+          <div className="pointer-events-auto">
+            <SearchBar coords={searchCoords} onSelect={onSearchSelect} />
+          </div>
+          <div className="pointer-events-auto">
+            <FilterChips selected={cats} onToggle={toggleCat} onClear={() => setCats([])} />
+          </div>
+          <SurgeBanner surges={surges} onSelect={selected.open} />
+        </div>
+
+        {/* 데스크톱 급증 배너 — 지도 상단 중앙에 띄운다(뷰포트 급증 알림) */}
+        <div className="pointer-events-none absolute inset-x-0 top-3 z-20 hidden justify-center px-4 lg:flex">
+          <div className="pointer-events-auto w-full max-w-[460px]">
+            <SurgeBanner surges={surges} onSelect={selected.open} />
+          </div>
+        </div>
+
+        <CurrentLocationFab hidden={snap === "full"} onClick={recenter} />
+
+        <BottomSheet
+          snap={snap}
+          onSnapChange={setSnap}
+          radius={radius}
+          places={listPlaces}
+          loading={radiusQuery.isLoading}
+          onSelectPlace={selected.open}
+          onWiden={widen}
+        />
+      </div>
     </div>
   );
 }
