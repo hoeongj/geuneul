@@ -8,10 +8,9 @@ import java.util.Optional;
 /**
  * 경로 폴리라인 공급자(B2, ADR-0019) — 경유지 순서(출발..도착)를 잇는 폴리라인을 만든다.
  *
- * <p>MVP는 {@link StraightLineDirectionsProvider}(우리 직선 폴백, 항상 성공). 도로를 따르는 실제 경로는
- * 외부 directions API(카카오모빌리티 waypoints)가 필요한데, <b>활용신청·키·실호출 계약검증(TS-026)</b>이
- * 붙는 사용자 액션이라 후속으로 분리한다. 키가 붙으면 이 인터페이스를 구현한 Kakao 공급자를 빈으로 얹으면
- * RouteService 변경 없이 mode="road"로 승격된다(전략 교체점). 실패/미설정 시 empty → 호출부가 직선 폴백.
+ * <p>주입되는 활성 공급자는 {@link KakaoDirectionsProvider}(@Primary, ADR-0021 — 카카오내비 도로 폴리라인,
+ * 기존 REST 키 재사용). 키 미설정·실패 시 empty를 주면 {@link RouteService}가 waypoints 직선(mode="straight")으로
+ * 인라인 폴백한다. {@link StraightLineDirectionsProvider}는 그 직선 전략의 참조/테스트용 구현이다(런타임 빈 아님).
  */
 public interface DirectionsProvider {
 
