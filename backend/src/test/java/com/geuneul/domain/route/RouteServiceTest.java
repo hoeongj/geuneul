@@ -45,11 +45,12 @@ class RouteServiceTest {
         };
     }
 
-    private static RouteWaypointView view(double lat, double lng, long id, String name,
+    private static RouteWaypointView view(double lat, double lng, long id, String name, String category,
                                           double distFrom, double distTo) {
         return new RouteWaypointView() {
             @Override public long getPlaceId() { return id; }
             @Override public String getName() { return name; }
+            @Override public String getCategory() { return category; }
             @Override public double getLat() { return lat; }
             @Override public double getLng() { return lng; }
             @Override public String getAddress() { return "서울 동작구"; }
@@ -59,27 +60,28 @@ class RouteServiceTest {
     }
 
     @Test
-    @DisplayName("경유 화장실이 있으면 3점 폴리라인 + 경유 총거리(출발거리+도착거리)")
+    @DisplayName("경유 화장실이 있으면 3점 폴리라인 + 경유 총거리(출발거리+도착거리) + 경유지 카테고리")
     void withWaypoint() {
-        when(placeRepository.findBestToiletWaypoint(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
-                anyDouble(), anyDouble(), anyDouble()))
-                .thenReturn(Optional.of(view(37.51, 126.94, 185L, "노량진역 화장실", 300, 400)));
+        when(placeRepository.findBestWaypointByCategories(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
+                anyDouble(), anyDouble(), anyDouble(), anyString()))
+                .thenReturn(Optional.of(view(37.51, 126.94, 185L, "노량진역 화장실", "TOILET", 300, 400)));
 
         RouteResponse res = service.toiletRoute(37.50, 126.93, 37.52, 126.95);
 
         assertThat(res.waypoint()).isNotNull();
         assertThat(res.waypoint().placeId()).isEqualTo(185L);
         assertThat(res.waypoint().name()).isEqualTo("노량진역 화장실");
+        assertThat(res.waypoint().category()).isEqualTo("TOILET"); // 미니맵 아이콘 구분용(C4)
         assertThat(res.polyline()).hasSize(3);                 // 출발·화장실·도착
         assertThat(res.routeDistanceM()).isEqualTo(700.0);     // 300 + 400
         assertThat(res.mode()).isEqualTo("straight");
     }
 
     @Test
-    @DisplayName("경유 화장실이 없으면 2점 직선 폴리라인 + 경유거리=직선거리")
+    @DisplayName("경유지가 없으면 2점 직선 폴리라인 + 경유거리=직선거리")
     void withoutWaypoint() {
-        when(placeRepository.findBestToiletWaypoint(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
-                anyDouble(), anyDouble(), anyDouble()))
+        when(placeRepository.findBestWaypointByCategories(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
+                anyDouble(), anyDouble(), anyDouble(), anyString()))
                 .thenReturn(Optional.empty());
 
         RouteResponse res = service.toiletRoute(37.50, 126.93, 37.52, 126.95);
@@ -92,10 +94,26 @@ class RouteServiceTest {
     }
 
     @Test
+    @DisplayName("그늘 경유 경로 — 쿨링쉼터 경유지가 3점 폴리라인 + 카테고리 노출(C4, F3 대칭)")
+    void shadeRouteInsertsShelterWaypoint() {
+        when(placeRepository.findBestWaypointByCategories(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
+                anyDouble(), anyDouble(), anyDouble(), anyString()))
+                .thenReturn(Optional.of(view(37.51, 126.94, 42L, "상도동 무더위쉼터", "COOLING_SHELTER", 250, 350)));
+
+        RouteResponse res = service.shadeRoute(37.50, 126.93, 37.52, 126.95);
+
+        assertThat(res.waypoint()).isNotNull();
+        assertThat(res.waypoint().placeId()).isEqualTo(42L);
+        assertThat(res.waypoint().category()).isEqualTo("COOLING_SHELTER"); // 화장실 아이콘 아님
+        assertThat(res.polyline()).hasSize(3);
+        assertThat(res.routeDistanceM()).isEqualTo(600.0); // 250 + 350
+    }
+
+    @Test
     @DisplayName("경로 corridor 안의 그늘/실내가 shadeSpots로 실린다(F4)")
     void includesShadeSpots() {
-        when(placeRepository.findBestToiletWaypoint(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
-                anyDouble(), anyDouble(), anyDouble()))
+        when(placeRepository.findBestWaypointByCategories(anyDouble(), anyDouble(), anyDouble(), anyDouble(),
+                anyDouble(), anyDouble(), anyDouble(), anyString()))
                 .thenReturn(Optional.empty());
         when(placeRepository.findShadeAlongCorridor(anyString(), anyString(), anyDouble(), anyInt()))
                 .thenReturn(List.of(shade(10L, "상도도서관", "LIBRARY", 37.505, 126.94)));

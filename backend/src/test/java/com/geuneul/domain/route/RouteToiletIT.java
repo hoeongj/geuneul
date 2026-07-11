@@ -39,6 +39,11 @@ class RouteToiletIT extends AbstractIntegrationTest {
                 GeoUtils.point(lat, lng), "test", extId));
     }
 
+    private void shelter(String name, double lat, double lng, String extId) {
+        placeRepository.save(Place.of(name, PlaceCategory.COOLING_SHELTER, "서울 동작구",
+                GeoUtils.point(lat, lng), "test", extId));
+    }
+
     @Test
     @DisplayName("출발-도착 사이 화장실이 경유지로 끼워지고 폴리라인 3점(mode=straight)")
     void insertsToiletWaypoint() throws Exception {
@@ -74,6 +79,45 @@ class RouteToiletIT extends AbstractIntegrationTest {
     void rejectsOutOfKorea() throws Exception {
         mvc.perform(get("/routes/toilet")
                         .param("fromLat", "48.85").param("fromLng", "2.35") // 파리
+                        .param("toLat", "37.52").param("toLng", "126.95"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("그늘 경유 경로 — corridor의 쿨링쉼터가 경유지(카테고리 노출), 화장실은 안 고름(C4)")
+    void shadeRouteInsertsShelter() throws Exception {
+        shelter("경유 쉼터", 37.510, 126.940, "sh-mid");   // O-D 사이(그늘 경유지 후보)
+        toilet("경유 화장실", 37.511, 126.941, "tl-mid");  // 근처 화장실 — shade 경로는 이걸 고르면 안 됨
+
+        mvc.perform(get("/routes/shade")
+                        .param("fromLat", "37.500").param("fromLng", "126.930")
+                        .param("toLat", "37.520").param("toLng", "126.950"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waypoint").exists())
+                .andExpect(jsonPath("$.waypoint.name").value("경유 쉼터"))
+                .andExpect(jsonPath("$.waypoint.category").value("COOLING_SHELTER")) // 화장실 아이콘 아님
+                .andExpect(jsonPath("$.polyline.length()").value(3))
+                .andExpect(jsonPath("$.mode").value("straight"));
+    }
+
+    @Test
+    @DisplayName("그늘 경유 경로 — corridor에 쉼터/실내가 없으면 경유지 없이 직선 2점(화장실만 있어도 폴백)")
+    void shadeRouteFallsBackWithoutShelter() throws Exception {
+        toilet("경유 화장실", 37.510, 126.940, "tl-only"); // 화장실만 — shade 카테고리 아님
+
+        mvc.perform(get("/routes/shade")
+                        .param("fromLat", "37.500").param("fromLng", "126.930")
+                        .param("toLat", "37.520").param("toLng", "126.950"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waypoint").doesNotExist())
+                .andExpect(jsonPath("$.polyline.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("그늘 경유 경로도 해외/뒤집힌 좌표는 400")
+    void shadeRouteRejectsOutOfKorea() throws Exception {
+        mvc.perform(get("/routes/shade")
+                        .param("fromLat", "48.85").param("fromLng", "2.35")
                         .param("toLat", "37.52").param("toLng", "126.95"))
                 .andExpect(status().isBadRequest());
     }

@@ -9,6 +9,9 @@ public interface RouteWaypointView {
 
     String getName();
 
+    /** 경유지 카테고리(enum name) — 미니맵 마커 아이콘 구분용(C4: 화장실 vs 쿨링쉼터/도서관/지하상가). */
+    String getCategory();
+
     double getLat();
 
     double getLng();

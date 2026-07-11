@@ -27,10 +27,12 @@ public class RouteService {
 
     /** F4 그늘/비 경로(N8) — 경로 폴리라인에서 이 반경(m) 안의 그늘/실내를 오버레이(도보 우회 가능 범위). */
     static final double SHADE_CORRIDOR_M = 400;
-    /** 오버레이 대상 그늘/실내 카테고리(enum name CSV, N8) — 쉼터·도서관·지하상가. */
+    /** 오버레이 대상 그늘/실내 카테고리(enum name CSV, N8) — 쉼터·도서관·지하상가. C4 그늘 경유지 후보도 동일 집합. */
     static final String SHADE_CATEGORIES = "COOLING_SHELTER,LIBRARY,UNDERGROUND";
     /** 오버레이 마커 상한(지도 혼잡 방지). */
     static final int SHADE_LIMIT = 15;
+    /** 화장실 경유지 카테고리(F3) — 경유지 선택용 CSV(단일). */
+    static final String TOILET_CATEGORY = "TOILET";
 
     private final PlaceRepository placeRepository;
     private final DirectionsProvider directions;
@@ -40,14 +42,32 @@ public class RouteService {
         this.directions = directions;
     }
 
+    /** 화장실 포함 경로(B2·F3) — 경유지 후보는 TOILET. */
     public RouteResponse toiletRoute(double fromLat, double fromLng, double toLat, double toLng) {
+        return viaRoute(fromLat, fromLng, toLat, toLng, TOILET_CATEGORY);
+    }
+
+    /**
+     * 그늘 경유 경로(C4) — 출발→도착 사이 우회 최소 쿨링쉼터/도서관/지하상가 1곳을 경유지로 끼운다("가는 길에 쉬어가기").
+     * F3 화장실 경로와 완전 대칭 — 경유지 카테고리만 SHADE_CATEGORIES로 바뀌고 인프라(corridor 선택·폴리라인·오버레이)는 공통.
+     * §0-2대로 자체 가중 라우팅은 하지 않는다(경유지 1곳만 PostGIS로 고르고 폴리라인은 기존 DirectionsProvider).
+     */
+    public RouteResponse shadeRoute(double fromLat, double fromLng, double toLat, double toLng) {
+        return viaRoute(fromLat, fromLng, toLat, toLng, SHADE_CATEGORIES);
+    }
+
+    /**
+     * 경유지 경로 공통 로직 — 허용 카테고리(CSV) 안에서 우회 최소 경유지 1곳을 corridor로 고르고, 폴리라인을 만들고,
+     * 경로 주변 그늘/실내 피난처(N8)를 오버레이로 얹는다. 경유지가 corridor에 없으면 직선/도로만(graceful 폴백).
+     */
+    private RouteResponse viaRoute(double fromLat, double fromLng, double toLat, double toLng, String categoriesCsv) {
         double directM = GeoUtils.haversineMeters(fromLat, fromLng, toLat, toLng);
         double midLat = (fromLat + toLat) / 2;
         double midLng = (fromLng + toLng) / 2;
         double corridorM = Math.max(directM / 2 + CORRIDOR_BUFFER_M, CORRIDOR_BUFFER_M);
 
-        Optional<RouteWaypointView> best = placeRepository.findBestToiletWaypoint(
-                fromLat, fromLng, toLat, toLng, midLat, midLng, corridorM);
+        Optional<RouteWaypointView> best = placeRepository.findBestWaypointByCategories(
+                fromLat, fromLng, toLat, toLng, midLat, midLng, corridorM, categoriesCsv);
 
         List<LatLng> waypoints = new ArrayList<>();
         waypoints.add(new LatLng(fromLat, fromLng));
@@ -56,8 +76,8 @@ public class RouteService {
         if (best.isPresent()) {
             RouteWaypointView t = best.get();
             waypoints.add(new LatLng(t.getLat(), t.getLng()));
-            waypointStop = RouteStop.place(t.getLat(), t.getLng(), t.getPlaceId(), t.getName());
-            routeM = t.getDistFromM() + t.getDistToM(); // 화장실 들렀다 가는 총거리 근사
+            waypointStop = RouteStop.place(t.getLat(), t.getLng(), t.getPlaceId(), t.getName(), t.getCategory());
+            routeM = t.getDistFromM() + t.getDistToM(); // 경유지 들렀다 가는 총거리 근사
         }
         waypoints.add(new LatLng(toLat, toLng));
 

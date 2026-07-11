@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
-import { fetchToiletRoute } from "@/lib/api";
+import { fetchRoute } from "@/lib/api";
 import { categoryLabel, iconForCategory } from "@/lib/categories";
 import { useGeo } from "@/lib/context/geo";
 import { useSelectedPlace } from "@/lib/context/selected";
@@ -16,7 +16,7 @@ import { usePlace, usePlaceReports } from "@/lib/queries";
 import { formatRelativeTime, REPORT_META } from "@/lib/reports";
 import { GRADE_META, gradeOf } from "@/lib/survival";
 import type { Place } from "@/types/place";
-import type { ToiletRoute } from "@/types/route";
+import type { RouteResult } from "@/types/route";
 import { BookmarkButton } from "./BookmarkButton";
 import { FlagButton } from "./FlagButton";
 import { DetailMiniMap } from "./DetailMiniMap";
@@ -92,7 +92,7 @@ export function PlaceDetailOverlay() {
   const geo = useGeo();
   const { show } = useToast();
   const query = usePlace(id);
-  const [route, setRoute] = useState<ToiletRoute | null>(null);
+  const [route, setRoute] = useState<RouteResult | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   // 데스크톱 좌측 패널화는 지도 탭('/')에서만 — 다른 탭은 뒤에 지도가 없어 전체 오버레이로 덮는다.
   const onMap = usePathname() === "/";
@@ -113,23 +113,18 @@ export function PlaceDetailOverlay() {
 
   const kakaoLink = place ? kakaoDirectionsUrl(place) : "#";
 
-  // 화장실 포함 경로(B2/F3) — 현재 위치→이 장소 사이 우회 최소 화장실을 경유지로 안내하고, 상단 미니맵에
-  // 경로 폴리라인을 그린다(mode=road: 카카오 도로 경로 / straight: 직선 폴백, ADR-0019·0021).
-  const onToiletRoute = async () => {
+  // 경유지 경로(B2/F3 화장실·C4 그늘) — 현재 위치→이 장소 사이 우회 최소 경유지를 안내하고, 상단 미니맵에 경로
+  // 폴리라인을 그린다(mode=road: 카카오 도로 경로 / straight: 직선 폴백, ADR-0019·0021·0027). 경유지 선택은 백엔드 PostGIS.
+  const runRoute = async (via: "toilet" | "shade", emptyMsg: string) => {
     if (!place) return;
     try {
-      const r = await fetchToiletRoute({
-        fromLat: geo.lat,
-        fromLng: geo.lng,
-        toLat: place.lat,
-        toLng: place.lng,
-      });
+      const r = await fetchRoute({ fromLat: geo.lat, fromLng: geo.lng, toLat: place.lat, toLng: place.lng }, via);
       setRoute(r);
       const shadeMsg = r.shadeSpots.length > 0 ? ` · 주변 피할 곳 ${r.shadeSpots.length}곳` : "";
       show(
         (r.waypoint
-          ? `${r.waypoint.name} 화장실을 경유해요 · 총 약 ${Math.round(r.routeDistanceM)}m`
-          : "경로에 들를 화장실을 못 찾았어요") + shadeMsg,
+          ? `${r.waypoint.name}에 들러 가요 · 총 약 ${Math.round(r.routeDistanceM)}m`
+          : emptyMsg) + shadeMsg,
       );
     } catch {
       show("경로를 불러오지 못했어요");
@@ -179,7 +174,7 @@ export function PlaceDetailOverlay() {
           <RouteMiniMap route={route} destCategory={place.category} />
           <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-bold text-ink-2 backdrop-blur">
             {route.mode === "road" ? "🛣️ 도로 경로" : "직선 경로"}
-            {route.waypoint ? " · 화장실 경유" : ""}
+            {route.waypoint ? ` · ${route.waypoint.category === "TOILET" ? "화장실" : "그늘"} 경유` : ""}
             {route.shadeSpots.length > 0 ? ` · 피할 곳 ${route.shadeSpots.length}` : ""}
           </span>
           <button
@@ -275,15 +270,25 @@ export function PlaceDetailOverlay() {
           </button>
         </div>
 
-        {/* 화장실 포함 경로(B2) — 현재 위치에서 이 장소로 가는 길에 우회 최소 화장실을 경유 */}
-        <button
-          type="button"
-          onClick={onToiletRoute}
-          className="flex h-[46px] w-full items-center justify-center gap-2 rounded-[14px] border border-line-cream bg-white text-[14px] font-bold text-ink-2"
-        >
-          <Icon name="toilet" size={17} />
-          화장실 들러 가기
-        </button>
+        {/* 경유지 경로(F3 화장실 · C4 그늘) — 가는 길에 우회 최소 화장실/쿨링쉼터를 경유. 경유지 선택은 백엔드 PostGIS(§0-2 자체 라우팅 아님). */}
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={() => runRoute("toilet", "경로에 들를 화장실을 못 찾았어요")}
+            className="flex h-[46px] flex-1 items-center justify-center gap-2 rounded-[14px] border border-line-cream bg-white text-[14px] font-bold text-ink-2"
+          >
+            <Icon name="toilet" size={17} />
+            화장실 들러 가기
+          </button>
+          <button
+            type="button"
+            onClick={() => runRoute("shade", "가는 길에 들를 쉼터를 못 찾았어요")}
+            className="flex h-[46px] flex-1 items-center justify-center gap-2 rounded-[14px] border border-line-cream bg-white text-[14px] font-bold text-ink-2"
+          >
+            <Icon name="tree" size={17} />
+            그늘 경유
+          </button>
+        </div>
 
         {/* AI 한 줄 요약(라이브, ADR-0010) — 유효 제보 없으면 안내 문구로 폴백 */}
         <div className="mt-1 flex flex-col gap-3">
