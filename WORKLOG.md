@@ -996,3 +996,17 @@
 - **왜(why)**: ① **왜 트랩 범위 `!(onMap && isLg)`** — 데스크톱 지도 탭('/')에선 오버레이가 400px 좌측 패널이고 옆 지도·NavRail이 살아 있어(뒤가 inert 아님) 하드 트랩하면 키보드 사용자를 보이는 UI에서 격리 → 해로움. 모바일 전 탭·데스크톱 비지도 탭은 전체를 덮으므로 트랩이 옳다. 그래서 `onMap`(usePathname==='/')·`isLg`(matchMedia)를 함께 봐 지도탭+데스크톱만 비트랩. ② **왜 useSyncExternalStore** — matchMedia 반응 구독의 2026 표준 이디엄(set-state-in-effect 린트·SSR 미스매치 회피, React 19). ③ **왜 콤보박스는 button에 role=option+tabIndex=-1** — aria-activedescendant 패턴(옵션이 탭 스톱이면 화살표 nav와 충돌). 이 프로젝트 eslint는 no-interactive-element-to-noninteractive-role 미활성이라 `<button role=option>` 안전, 단 role-has-required-aria-props가 combobox의 aria-expanded를 요구해 반드시 포함(BACKLOG C2 린트 근거).
 - **검증**: 프론트 tsc·eslint·build(next --webpack) 전부 green. 마이그레이션·외부 API 없음(TS-016·TS-026 비해당). 모바일 무변경(트랩 판단만 추가, 레이아웃·마우스·터치·디바운스 동작 불변). 프론트 테스트 인프라 없음 → 키보드 워크스루로 확인(비지도/모바일 오버레이 Tab 첫↔마지막 순환·Esc 복귀, 데스크톱 지도탭 의도적 비트랩, 검색 화살표 하이라이트·Enter 선택).
 - **관련**: CLAUDE.md §6(MVP 화면)·규칙2(스코프) · #92·#94 후속 · BACKLOG C2 · [[geuneul-current-state]].
+
+## 2026-07-11 — C1 신고/모더레이션 프론트 진입점 (BACKLOG C1)
+백엔드(V7·FlagController·AdminFlagController·SecurityConfig)는 이미 완비, 프론트 진입점만 0건이던 것을 마감. 신규 마이그레이션·외부 API 0. §9대로 최소·비노출(하단 탭 신설 금지).
+- **무엇**:
+  - `types/flag.ts`(백엔드 DTO 1:1) · BFF 프록시 3개(`/api/flags` POST, `/api/admin/flags` GET, `/api/admin/flags/[id]/resolve` POST). **admin GET은 proxyAuthed가 쿼리스트링을 포워딩 안 해 `nextUrl.searchParams`를 path에 직접 결합**(status/page/size). · `lib/api.ts` createFlag/fetchAdminFlags/resolveFlag(ApiError로 409/404/401/403 구분) · `lib/queries.ts` useAdminFlags(status,page,enabled)/useResolveFlag.
+  - `FlagButton`(공용) — 후기·제보 항목의 작은 "신고" 텍스트 버튼 + 사유 라디오+코멘트(≤500) fixed 모달 시트. 비로그인은 useMe로 분기해 토스트("로그인이 필요해요"), 성공 "신고가 접수됐어요", 409 "이미 신고한 항목이에요". 시트 접근성은 **C2 공유 훅 `useDialogFocusTrap` 재사용**(Esc·포커스 복귀·Tab 트랩).
+  - `ReviewsSection`(후기 헤더)·`PlaceDetailOverlay` RecentReports(제보 li)에 FlagButton 최소 배치. `admin/flags` 검수 큐 화면(useMe role 게이트·상태탭 3종·대상요약·RESOLVED 숨김/DISMISSED·이전·다음 페이저). `mypage` role===ADMIN 조건부 링크(하단 탭 신설 없이).
+- **왜(why)**: ① **왜 백엔드 계약 그대로** — 백엔드 완비·불변이라 프론트가 DTO/에러코드에 정확히 맞춘다(reporterId는 서버 JWT에서 취함, 바디에 없음). ② **왜 클라 role 게이트 + 백엔드 방어 이중** — role 게이트는 UX(비관리자에 화면 숨김)일 뿐, 실제 방어는 `/admin/** = hasRole ADMIN`(403). ③ **왜 §9 최소** — 모더레이션이 주인공화(리뷰앱화)하지 않게 진입점은 작은 텍스트 버튼·비노출, 검수는 mypage 조건부 링크로만.
+- **적대적 리뷰(워크플로 3렌즈→검증)로 확정 2건 선제 수정**:
+  - **(HIGH) 중첩 다이얼로그 Esc 이중 닫힘** — FlagSheet가 PlaceDetailOverlay 패널의 DOM 자손이라 두 `useDialogFocusTrap`의 document keydown이 동시에 떠, 시트 취소 Esc 한 번이 부모 상세까지 닫아 지도로 튕겼다(부모가 먼저 등록돼 먼저 발화). → `useDialogFocusTrap` onKey 최상단에 **`panelRef.querySelector('[aria-modal="true"]')`면 양보**(중첩 모달이 Esc·Tab 소유). aria-modal은 FlagSheet에만 있어 부모만 감지·양보(형제 오버레이 케이스는 기존·스코프 밖). Tab 충돌은 검증 결과 실제 미발현(부모 트랩 경계는 시트 내부 컨트롤에 안 걸림)이라 Esc만 수정.
+  - **(LOW) 관리자 큐 페이지네이션 없음** — page=0·size=20 고정에 hasNext 미사용이라 이력 탭(createdAt ASC) 20건 초과분에 도달 불가. → `useAdminFlags(status,page)`+queryKey에 page+keepPreviousData, 화면에 이전/다음 페이저(§9 최소, 탭 전환 시 page=0 리셋).
+  - **(FALSE_POSITIVE) 자기신고** — 백엔드 가드 부재는 사실이나 클라 숨김은 실효 방어 아님(§ "실제 방어는 백엔드")·409로 1건 캡·큐에서 우아히 반려 가능 → 검증 결과 수정 불필요(스킵).
+- **검증**: 프론트 tsc·eslint·build green(수정 후 재확인). 라우트 등록 확인(`/admin/flags`·`/api/flags`·`/api/admin/flags[/[id]/resolve]`). z-index: FlagSheet(fixed z-60)는 부모 오버레이(absolute z-40 스택 컨텍스트)에 갇혀 루트 토스트(z-50)보다 아래 → 에러 토스트가 시트 위에 정상 노출(확인). 모바일 무변경(추가 요소·모달만, 기존 레이아웃 불변). 마이그레이션·외부 API 없음(TS-016·TS-026 비해당).
+- **관련**: CLAUDE.md §0-7(모더레이션)·§9(커뮤니티=살)·§6(중립) · 적대적 리뷰 워크플로 wf_99b17604 · BACKLOG C1 · [[geuneul-current-state]].
