@@ -1,8 +1,9 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GeoProvider } from "@/lib/context/geo";
+import { initPwaInstall } from "@/lib/pwa-install";
 import { SelectedPlaceProvider } from "@/lib/context/selected";
 import { SelectedUserProvider } from "@/lib/context/selectedUser";
 import { ToastProvider } from "@/lib/context/toast";
@@ -21,6 +22,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+
+  // 설치 프롬프트(beforeinstallprompt)를 앱 어디서든 조기 캡처 → /install 원탭 설치용. UI 무변경.
+  useEffect(() => {
+    initPwaInstall();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
