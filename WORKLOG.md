@@ -1062,3 +1062,10 @@ status·구조 위주 README를 30초에 판독되는 미니 케이스 스터디
 - **왜(why) + 웹검증(규칙B)**: ① **라이브 데모 결정적**(채용담당자 84%가 동작앱 원함) → 링크·설치·스크린샷을 최상단. ② **지리공간을 DB 엔지니어링으로 프레이밍**(GiST 인덱스·kNN `<->`·EXPLAIN·k6 p95 튜닝) — JD가 원하는 건 "지도 그림"이 아니라 대용량 공간검색(D5). ③ **정량 지표는 실측만** — JaCoCo 71%는 build.gradle 실측(LINE 71.0%·게이트 0.70), 반경 p95 ~1.4s는 perf/README.md(k6 실측), ADR 27·TS 32는 파일 카운트. 과장 0.
 - **검증**: README 인라인 mermaid `mmdc` 렌더 에러 0. **내부 링크 전수 확인** — ADR 파일 22개 링크 실경로 매칭(0021~0025 파일명 오타 5건 교정), 히어로 이미지 경로(docs/media, D3 머지분) 존재, 앵커(#데이터--etl·#기술-스택) 정합. 라이브 배지 대상(App·API·shade 경로) 200 확인. INTERVIEW.md 링크는 D4에서 추가(선참조 데드링크 방지).
 - **관련**: BACKLOG D1 · D3(데모 이미지·architecture.md)·D5(헤드라인) 연동 · [[geuneul-current-state]].
+
+## 2026-07-11 — D4 면접 STAR 스토리: ADR/TS를 채용 자산으로 (BACKLOG D4, 자산화 사이클)
+27 ADR·32 TS 중 면접에서 30초에 꺼낼 9개를 STAR(Situation·Task·Action·Result)로 구조화. **코드·마이그레이션 0**(문서 신규 1).
+- **무엇**: `docs/INTERVIEW.md`(공개 가능 — 기술 스토리라 §D 무관) 신규. 9개 STAR + 적대적 리뷰 방법론 섹션. 선정: TS-004(Boot4 Jackson3 지오코딩 전량실패+모킹 사각지대) · TS-016(네이티브 프로젝션 timestamptz→Instant, CI만 잡음) · C3 RETURNING 동시성(정확히 1회 push) · k6 "병목은 GiST 아니라 CPU"(p95 2.68s→1.4s) · TS-008(적대적 리뷰: XFF append 신뢰경계·eviction OOM) · TS-009(colima IT skip→실 psql 확증·CI 게이트) · TS-030(컨텍스트×풀 커넥션 총량 소진) · TS-031(제약위반 catch 후 25P02 tx 오염) · TS-019(HikariCP close≠세션종료 advisory lock 사전예방). `README.md` 문서 섹션에 INTERVIEW.md 링크 추가(D1이 데드링크 방지로 뺀 것을 실파일과 함께 복원).
+- **왜(why)**: ① **그늘 고유 축(지리·ETL·실시간·동시성·검증 회복력) 위주** — mp가 이미 증명한 분산/AI/K8s와 중복 최소화(BACKLOG D4 주의). ② **각 STAR에 "한 줄" 훅 + 정량 결과** — 면접에서 30초에 꺼내게. ③ **방법론 섹션(적대적 다중 에이전트 리뷰)** — 3·5·8번이 순차 테스트로 안 드러나는 동시성·신뢰경계 결함을 커밋 전에 잡은 공통 방법을 별도로.
+- **검증**: INTERVIEW.md 내부 링크(../TROUBLESHOOTING.md·./adr) 정합. 각 STAR의 정량 수치는 원 TS/ADR 실측 인용(p95 2.68s→1.4s=perf, TS-008 14건중 확정5 등). README INTERVIEW.md 링크 실파일 존재(이 PR에 동봉).
+- **관련**: BACKLOG D4 · TROUBLESHOOTING TS-004/008/009/016/019/030/031 · ADR-0012/0026 · [[geuneul-current-state]].
