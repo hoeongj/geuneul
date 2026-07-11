@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
@@ -9,6 +9,7 @@ import { categoryLabel, iconForCategory } from "@/lib/categories";
 import { useGeo } from "@/lib/context/geo";
 import { useSelectedPlace } from "@/lib/context/selected";
 import { useToast } from "@/lib/context/toast";
+import { useDialogFocusTrap, useIsLg } from "@/lib/hooks";
 import { formatDistance, haversineMeters, walkMinutes } from "@/lib/geo";
 import { kakaoDirectionsUrl, kakaoMapUrl } from "@/lib/kakao";
 import { usePlace, usePlaceReports } from "@/lib/queries";
@@ -92,24 +93,11 @@ export function PlaceDetailOverlay() {
   const panelRef = useRef<HTMLDivElement>(null);
   // 데스크톱 좌측 패널화는 지도 탭('/')에서만 — 다른 탭은 뒤에 지도가 없어 전체 오버레이로 덮는다.
   const onMap = usePathname() === "/";
+  const isLg = useIsLg();
 
-  // Esc로 닫기(데스크톱 관례) — 열려 있을 때만 리스너.
-  useEffect(() => {
-    if (id == null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [id, close]);
-
-  // 열릴 때 패널로 포커스 이동, 닫힐 때 직전 포커스 복귀(데스크톱 키보드 접근성).
-  useEffect(() => {
-    if (id == null) return;
-    const prev = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus();
-    return () => prev?.focus?.();
-  }, [id]);
+  // Esc 닫기 + 포커스 이동/복귀 + Tab 트랩(C2). 데스크톱 지도 탭은 옆 지도·NavRail이 살아 있어(뒤 inert 아님)
+  // 하드 트랩을 끈다 — 그 외(모바일 전 탭·데스크톱 비지도 탭)는 전체를 덮으므로 트랩이 옳다.
+  useDialogFocusTrap(panelRef, id != null, close, { trapTab: !(onMap && isLg) });
 
   if (id == null) return null;
 

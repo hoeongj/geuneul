@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { searchPlaces } from "@/lib/api";
 import type { PlaceSearchResult } from "@/types/search";
@@ -19,9 +19,14 @@ export function SearchBar({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  // 키보드 하이라이트 인덱스(-1=없음). aria-activedescendant 패턴 — 포커스는 input에 두고 화살표로 옵션을 강조한다.
+  const [active, setActive] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqIdRef = useRef(0);
   const boxRef = useRef<HTMLDivElement>(null);
+  // 두 SearchBar(모바일 상단·데스크톱 사이드바)가 동시에 마운트되므로 정적 id 금지 — useId로 인스턴스별 고유 id.
+  const listboxId = useId();
+  const optionId = (i: number) => `${listboxId}-opt-${i}`;
 
   // coords는 부모(page)가 렌더마다 새 객체로 만들어 넘긴다 → 객체 참조를 deps에 쓰면 무관한 리렌더에도
   // 디바운스가 재실행돼 불필요한 카카오 호출이 난다. 원시값(lat/lng)만 deps로 써서 실제 위치 변화·입력에만 반응.
@@ -44,11 +49,13 @@ export function SearchBar({
         if (myId === reqIdRef.current) {
           setResults(r);
           setSearched(true);
+          setActive(-1); // 새 결과가 도착하면 하이라이트 초기화(엉뚱한 인덱스 강조 방지).
         }
       } catch {
         if (myId === reqIdRef.current) {
           setResults([]);
           setSearched(true);
+          setActive(-1);
         }
       } finally {
         if (myId === reqIdRef.current) setLoading(false);
@@ -63,16 +70,28 @@ export function SearchBar({
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setActive(-1);
+      }
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
+  // 화살표로 옮긴 하이라이트 옵션을 스크롤 뷰 안으로(긴 결과 목록 대비). block:"nearest"로 과한 점프 방지.
+  useEffect(() => {
+    if (active < 0) return;
+    document.getElementById(optionId(active))?.scrollIntoView({ block: "nearest" });
+    // optionId는 렌더마다 재생성되지만 listboxId(useId)는 안정적이라 active만 의존해도 정확하다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
   const pick = (r: PlaceSearchResult) => {
     onSelect(r);
     setQuery(r.name);
     setOpen(false);
+    setActive(-1);
   };
 
   const clear = () => {
@@ -80,9 +99,11 @@ export function SearchBar({
     setResults([]);
     setSearched(false);
     setOpen(false);
+    setActive(-1);
   };
 
   const showDropdown = open && query.trim().length >= 2;
+  const hasOptions = showDropdown && results.length > 0;
 
   return (
     <div ref={boxRef} className="relative">
@@ -95,17 +116,35 @@ export function SearchBar({
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
+            setActive(-1); // 입력이 바뀌면 하이라이트 초기화(결과가 곧 갱신됨).
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === "Escape") setOpen(false);
-            else if (e.key === "Enter" && results.length > 0) {
+            if (e.key === "Escape") {
+              setOpen(false);
+              setActive(-1);
+            } else if (e.key === "ArrowDown") {
+              if (results.length === 0) return;
               e.preventDefault();
-              pick(results[0]);
+              setOpen(true);
+              setActive((a) => (a + 1) % results.length);
+            } else if (e.key === "ArrowUp") {
+              if (results.length === 0) return;
+              e.preventDefault();
+              setActive((a) => (a <= 0 ? results.length - 1 : a - 1));
+            } else if (e.key === "Enter" && results.length > 0) {
+              // 하이라이트가 있으면 그 항목, 없으면 첫 결과(기존 동작 유지).
+              e.preventDefault();
+              pick(results[active >= 0 ? active : 0]);
             }
           }}
           placeholder="지역·장소 검색"
           aria-label="지역·장소 검색"
+          role="combobox"
+          aria-expanded={hasOptions}
+          aria-controls={hasOptions ? listboxId : undefined}
+          aria-activedescendant={hasOptions && active >= 0 ? optionId(active) : undefined}
+          aria-autocomplete="list"
           enterKeyHint="search"
           className="min-w-0 flex-1 bg-transparent text-[14px] text-ink placeholder:text-muted-2 focus:outline-none"
         />
@@ -128,13 +167,21 @@ export function SearchBar({
           ) : results.length === 0 ? (
             <p className="px-3 py-3 text-[13px] text-muted">검색 결과가 없어요</p>
           ) : (
-            <ul className="flex flex-col">
+            <ul id={listboxId} role="listbox" aria-label="검색 결과" className="flex flex-col">
               {results.map((r, i) => (
-                <li key={`${r.name}-${r.lat}-${i}`}>
+                <li key={`${r.name}-${r.lat}-${i}`} role="presentation">
                   <button
                     type="button"
+                    id={optionId(i)}
+                    role="option"
+                    aria-selected={active === i}
+                    tabIndex={-1}
                     onClick={() => pick(r)}
-                    className="flex w-full flex-col items-start gap-0.5 rounded-[10px] px-3 py-2.5 text-left transition-colors active:bg-cream lg:hover:bg-cream"
+                    onPointerMove={() => setActive(i)}
+                    className={
+                      "flex w-full flex-col items-start gap-0.5 rounded-[10px] px-3 py-2.5 text-left transition-colors active:bg-cream lg:hover:bg-cream" +
+                      (active === i ? " bg-cream" : "")
+                    }
                   >
                     <span className="text-[14px] font-bold text-ink">{r.name}</span>
                     <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted">
