@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 신고 접수 API (CLAUDE.md §0-7 모더레이션, §9). 로그인 필요 — SecurityConfig가 POST /flags를
+ * 신고 접수 API (docs/SPEC.md §0-7 모더레이션, §9). 로그인 필요 — SecurityConfig가 POST /flags를
  * 인증 요구로 보호하므로, 여기 도달했다면 principal은 항상 유효하다(ReviewController와 동일 패턴).
  * 검수 큐(관리자)는 별도 AdminFlagController.
  */

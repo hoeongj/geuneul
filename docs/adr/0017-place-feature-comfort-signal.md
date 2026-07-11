@@ -3,7 +3,7 @@
 - 상태: 승인(구현 반영, 2026-07-10)
 - 관련: `V13__place_feature_signals_view.sql`(신규 뷰), `SurvivalScore`(단조 상승 조립), `ScoredPlaceView`·
   `PlaceRepository`(4개 스코어드 쿼리 LEFT JOIN), ADR-0007(place_report_signals 시공간 신호 — SQL 집계+Java 조립),
-  ADR-0009(날씨 comfort additive), ADR-0005 §④(FeatureGrade 등급화·표시), CLAUDE.md §5(survival_score)·§9(마커 3색)
+  ADR-0009(날씨 comfort additive), ADR-0005 §④(FeatureGrade 등급화·표시), SPEC.md §5(survival_score)·§9(마커 3색)
 
 ## 문제(Context)
 

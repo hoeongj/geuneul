@@ -16,7 +16,7 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * 지도/장소 조회 API (CLAUDE.md §9). PostGIS 인덱스 경로는 PlaceRepository 주석 참고.
+ * 지도/장소 조회 API (docs/SPEC.md §9). PostGIS 인덱스 경로는 PlaceRepository 주석 참고.
  */
 @Tag(name = "Places", description = "장소 공간검색 — 반경(ST_DWithin) · bounds · 최근접(kNN)")
 @RestController
@@ -50,7 +50,7 @@ public class PlaceController {
         int safeLimit = ApiRequests.clampLimit(limit, MAX_LIMIT);
 
         if (bounds != null && !bounds.isBlank()) {
-            double[] box = parseBounds(bounds);
+            double[] box = ApiRequests.parseBounds(bounds);
             return placeSearchService.searchBounds(box[0], box[1], box[2], box[3], category, safeLimit);
         }
         if (lat == null || lng == null) {
@@ -77,25 +77,5 @@ public class PlaceController {
     @GetMapping("/places/{id}")
     public PlaceResponse get(@PathVariable long id) {
         return placeSearchService.getById(id);
-    }
-
-    /** "west,south,east,north" → double[4]. 잘못된 형식은 400. */
-    private static double[] parseBounds(String bounds) {
-        String[] parts = bounds.split(",");
-        if (parts.length != 4) {
-            throw new ResponseStatusException(BAD_REQUEST, "bounds 형식: west,south,east,north");
-        }
-        try {
-            double west = Double.parseDouble(parts[0].trim());
-            double south = Double.parseDouble(parts[1].trim());
-            double east = Double.parseDouble(parts[2].trim());
-            double north = Double.parseDouble(parts[3].trim());
-            if (west >= east || south >= north) {
-                throw new ResponseStatusException(BAD_REQUEST, "bounds가 뒤집혔습니다 (west<east, south<north)");
-            }
-            return new double[]{west, south, east, north};
-        } catch (NumberFormatException e) {
-            throw new ResponseStatusException(BAD_REQUEST, "bounds 숫자 파싱 실패: " + bounds);
-        }
     }
 }

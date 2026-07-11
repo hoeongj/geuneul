@@ -1,6 +1,8 @@
 package com.geuneul.global.security;
 
 import com.geuneul.domain.auth.JwtService;
+import com.geuneul.domain.auth.UserRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,7 +32,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
+                                    ObjectProvider<UserRepository> userRepository) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -57,7 +60,7 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, userRepository.getIfAvailable()),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

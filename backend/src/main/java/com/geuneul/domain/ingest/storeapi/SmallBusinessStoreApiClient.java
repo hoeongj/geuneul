@@ -26,12 +26,8 @@ public class SmallBusinessStoreApiClient implements StoreApiClient {
     private final boolean keyPresent;
 
     @Autowired
-    public SmallBusinessStoreApiClient(@Value("${datago.service-key:}") String serviceKey) {
-        this(serviceKey, RestClient.builder());
-    }
-
-    /** 테스트용 — MockRestServiceServer를 바인딩한 builder를 주입한다. */
-    SmallBusinessStoreApiClient(String serviceKey, RestClient.Builder builder) {
+    public SmallBusinessStoreApiClient(@Value("${datago.service-key:}") String serviceKey,
+                                       RestClient.Builder builder) {
         this.serviceKey = serviceKey;
         this.keyPresent = serviceKey != null && !serviceKey.isBlank();
         this.restClient = builder.baseUrl("https://apis.data.go.kr").build();

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface NotificationRuleRepository extends JpaRepository<NotificationRule, Long> {
 
-    List<NotificationRule> findByUserIdOrderByCreatedAtDesc(long userId);
+    List<NotificationRule> findTop100ByUserIdOrderByCreatedAtDesc(long userId);
 
     Optional<NotificationRule> findByIdAndUserId(long id, long userId);
 

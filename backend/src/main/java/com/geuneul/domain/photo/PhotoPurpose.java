@@ -5,7 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * 사진 업로드 용도 — S3 오브젝트 키 prefix 겸 인증 요구사항을 가른다(CLAUDE.md §1 UGC 2단 구조).
+ * 사진 업로드 용도 — S3 오브젝트 키 prefix 겸 인증 요구사항을 가른다(docs/SPEC.md §1 UGC 2단 구조).
  * REPORT(제보): 익명 허용, 남용은 레이트리밋으로 방어. REVIEW(후기): 로그인 필요(§9 POST /reviews와 동일 정책).
  */
 public enum PhotoPurpose {

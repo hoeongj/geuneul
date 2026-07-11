@@ -1,12 +1,12 @@
 # P3 공공데이터 주기 동기화 무인화 — EventBridge Scheduler(월1회) → ECS RunTask(one-off, 기존 태스크데프 재사용).
-# CLAUDE.md 로드맵 P3: "멱등 upsert 재실행 + 스냅샷에서 사라진 행 soft-delete 비활성화 + 오픈API serviceKey로
+# docs/SPEC.md 로드맵 P3: "멱등 upsert 재실행 + 스냅샷에서 사라진 행 soft-delete 비활성화 + 오픈API serviceKey로
 # 다운로드까지 무인화". 대상은 전국도서관표준데이터(library, domain.ingest.openapi) — 이미 페이지네이션
 # 오픈API로 전량 자체 수집하고(파일/URL 불필요), soft-delete diff도 지원한다(ADR-0006). CSV 소스(쉼터/화장실)는
 # 스냅샷 URL이 GitHub Release 고정 자산이라 "주기 재동기화"의 의미가 약해 이번 스케줄 대상에서 제외했다
 # (필요해지면 이 스케줄을 복제해 --ingest.source만 바꾸면 됨).
 #
-# 🔴 안전장치: var.ingest_schedule_enabled 기본값 false → 이 파일이 apply되어도 스케줄은 DISABLED 상태로
-# 생성된다(자동 실행 없음). 사람이 검토 후 -var ingest_schedule_enabled=true로 재적용해야 실제로 돈다.
+# 안전장치 이력: var.ingest_schedule_enabled는 처음엔 기본 false(DISABLED 생성 → 사람이 실트리거 1회 검증 후
+# 활성화)였고, 2026-07-10 검증 완료 후 기본값을 true로 승격했다(variables.tf 참고). 끄려면 -var ingest_schedule_enabled=false.
 #
 # 동시 실행 방지는 인프라가 아니라 애플리케이션 레벨(IngestBatchLock, Postgres advisory lock)에서 처리한다 —
 # 스케줄이 겹치거나 사람이 prod-ingest.sh를 동시에 돌려도 나중 실행은 즉시 포기(exitCode=0)한다.
@@ -69,7 +69,7 @@ resource "aws_iam_role_policy" "ingest_scheduler_run_task" {
 resource "aws_scheduler_schedule" "public_data_sync" {
   name        = "${var.project}-public-data-sync"
   group_name  = "default"
-  description = "P3 월1회 공공데이터 무인 동기화 — library(전국도서관표준데이터) 재적재 + soft-delete diff. 기본 DISABLED(var.ingest_schedule_enabled)."
+  description = "P3 월1회 공공데이터 무인 동기화 — library(전국도서관표준데이터) 재적재 + soft-delete diff. on/off는 var.ingest_schedule_enabled."
 
   flexible_time_window {
     mode = "OFF" # 정확히 지정 시각에 실행 — 월1회 저빈도라 지연 창을 둘 이유가 없다.

@@ -35,12 +35,8 @@ public class WeatherClient {
     private final boolean keyPresent;
 
     @Autowired
-    public WeatherClient(@Value("${weather.service-key:}") String serviceKey) {
-        this(serviceKey, RestClient.builder());
-    }
-
-    /** 테스트용 — MockRestServiceServer를 바인딩한 builder를 주입해 실제 파싱 경로를 검증한다. */
-    WeatherClient(String serviceKey, RestClient.Builder builder) {
+    public WeatherClient(@Value("${weather.service-key:}") String serviceKey,
+                         RestClient.Builder builder) {
         this.serviceKey = serviceKey == null ? "" : serviceKey;
         this.keyPresent = !this.serviceKey.isBlank();
         this.restClient = builder

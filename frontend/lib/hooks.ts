@@ -40,16 +40,37 @@ export function usePhotoUpload(purpose: PhotoPurpose) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const previewObjectUrlRef = useRef<string | null>(null);
+  const reqIdRef = useRef(0);
+
+  const revokePreview = useCallback(() => {
+    if (!previewObjectUrlRef.current) return;
+    URL.revokeObjectURL(previewObjectUrlRef.current);
+    previewObjectUrlRef.current = null;
+  }, []);
 
   const reset = useCallback(() => {
+    reqIdRef.current += 1;
+    revokePreview();
     setState("idle");
     setPreviewUrl(null);
     setObjectUrl(null);
     setErrorMessage(null);
-  }, []);
+  }, [revokePreview]);
+
+  useEffect(() => {
+    return () => {
+      reqIdRef.current += 1;
+      revokePreview();
+    };
+  }, [revokePreview]);
 
   const pick = useCallback(
     async (file: File) => {
+      const myId = ++reqIdRef.current;
+      revokePreview();
+      setPreviewUrl(null);
+      setObjectUrl(null);
       if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number])) {
         setState("error");
         setErrorMessage("jpg·png·webp 사진만 올릴 수 있어요");
@@ -62,18 +83,23 @@ export function usePhotoUpload(purpose: PhotoPurpose) {
       }
       setState("uploading");
       setErrorMessage(null);
-      setPreviewUrl(URL.createObjectURL(file));
+      const nextPreviewUrl = URL.createObjectURL(file);
+      previewObjectUrlRef.current = nextPreviewUrl;
+      setPreviewUrl(nextPreviewUrl);
       try {
         const presigned = await presignPhoto({ contentType: file.type, contentLength: file.size, purpose });
+        if (reqIdRef.current !== myId) return;
         await uploadPhotoToS3(presigned, file);
+        if (reqIdRef.current !== myId) return;
         setObjectUrl(presigned.objectUrl);
         setState("done");
       } catch {
+        if (reqIdRef.current !== myId) return;
         setState("error");
         setErrorMessage(purpose === "review" ? "로그인 후 다시 시도해 주세요" : "사진 업로드에 실패했어요");
       }
     },
-    [purpose],
+    [purpose, revokePreview],
   );
 
   return { state, previewUrl, objectUrl, errorMessage, pick, reset };

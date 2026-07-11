@@ -23,7 +23,7 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Redis 캐시 구성 — P3 날씨 TTL 캐시(CLAUDE.md §7) + AI 요약 캐시(P3, 곁다리).
+ * Redis 캐시 구성 — P3 날씨 TTL 캐시(docs/SPEC.md §7) + AI 요약 캐시(P3, 곁다리).
  *
  * 설계 결정(WORKLOG 기록):
  * - 값 직렬화는 **타입 바인드 JSON**(JacksonJsonRedisSerializer&lt;Weather&gt;) — "weather" 캐시는 Weather만

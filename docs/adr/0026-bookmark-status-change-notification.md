@@ -3,7 +3,7 @@
 - 상태: 승인(구현 반영, 2026-07-11)
 - 관련: ADR-0018(알림 §2 "관심 장소 상태 변화"를 범위 밖으로 남김), ADR-0016(급증 LISTEN/NOTIFY),
   `ReportNotificationListener`·`NotificationService.onBookmarkStatus`·`NotificationDeliveryRepositoryImpl.insertBookmarkStatusReturning`,
-  `ReportRepository.findRecentMeaningfulReports`·`MeaningfulReportView`, `bookmarks`(A7·V14), CLAUDE.md §2(통학러 침수 우회)·§6(공포 조장 금지)·§9(기능 증식 금지)
+  `ReportRepository.findRecentMeaningfulReports`·`MeaningfulReportView`, `bookmarks`(A7·V14), SPEC.md §2(통학러 침수 우회)·§6(공포 조장 금지)·§9(기능 증식 금지)
 - 후속: BACKLOG C3
 
 ## 문제(Context)

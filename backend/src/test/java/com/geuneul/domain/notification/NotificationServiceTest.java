@@ -69,6 +69,28 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("SURGE_NEARBY 좌표가 NaN이면 400")
+    void surgeNearbyRejectsNanCoordinate() {
+        var req = new NotificationRuleRequest(NotificationRuleType.SURGE_NEARBY, Double.NaN, 127.0, 1000);
+
+        assertThatThrownBy(() -> service.createRule(10L, req))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+        verify(ruleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("SURGE_NEARBY 반경이 10km를 넘으면 400")
+    void surgeNearbyRejectsRadiusOverMax() {
+        var req = new NotificationRuleRequest(NotificationRuleType.SURGE_NEARBY, 37.5, 127.0, 10_001);
+
+        assertThatThrownBy(() -> service.createRule(10L, req))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+        verify(ruleRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("BOOKMARK_SURGE 규칙은 좌표 없이도 생성된다(관심 장소 기반)")
     void bookmarkSurgeAllowsNoGeo() {
         var req = new NotificationRuleRequest(NotificationRuleType.BOOKMARK_SURGE, null, null, null);
@@ -182,6 +204,17 @@ class NotificationServiceTest {
     @DisplayName("HEAT_ESCAPE 규칙은 lat/lng 없으면 400")
     void heatEscapeRequiresGeo() {
         var req = new NotificationRuleRequest(NotificationRuleType.HEAT_ESCAPE, null, null, null);
+
+        assertThatThrownBy(() -> service.createRule(10L, req))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+        verify(ruleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("HEAT_ESCAPE 좌표가 Infinity면 400")
+    void heatEscapeRejectsInfiniteCoordinate() {
+        var req = new NotificationRuleRequest(NotificationRuleType.HEAT_ESCAPE, 37.5, Double.POSITIVE_INFINITY, null);
 
         assertThatThrownBy(() -> service.createRule(10L, req))
                 .isInstanceOf(ResponseStatusException.class)

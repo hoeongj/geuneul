@@ -1,4 +1,4 @@
-// 후기 커뮤니티(2차·살, CLAUDE.md §8) — 댓글 + 리액션. 백엔드 /reviews/{id}/comments · /reactions.
+// 후기 커뮤니티(2차·살, docs/SPEC.md §8) — 댓글 + 리액션. 백엔드 /reviews/{id}/comments · /reactions.
 // survival_score(간판)와 완전 분리. 프론트도 최소 표면만 연다(§0-9 — 커뮤니티가 주인공이 되지 않게).
 export interface ReviewComment {
   id: number;

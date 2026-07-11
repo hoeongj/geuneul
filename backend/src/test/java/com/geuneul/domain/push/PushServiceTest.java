@@ -4,9 +4,12 @@ import com.zerodeplibs.webpush.VAPIDKeyPair;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.web.server.ResponseStatusException;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -62,6 +65,16 @@ class PushServiceTest {
         serviceWith(null).subscribe(10L, "https://ep", "p256", "auth");
 
         verify(repository).upsert(10L, "https://ep", "p256", "auth");
+    }
+
+    @Test
+    @DisplayName("subscribe는 위험한 endpoint를 저장하지 않고 400으로 거부한다")
+    void subscribeRejectsUnsafeEndpoint() {
+        assertThatThrownBy(() -> serviceWith(null).subscribe(10L, "http://127.0.0.1/push", "p256", "auth"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+
+        verify(repository, never()).upsert(anyLong(), anyString(), anyString(), anyString());
     }
 
     @Test

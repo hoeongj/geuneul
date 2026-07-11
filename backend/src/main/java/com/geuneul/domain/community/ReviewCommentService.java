@@ -13,7 +13,7 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
- * 후기 댓글(2차·살, CLAUDE.md §8) 오케스트레이션. survival_score(간판)와 무관한 커뮤니티 콘텐츠(§0-9).
+ * 후기 댓글(2차·살, docs/SPEC.md §8) 오케스트레이션. survival_score(간판)와 무관한 커뮤니티 콘텐츠(§0-9).
  * 작성은 로그인 필요(userId는 컨트롤러가 JWT에서 뽑아 전달 — 요청 바디로 안 받는다, 신원 위조 방지).
  */
 @Service
@@ -33,9 +33,7 @@ public class ReviewCommentService {
 
     @Transactional
     public ReviewCommentResponse create(long reviewId, long userId, String comment) {
-        if (!reviewRepository.existsById(reviewId)) {
-            throw new ResponseStatusException(NOT_FOUND, "review not found: " + reviewId);
-        }
+        requireVisibleReview(reviewId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "user not found: " + userId));
         ReviewComment saved = commentRepository.save(ReviewComment.of(reviewId, userId, comment.strip()));
@@ -43,11 +41,15 @@ public class ReviewCommentService {
     }
 
     public List<ReviewCommentResponse> listByReview(long reviewId) {
-        if (!reviewRepository.existsById(reviewId)) {
-            throw new ResponseStatusException(NOT_FOUND, "review not found: " + reviewId);
-        }
+        requireVisibleReview(reviewId);
         return commentRepository.findByReviewIdWithAuthor(reviewId).stream()
                 .map(ReviewCommentResponse::of)
                 .toList();
+    }
+
+    private void requireVisibleReview(long reviewId) {
+        if (!reviewRepository.existsByIdAndHiddenFalse(reviewId)) {
+            throw new ResponseStatusException(NOT_FOUND, "review not found: " + reviewId);
+        }
     }
 }

@@ -46,4 +46,15 @@ class SurgeEmitterRegistryTest {
         registry.completeAll();
         assertThat(registry.subscriberCount()).isZero();
     }
+
+    @Test
+    @DisplayName("연결 상한을 넘으면 등록을 거부한다")
+    void rejectsWhenConnectionLimitExceeded() {
+        SurgeEmitterRegistry registry = new SurgeEmitterRegistry(2);
+
+        assertThat(registry.tryRegister()).isPresent();
+        assertThat(registry.tryRegister()).isPresent();
+        assertThat(registry.tryRegister()).isEmpty();
+        assertThat(registry.subscriberCount()).isEqualTo(2);
+    }
 }

@@ -44,7 +44,7 @@ jobs:
           path: backend/build/reports/jacoco/test/html
           retention-days: 7
 
-  # 워크플로우 규칙 D("커밋 전 비밀 유출 스캔") + CLAUDE.md §7 스택의 gitleaks를 CI로 강제.
+  # 워크플로우 규칙 D("커밋 전 비밀 유출 스캔") + docs/SPEC.md §7 스택의 gitleaks를 CI로 강제.
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest

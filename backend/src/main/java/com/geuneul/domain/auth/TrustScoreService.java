@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 
 /**
- * trust_score 재계산 오케스트레이션 (CLAUDE.md §5 "제보는 trust_score로 가중"의 실제 산출, {@link TrustScore}
+ * trust_score 재계산 오케스트레이션 (docs/SPEC.md §5 "제보는 trust_score로 가중"의 실제 산출, {@link TrustScore}
  * 참고). ReportService·ReviewService가 로그인 유저의 제보/후기 저장 직후 호출한다.
  *
  * <p><b>재계산 시점 = 온디맨드(배치 아님) — WORKLOG 2026-07-09 근거</b>:
@@ -18,7 +18,7 @@ import java.time.OffsetDateTime;
  *   <li>UGC는 저빈도(레이트리밋 분당 3·시간당 10)라 유저당 재계산 비용(카운트 쿼리 2회)이 미미하다 —
  *       전체 유저를 도는 배치 잡이 얻을 성능 이득이 없다.</li>
  *   <li>이 프로젝트에 스케줄러 인프라(EventBridge)는 P3 공공데이터 동기화용으로만 계획돼 있다.
- *       trust_score 하나 때문에 새 스케줄 인프라를 얹는 건 과설계(CLAUDE.md §0.2 "범위를 스스로 늘리지 않는다").</li>
+ *       trust_score 하나 때문에 새 스케줄 인프라를 얹는 건 과설계(docs/SPEC.md §0.2 "범위를 스스로 늘리지 않는다").</li>
  *   <li>{@code place_report_signals} 뷰(V4)가 조회 시점에 users.trust_score를 그대로 읽으므로, 배치 지연 없이
  *       "방금 로그인해 첫 제보를 남긴 유저"도 다음 제보부터 즉시 신뢰도가 반영되는 게 제품 경험상 자연스럽다.</li>
  * </ul>

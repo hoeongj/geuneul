@@ -37,11 +37,8 @@ public class KakaoOAuthClient implements OAuthClient {
 
     @Autowired
     public KakaoOAuthClient(@Value("${kakao.rest-api-key:}") String clientId,
-                            @Value("${kakao.oauth.client-secret:}") String clientSecret) {
-        this(clientId, clientSecret, RestClient.builder());
-    }
-
-    KakaoOAuthClient(String clientId, String clientSecret, RestClient.Builder builder) {
+                            @Value("${kakao.oauth.client-secret:}") String clientSecret,
+                            RestClient.Builder builder) {
         this.clientId = clientId == null ? "" : clientId;
         this.clientSecret = clientSecret == null ? "" : clientSecret;
         this.restClient = builder.build();

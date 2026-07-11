@@ -14,7 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 /**
  * 실시간 제보 급증 알림 API (ADR-0016). 둘 다 permitAll(공개 커먼스 — 알림은 로그인 불필요).
@@ -44,7 +44,7 @@ public class AlertController {
     public List<SurgeInfo> surge(
             @Parameter(description = "west,south,east,north (경도,위도,경도,위도)") @RequestParam String bounds,
             @Parameter(description = "최대 결과 수, 기본 50, 최대 200") @RequestParam(defaultValue = "50") int limit) {
-        double[] box = parseBounds(bounds);
+        double[] box = ApiRequests.parseBounds(bounds);
         int safeLimit = ApiRequests.clampLimit(limit, MAX_LIMIT);
         return surgeService.surgingInBounds(box[0], box[1], box[2], box[3], safeLimit);
     }
@@ -54,29 +54,7 @@ public class AlertController {
                     + "브라우저 EventSource가 끊기면 자동 재연결한다. 초기 상태는 GET /alerts/surge로 받는다.")
     @GetMapping(value = "/alerts/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
-        return emitterRegistry.register();
-    }
-
-    /** "west,south,east,north" → double[4]. 잘못된 형식은 400(PlaceController와 동일 규약). */
-    private static double[] parseBounds(String bounds) {
-        if (bounds == null || bounds.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "bounds 형식: west,south,east,north");
-        }
-        String[] parts = bounds.split(",");
-        if (parts.length != 4) {
-            throw new ResponseStatusException(BAD_REQUEST, "bounds 형식: west,south,east,north");
-        }
-        try {
-            double west = Double.parseDouble(parts[0].trim());
-            double south = Double.parseDouble(parts[1].trim());
-            double east = Double.parseDouble(parts[2].trim());
-            double north = Double.parseDouble(parts[3].trim());
-            if (west >= east || south >= north) {
-                throw new ResponseStatusException(BAD_REQUEST, "bounds가 뒤집혔습니다 (west<east, south<north)");
-            }
-            return new double[]{west, south, east, north};
-        } catch (NumberFormatException e) {
-            throw new ResponseStatusException(BAD_REQUEST, "bounds 숫자 파싱 실패: " + bounds);
-        }
+        return emitterRegistry.tryRegister()
+                .orElseThrow(() -> new ResponseStatusException(SERVICE_UNAVAILABLE, "SSE 연결이 너무 많습니다"));
     }
 }

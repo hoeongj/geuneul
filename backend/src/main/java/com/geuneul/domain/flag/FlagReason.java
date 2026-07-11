@@ -1,6 +1,6 @@
 package com.geuneul.domain.flag;
 
-/** 신고 사유 (CLAUDE.md §8 flags.reason). 자유 텍스트는 {@code detail}로 별도 수용. */
+/** 신고 사유 (docs/SPEC.md §8 flags.reason). 자유 텍스트는 {@code detail}로 별도 수용. */
 public enum FlagReason {
     SPAM("스팸/광고"),
     FALSE_INFO("허위 정보"),

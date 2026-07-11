@@ -95,9 +95,11 @@ export function SearchBar({
   };
 
   const clear = () => {
+    reqIdRef.current += 1;
     setQuery("");
     setResults([]);
     setSearched(false);
+    setLoading(false);
     setOpen(false);
     setActive(-1);
   };
@@ -114,7 +116,12 @@ export function SearchBar({
         <input
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            const next = e.target.value;
+            reqIdRef.current += 1;
+            setQuery(next);
+            setResults([]);
+            setSearched(false);
+            setLoading(next.trim().length >= 2);
             setOpen(true);
             setActive(-1); // 입력이 바뀌면 하이라이트 초기화(결과가 곧 갱신됨).
           }}

@@ -15,6 +15,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     /** 같은 유저·같은 장소의 기존 후기 — upsert 판정(정책: 장소당 1건, Review 클래스 주석 참고). */
     Optional<Review> findByUserIdAndPlaceId(long userId, long placeId);
 
+    /** 공개 가능한 후기 존재 확인 — hidden 후기는 댓글/리액션 대상에서 404로 취급한다. */
+    boolean existsByIdAndHiddenFalse(long id);
+
     /**
      * 유저의 총 후기 수(=리뷰한 장소 수, 장소당 1건 upsert 정책) — trust_score 활동량 신호
      * ({@link com.geuneul.domain.auth.TrustScore}). idx_reviews_user(V6) 경로.
@@ -47,8 +50,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
                    r.comment AS comment, r.created_at AS createdAt
             FROM reviews r
             JOIN places p ON p.id = r.place_id
-            WHERE r.user_id = :userId AND NOT r.hidden
+            WHERE r.user_id = :userId
+              AND NOT r.hidden
+              AND p.deleted_at IS NULL
             ORDER BY r.created_at DESC
+            LIMIT 100
             """, nativeQuery = true)
     List<MyReviewView> findByUserIdWithPlace(@Param("userId") long userId);
 }

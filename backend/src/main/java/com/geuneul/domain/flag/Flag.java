@@ -13,7 +13,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 
 /**
- * 허위 제보/후기 신고 (CLAUDE.md §0-7 모더레이션, §8 flags — reports_flags/reviews_flags를
+ * 허위 제보/후기 신고 (docs/SPEC.md §0-7 모더레이션, §8 flags — reports_flags/reviews_flags를
  * 통합한 단일 테이블, 근거는 V7 마이그레이션 주석·WORKLOG 참고). target은 REPORT|REVIEW를
  * 가리키는 다형 참조라 FK 대신 (targetType, targetId)만 갖는다 — 대상 존재 검증은
  * FlagService가 각 리포지토리로 확인한다.

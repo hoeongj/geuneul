@@ -3,7 +3,7 @@
 - 상태: 승인(구현 반영, 2026-07-11)
 - 관련: ADR-0018(알림 인앱 센터·Web Push를 stretch로 분리), ADR-0020(HEAT_ESCAPE), `domain.notification`,
   `domain.push`(신규), `V16__push_subscriptions.sql`, 프론트 Serwist SW·`NotificationsSection`,
-  CLAUDE.md §3(알림)·§0-2(과설계)·§D(비밀)
+  SPEC.md §3(알림)·§0-2(과설계)·§D(비밀)
 - 후속: BACKLOG F2
 
 ## 문제(Context)

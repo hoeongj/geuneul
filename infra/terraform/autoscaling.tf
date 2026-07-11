@@ -1,4 +1,4 @@
-# P4 심화 — ECS Service Auto Scaling(=k8s HPA 상당). CLAUDE.md §7 "오토스케일링/HPA는 P4에서 k6 부하테스트와
+# P4 심화 — ECS Service Auto Scaling(=k8s HPA 상당). docs/SPEC.md §7 "오토스케일링/HPA는 P4에서 k6 부하테스트와
 # 함께 additive하게" · 로드맵 P4. D1(k6 부하테스트+EXPLAIN)이 부하를 만들고, 이 target tracking 정책이 그
 # 부하에 실제로 반응하는지를 같이 실증한다(짝 산출물, ADR-0012 참고).
 #

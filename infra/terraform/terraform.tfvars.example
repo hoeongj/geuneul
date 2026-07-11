@@ -1,5 +1,16 @@
 # 복사해서 `terraform.tfvars` 로 만들고 값 채우기. terraform.tfvars 는 gitignore됨(커밋 금지).
 # 또는 환경변수로: export TF_VAR_db_password='...'
+# 아래 sensitive 변수들은 전부 default가 없어 apply 전에 값이 필요하다(SSM SecureString으로 저장됨).
 
-db_password = "CHANGE-ME-강한-비밀번호"
+db_password          = "CHANGE-ME-강한-비밀번호"
+proxy_secret         = "CHANGE-ME-openssl-rand-hex-32" # BFF↔백엔드 공유 시크릿(레이트리밋 신뢰경계, TS-008)
+kma_service_key      = "CHANGE-ME"                     # 기상청(data.go.kr) 초단기실황
+kakao_rest_api_key   = "CHANGE-ME"                     # 카카오 REST(지오코딩·로그인·경로)
+kakao_client_secret  = "CHANGE-ME"                     # 카카오 로그인 Client Secret
+google_client_id     = "CHANGE-ME.apps.googleusercontent.com"
+google_client_secret = "CHANGE-ME"
+jwt_secret           = "CHANGE-ME-openssl-rand-hex-64"
+datago_service_key   = "CHANGE-ME"                     # 공공데이터포털 serviceKey(도서관·상권)
+ai_summary_api_key   = "CHANGE-ME"                     # OpenAI 호환 프로바이더 키(AI 한줄요약)
+
 # github_repo = "hoeongj/geuneul"   # 기본값과 같으면 생략 가능

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 영구 후기(review) API (CLAUDE.md §9). survival_score(휘발성 제보, §5)와 완전히 분리된
+ * 영구 후기(review) API (docs/SPEC.md §9). survival_score(휘발성 제보, §5)와 완전히 분리된
  * 장소 평판 콘텐츠 — 작성은 로그인 필요(JWT, 익명 불가). SecurityConfig가 POST /reviews를
  * 인증 요구로 보호하므로, 여기 도달했다면 principal은 항상 유효하다(AuthController.me()와 동일 패턴).
  * 조회(GET /places/{id}/reviews)는 공개.

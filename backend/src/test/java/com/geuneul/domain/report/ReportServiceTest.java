@@ -49,7 +49,7 @@ class ReportServiceTest {
         PhotoService photoService = new PhotoService(mock(S3Presigner.class), "", "ap-northeast-2", CLOCK);
         reportService = new ReportService(reportRepository, placeRepository, trustScoreService, photoService, CLOCK);
 
-        when(placeRepository.existsById(1L)).thenReturn(true);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(1L)).thenReturn(true);
         when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -78,7 +78,7 @@ class ReportServiceTest {
     }
 
     @Test
-    @DisplayName("로그인 유저가 '익명으로 표시'를 선택해도 userId는 기록돼 trust_score가 반영된다 (CLAUDE.md §6)")
+    @DisplayName("로그인 유저가 '익명으로 표시'를 선택해도 userId는 기록돼 trust_score가 반영된다 (docs/SPEC.md §6)")
     void loggedInUserChoosingAnonymousDisplayStillTracksTrust() {
         JwtService.AuthPrincipal principal = new JwtService.AuthPrincipal(10L, Role.USER);
 
@@ -91,7 +91,7 @@ class ReportServiceTest {
     @Test
     @DisplayName("없는 장소면 404 — 유령 장소에 제보가 쌓이지 않고 trust_score도 건드리지 않는다")
     void unknownPlaceIs404() {
-        when(placeRepository.existsById(999L)).thenReturn(false);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(999L)).thenReturn(false);
         JwtService.AuthPrincipal principal = new JwtService.AuthPrincipal(10L, Role.USER);
 
         assertThatThrownBy(() -> reportService.create(principal,
@@ -101,5 +101,27 @@ class ReportServiceTest {
 
         verify(reportRepository, never()).save(any());
         verify(trustScoreService, never()).recalculate(anyLong());
+    }
+
+    @Test
+    @DisplayName("GPS 좌표가 하나만 오면 400")
+    void partialReporterLocationIs400() {
+        assertThatThrownBy(() -> reportService.create(null,
+                new ReportCreateRequest(1L, ReportType.COOL, null, null, null, 37.5, null)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+
+        verify(reportRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("GPS 좌표가 NaN이면 400")
+    void nanReporterLocationIs400() {
+        assertThatThrownBy(() -> reportService.create(null,
+                new ReportCreateRequest(1L, ReportType.COOL, null, null, null, Double.NaN, 127.0)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+
+        verify(reportRepository, never()).save(any());
     }
 }

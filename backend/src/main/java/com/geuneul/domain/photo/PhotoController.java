@@ -17,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 /**
- * 사진 업로드 presign API (CLAUDE.md §9 POST /photos/presign). 백엔드는 파일을 절대 거치지 않는다 —
+ * 사진 업로드 presign API (docs/SPEC.md §9 POST /photos/presign). 백엔드는 파일을 절대 거치지 않는다 —
  * 브라우저가 응답의 uploadUrl로 S3에 직접 PUT한다. 엔드포인트 자체는 permitAll(SecurityConfig)이다:
  * purpose=report는 익명 허용(제보 자체가 그렇다, §1), purpose=review는 PhotoService가 principal
  * 유무로 401을 낸다(POST /reviews와 동일 정책 — 컨트롤러 레벨에서 강제하면 report 익명 경로가 막힌다).

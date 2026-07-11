@@ -5,18 +5,24 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { TABS } from "@/components/shell/TabBar";
 import { useSelectedPlace } from "@/lib/context/selected";
+import { useSelectedUser } from "@/lib/context/selectedUser";
 
 // 데스크톱(≥lg) 전용 좌측 내비게이션 레일 — 모바일 하단 3탭(TabBar)을 세로 레일로.
 // 탭 항목은 TabBar와 단일 소스(TABS) 공유. 상단 브랜드 마크(그늘=나무 그늘)는 홈으로.
 export function NavRail({ className = "" }: { className?: string }) {
   const pathname = usePathname();
-  const { close } = useSelectedPlace();
+  const selectedPlace = useSelectedPlace();
+  const selectedUser = useSelectedUser();
+  const closeOverlays = () => {
+    selectedPlace.close();
+    selectedUser.close();
+  };
 
   return (
     <nav aria-label="주 메뉴" className={"w-[76px] shrink-0 flex-col items-center gap-1 border-r border-line-cream bg-white pt-4 " + className}>
       <Link
         href="/"
-        onClick={close}
+        onClick={closeOverlays}
         aria-label="그늘 홈"
         className="mb-3 flex h-11 w-11 items-center justify-center rounded-[14px] bg-forest text-cream"
       >
@@ -29,7 +35,7 @@ export function NavRail({ className = "" }: { className?: string }) {
           <Link
             key={tab.href}
             href={tab.href}
-            onClick={close}
+            onClick={closeOverlays}
             aria-current={active ? "page" : undefined}
             className="flex w-full flex-col items-center gap-1 rounded-[12px] py-2.5 transition-colors lg:hover:bg-cream"
           >

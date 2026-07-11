@@ -10,7 +10,7 @@ import java.util.Optional;
 
 /**
  * 제보 급증 감지 서비스(ADR-0016). "최근 windowMinutes 분 안에 유효 제보 ≥ minReports 건"인 장소를
- * 시공간 SQL로 판정한다(간판=DB 레이어, CLAUDE.md §5). 임계값은 설정으로 빼 현장 시딩 밀도에 맞춰 조정(P5).
+ * 시공간 SQL로 판정한다(간판=DB 레이어, docs/SPEC.md §5). 임계값은 설정으로 빼 현장 시딩 밀도에 맞춰 조정(P5).
  */
 @Service
 @Transactional(readOnly = true)

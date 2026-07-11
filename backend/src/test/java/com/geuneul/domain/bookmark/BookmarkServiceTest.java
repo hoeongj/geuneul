@@ -5,6 +5,7 @@ import com.geuneul.domain.place.PlaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
@@ -14,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +39,7 @@ class BookmarkServiceTest {
     @Test
     @DisplayName("신규 저장은 save를 부른다")
     void addNewSaves() {
-        when(placeRepository.existsById(185L)).thenReturn(true);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(185L)).thenReturn(true);
         when(bookmarkRepository.findByUserIdAndPlaceId(10L, 185L)).thenReturn(Optional.empty());
 
         BookmarkToggleResponse res = service.add(10L, 185L, "메모");
@@ -47,27 +49,46 @@ class BookmarkServiceTest {
     }
 
     @Test
-    @DisplayName("이미 저장된 장소 재저장은 save 없이 memo만 갱신(upsert)")
+    @DisplayName("이미 저장된 장소 재저장은 memo를 갱신해 save한다(upsert)")
     void addExistingUpdatesMemo() {
         Bookmark existing = Bookmark.of(10L, 185L, "옛 메모");
-        when(placeRepository.existsById(185L)).thenReturn(true);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(185L)).thenReturn(true);
         when(bookmarkRepository.findByUserIdAndPlaceId(10L, 185L)).thenReturn(Optional.of(existing));
 
         service.add(10L, 185L, "새 메모");
 
         assertThat(existing.getMemo()).isEqualTo("새 메모");
-        verify(bookmarkRepository, never()).save(any());
+        verify(bookmarkRepository).save(existing);
     }
 
     @Test
     @DisplayName("없는 장소 저장은 404")
     void addMissingPlaceThrows404() {
-        when(placeRepository.existsById(999L)).thenReturn(false);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(999L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.add(10L, 999L, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
         verify(bookmarkRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("동시 저장 UNIQUE 충돌은 기존 북마크를 찾아 memo 갱신으로 멱등 처리한다")
+    void addRaceUpdatesExistingBookmark() {
+        Bookmark existing = Bookmark.of(10L, 185L, "먼저 저장됨");
+        when(placeRepository.existsByIdAndDeletedAtIsNull(185L)).thenReturn(true);
+        when(bookmarkRepository.findByUserIdAndPlaceId(10L, 185L))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existing));
+        when(bookmarkRepository.save(any(Bookmark.class)))
+                .thenThrow(new DataIntegrityViolationException("uq_bookmarks"))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        BookmarkToggleResponse res = service.add(10L, 185L, "새 메모");
+
+        assertThat(res.bookmarked()).isTrue();
+        assertThat(existing.getMemo()).isEqualTo("새 메모");
+        verify(bookmarkRepository, times(2)).save(any(Bookmark.class));
     }
 
     @Test

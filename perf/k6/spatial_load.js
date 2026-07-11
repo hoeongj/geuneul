@@ -1,8 +1,8 @@
-// 그늘 P4 간판 부하테스트 — PostGIS 반경/kNN/bounds/추천 공간쿼리 (CLAUDE.md §7 Test/Ops, §10 P4).
+// 그늘 P4 간판 부하테스트 — PostGIS 반경/kNN/bounds/추천 공간쿼리 (docs/SPEC.md §7 Test/Ops, §10 P4).
 //
 // 목적: "PostGIS 대용량 지리검색"(간판)이 GiST 인덱스로 실제로 빠른지 부하로 실증한다.
 // 로컬 docker-compose(PostGIS) + 합성 시드(perf/seed/seed_synthetic_places.sql, 30만 places)에만 건다.
-// 프로덕션 ALB 고부하 금지(CLAUDE.md 지시) — BASE_URL 기본값은 로컬.
+// 프로덕션 ALB 고부하 금지(docs/SPEC.md 지시) — BASE_URL 기본값은 로컬.
 //
 // 실행:
 //   docker compose up -d && (백엔드) ./gradlew bootRun
@@ -43,7 +43,7 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 // CPU가 병목이라 ~10 RPS에서 처리량이 포화한다(VU를 올리면 처리량이 아니라 지연만 증가 — 실측 4/8/12 VU
 // 모두 ~10 RPS). 절대 지연은 에뮬레이션으로 부풀려져 있고(네이티브 RDS는 훨씬 빠름), 임계값은 "이 환경에서
 // 인덱스가 실제로 서빙 중"임을 지키는 회귀 가드로 잡았다(GiST 인덱스가 빠지면 이 관대한 임계도 뚫린다).
-// 처리량 상한·포화 곡선의 근거와 EXPLAIN 인덱스 증빙은 docs/adr/0010, perf/explain/ 참고.
+// 처리량 상한·포화 곡선의 근거와 EXPLAIN 인덱스 증빙은 docs/adr/0012, perf/explain/ 참고.
 const PEAK_VUS = Number(__ENV.PEAK_VUS || 4);
 
 export const options = {

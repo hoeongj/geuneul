@@ -5,8 +5,20 @@ import { CustomOverlayMap, Map, MapMarker, MarkerClusterer, useKakaoLoader } fro
 import { iconForCategory } from "@/lib/categories";
 import { markerImage } from "@/lib/marker";
 import { gradeOf } from "@/lib/survival";
-import type { MapBounds, Place } from "@/types/place";
+import type { IconName } from "@/lib/icon-paths";
+import type { MapBounds, Place, SurvivalGrade } from "@/types/place";
 import { MapPlaceholder } from "./MapPlaceholder";
+
+const markerImageCache = new globalThis.Map<string, ReturnType<typeof markerImage>>();
+
+function cachedMarkerImage(icon: IconName, selected: boolean, grade: SurvivalGrade) {
+  const key = `${icon}:${grade}:${selected ? "1" : "0"}`;
+  const cached = markerImageCache.get(key);
+  if (cached) return cached;
+  const image = markerImage(icon, selected, grade);
+  markerImageCache.set(key, image);
+  return image;
+}
 
 export interface KakaoMapLiveProps {
   center: { lat: number; lng: number };
@@ -75,14 +87,19 @@ export default function KakaoMapLive({
       }}
     >
       <MarkerClusterer averageCenter minLevel={7} disableClickZoom={false}>
-        {places.map((p) => (
-          <MapMarker
-            key={p.id}
-            position={{ lat: p.lat, lng: p.lng }}
-            image={markerImage(iconForCategory(p.category), p.id === selectedId, gradeOf(p))}
-            onClick={() => onSelect(p)}
-          />
-        ))}
+        {places.map((p) => {
+          const icon = iconForCategory(p.category);
+          const selected = p.id === selectedId;
+          const grade = gradeOf(p);
+          return (
+            <MapMarker
+              key={p.id}
+              position={{ lat: p.lat, lng: p.lng }}
+              image={cachedMarkerImage(icon, selected, grade)}
+              onClick={() => onSelect(p)}
+            />
+          );
+        })}
       </MarkerClusterer>
 
       {/* 지정 장소 검색 핀(N5) — 검색해서 이동한 목적지. 우리 마커(카테고리)와 구분되는 라벨 핀. */}

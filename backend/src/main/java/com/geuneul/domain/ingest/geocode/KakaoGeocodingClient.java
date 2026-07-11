@@ -39,15 +39,10 @@ public class KakaoGeocodingClient implements GeocodingClient {
     private final RestClient restClient;
     private final boolean keyPresent;
 
-    // 생성자가 2개(운영/테스트)라 Spring이 어느 것으로 빈을 만들지 명시해야 한다(@Autowired 없으면
-    // NoSuchMethodException으로 컨텍스트 생성 실패 — 이 케이스도 Docker 있는 CI에서만 드러남).
+    // 운영은 공통 타임아웃이 설정된 RestClient.Builder를 주입받는다.
     @Autowired
-    public KakaoGeocodingClient(@Value("${kakao.rest-api-key:}") String restApiKey) {
-        this(restApiKey, RestClient.builder());
-    }
-
-    /** 테스트용 — MockRestServiceServer를 바인딩한 builder를 주입해 실제 파싱 경로를 검증한다. */
-    KakaoGeocodingClient(String restApiKey, RestClient.Builder builder) {
+    public KakaoGeocodingClient(@Value("${kakao.rest-api-key:}") String restApiKey,
+                                RestClient.Builder builder) {
         this.keyPresent = restApiKey != null && !restApiKey.isBlank();
         this.restClient = builder
                 .baseUrl("https://dapi.kakao.com")

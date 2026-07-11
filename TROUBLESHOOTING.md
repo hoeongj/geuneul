@@ -185,11 +185,11 @@
 
 ### TS-017 · 2026-07-09 — ADR 전제("도서관 오픈API=경기도만")가 실측으로 뒤집힘 — 구현 착수 전 추정을 검증하지 않은 대가
 - **상황:** ADR-0006/HANDOFF는 "전국도서관표준데이터는 CSV 다운로드로 전국, 오픈API는 경기도 한정"이라 적어뒀고(과거 세션의 조사 근거), 이번 세션도 처음엔 그 전제를 그대로 받아 `SourceSpec.LIBRARY`(CSV 파서 경로)와 픽스처·IT를 먼저 만들었다.
-- **원인 분석:** CLAUDE.md §B(의사결정 프로토콜)는 "웹 검색으로 트렌드·베스트프랙티스를 확인"까지는 요구하지만, 이번처럼 **실제 API를 직접 호출해 응답을 실측하기 전까지는 문서화된 과거 추정이 최신 진실이라는 보장이 없다.** `.local/datago.env`에 이미 확보돼 있던 `DATA_GO_KR_SERVICE_KEY`로 `https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api`(전국도서관표준데이터 오픈API)를 직접 curl 해보니 **지역 파라미터 없이 페이지네이션만으로 전국 3,555건**(광주·서울 등 여러 시도 확인, `totalCount=3555`)을 반환했다 — "경기도만" 전제가 틀렸음을 그 자리에서 확인.
+- **원인 분석:** docs/SPEC.md §B(의사결정 프로토콜)는 "웹 검색으로 트렌드·베스트프랙티스를 확인"까지는 요구하지만, 이번처럼 **실제 API를 직접 호출해 응답을 실측하기 전까지는 문서화된 과거 추정이 최신 진실이라는 보장이 없다.** `.local/datago.env`에 이미 확보돼 있던 `DATA_GO_KR_SERVICE_KEY`로 `https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api`(전국도서관표준데이터 오픈API)를 직접 curl 해보니 **지역 파라미터 없이 페이지네이션만으로 전국 3,555건**(광주·서울 등 여러 시도 확인, `totalCount=3555`)을 반환했다 — "경기도만" 전제가 틀렸음을 그 자리에서 확인.
 - **해결 과정:** CSV 기반으로 이미 작성한 `SourceSpec.LIBRARY`·`library_sample.csv`·`StandardCsvParserTest` LIBRARY 케이스·초안 IT를 **전량 되돌리고**, JSON 오픈API 기반의 새 패키지(`domain.ingest.openapi`)로 다시 설계했다. 손해(되돌린 코드)는 있었지만, 결과적으로 더 나은 설계로 이어졌다 — API가 `seatCo`(열람좌석수)를 레코드마다 직접 주기 때문에, CSV 경로에서는 "균일 규칙으로 근사"하려 했던 study_ok 백필(ADR 원안 "열람좌석수>0"을 컬럼 파싱 없이 카테고리 전체에 균일 적용)을 **레코드 조건부로 정밀 구현**할 수 있었다.
 - **결과:** 정정된 설계로 완료. 상권정보(STUDY_CAFE/CAFE) API도 같은 방식으로 먼저 실호출해봤고, 이쪽은 **403(활용신청 미승인)** 임을 확인해 "계약 미검증"으로 명시 플래그 처리(추측 코드를 실측인 것처럼 포장하지 않음, ADR-0006 "구현 정정" 섹션).
 - **핵심 학습 포인트:** ① **문서화된 과거 조사도 유효기간이 있다** — 데이터 소스가 살아있는 외부 API라면, 코드를 쓰기 전에 실제로 한 번 호출해보는 것이 웹 검색보다 싸고 확실하다(이번엔 curl 몇 번으로 몇 시간의 잘못된 방향을 피할 수 있었다). ② 실측이 불가능하면(승인 대기 등) **"검증됨"과 "리서치 기반 추정"을 코드 주석·ADR에 명확히 구분 표시**해 다음 사람이 신뢰 수준을 오인하지 않게 한다. ③ 되돌린 작업이 아깝다고 원래 설계를 억지로 맞추지 않고, 새로 확인된 사실(seatCo 필드 존재)에 맞춰 설계를 더 정밀하게 다시 짜는 게 결과적으로 이득이었다.
-- **관련:** `domain.ingest.openapi.PublicLibraryIngestionService`, ADR-0006 "구현 정정" 섹션, `domain.ingest.storeapi`(계약 미검증 플래그). CLAUDE.md §B.
+- **관련:** `domain.ingest.openapi.PublicLibraryIngestionService`, ADR-0006 "구현 정정" 섹션, `domain.ingest.storeapi`(계약 미검증 플래그). docs/SPEC.md §B.
 ### TS-018 · 2026-07-09 — `terraform validate` 경고: `aws_s3_bucket_lifecycle_configuration`의 `rule`에 filter/prefix 필수
 - **상황/증상:** S3 사진 버킷(`s3.tf`, 미완료 멀티파트 업로드 정리용)을 추가하고 `terraform validate`를 돌리니 에러는 아니지만 경고: `No attribute specified when one (and only one) of [rule[0].filter,rule[0].prefix] is required` + `This will be an error in a future version of the provider`. 리소스 자체는 `id`·`status`·`abort_incomplete_multipart_upload`만 있고 필터링 조건이 필요 없는 규칙(버킷 전체 대상)이었다.
 - **원인 분석:** S3 라이프사이클 API는 규칙이 "무엇에 적용되는지"(filter 또는 구식 prefix)를 명시하도록 강제하는 방향으로 바뀌었는데(AWS 문서/`aws_s3_bucket_lifecycle_configuration` 스키마), 대상 provider(hashicorp/aws v5.100.0)는 아직 완전 강제(하드 에러)는 아니고 경고만 낸다 — "버킷 전체"라는 의도를 표현하는 관용구가 빈 `filter {}` 블록이라는 게 문서만 봐서는 바로 안 와닿았다(직관적으로는 filter를 아예 생략하면 "무조건"일 거라 생각하기 쉬움).
@@ -219,7 +219,7 @@
   1. 카테고리/좌표 계산을 **파생 서브쿼리 `FROM (SELECT gs, (ARRAY[...])[...] AS category, ... FROM generate_series(1,:n) gs) t`의 SELECT 목록**으로 옮겨 행마다 random()이 평가되게 했다. 재적재 후 분포 정상화(TOILET 90k=30%, 나머지 ~30k씩). is_commercial은 같은 파생 컬럼 `t.category`를 참조해 재계산 캐시 문제를 원천 회피.
   2. bounds가 진짜로 GiST를 타는지 **희소(강원 산간 작은 박스)와 밀집(서울 대박스)을 각각 EXPLAIN으로 대조**. 희소 박스는 `Bitmap Index Scan on idx_places_geom`(1.7ms)로 인덱스를 실제로 탔다. 즉 "인덱스는 이득이 될 때만 쓴다"는 정상 동작 — 대박스 Seq Scan은 버그가 아니라 정답. 이 판별을 ADR-0010·`perf/explain/RESULTS.md`에 근거와 함께 기록.
 - **핵심 학습 포인트:** ① **VOLATILE 함수의 "행별 평가"는 함수 종류가 아니라 배치 위치가 결정한다** — 상관 없는 LATERAL/서브쿼리는 상수 폴딩·단일 평가 대상이 될 수 있으니, 행마다 달라야 하는 랜덤은 반드시 행을 생성하는 스캔(generate_series)의 직접 SELECT 목록에서 계산하고 EXPLAIN/실측으로 분포를 검증한다(합성 데이터 자체가 편향되면 부하테스트 결론이 통째로 틀어진다). ② **EXPLAIN의 Seq Scan을 반사적으로 "인덱스 미사용 결함"으로 읽지 않는다** — LIMIT + 낮은 selectivity(넓은 술어)에서는 조기종료 Seq Scan이 정답일 수 있다. "인덱스가 있는데 왜 안 쓰나"가 아니라 "이 술어·LIMIT에서 인덱스가 이득인가"를 selectivity를 바꿔가며(희소 vs 밀집 박스) 대조해야 옵티마이저의 의도를 읽는다.
-- **관련:** `perf/seed/seed_synthetic_places.sql`, `perf/explain/explain_spatial_queries.sql`, `perf/explain/RESULTS.md`, ADR-0010, CLAUDE.md §0-4(GiST·전체스캔 금지). 계열: 합성 데이터/실측 검증의 중요성(TS-004·TS-017 "추정을 실측으로 검증").
+- **관련:** `perf/seed/seed_synthetic_places.sql`, `perf/explain/explain_spatial_queries.sql`, `perf/explain/RESULTS.md`, ADR-0010, docs/SPEC.md §0-4(GiST·전체스캔 금지). 계열: 합성 데이터/실측 검증의 중요성(TS-004·TS-017 "추정을 실측으로 검증").
 
 ### TS-022 · 2026-07-10 — `/actuator/prometheus`가 이미 프로덕션에 인증 없이 공개돼 있었다(관측성 작업 착수 전 실측으로 발견)
 - **상황/증상:** P4 관측성(ADR-0014) 작업을 시작하기 전, `application.yml`을 읽다가 `management.endpoints.web.exposure.include: health,info,prometheus`가 하드코딩돼 있는 걸 발견했다. "설마 이미 라이브에 나가 있나?" 싶어 실제 ALB URL로 확인: `curl http://<ALB>/actuator/prometheus` → **200과 함께 전체 Micrometer 메트릭 덤프**(JVM 힙, GC, HTTP 요청 경로별 카운트 등)가 인증 없이 그대로 응답했다.
@@ -240,7 +240,7 @@
 - **원인 분석:** ① 첫 주입에서 `python re.sub`로 `key = "..."`를 만들 때 소스 값에 개행이 섞여 들어가 `ai_summary_api_key = "<키>\n"`처럼 **따옴표 안에 개행**이 생겼다 — HCL은 큰따옴표 문자열을 여러 줄에 걸칠 수 없어 파싱 실패. ② 이를 "라인 11만 재작성"으로 고쳤더니, 원래 두 줄로 쪼개져 있던 값의 **둘째 줄(닫는 `"` 하나)이 라인 12에 그대로 남아** 다시 파싱이 깨졌다(첫 수정이 라인 하나만 교체하고 잔여 라인을 지우지 않은 탓).
 - **해결:** 키 값을 쓰기 전에 `key.strip().replace("\r","").replace("\n","")`로 **개행·CR·공백을 전부 제거**한 뒤 라인을 한 줄로 재작성하고, 남아 있던 잔여 `"` 라인(정확히 `"`인 줄)을 삭제했다. 이후 `terraform validate` → `plan`이 정상(`1 to add, 1 to destroy`)으로 통과했다. 시크릿 값은 gitignore된 `terraform.tfvars`에만 있고 git에는 들어가지 않는다(규칙 D) — 다만 깨진 `terraform` 에러 메시지가 값을 콘솔에 노출했으므로, 이런 스크립팅 실수 자체가 **작업 로그·터미널로의 우발적 시크릿 노출 경로**임을 유의(대화는 허용, 커밋·푸시는 금지 경계는 지켜짐).
 - **핵심 학습 포인트:** ① **셸 `. env` 소싱 → 스크립트로 파일에 써넣는 경로에서는 값의 trailing newline을 항상 제거**하라(`.strip()`/`tr -d '\n\r'`). 특히 HCL·JSON·YAML처럼 개행이 문법적으로 유의미한 포맷에 값을 끼워 넣을 때 치명적이다. ② **"한 줄만 교체"하는 편집은 그 줄이 원래 여러 줄로 오염돼 있으면 잔재를 남긴다** — 재작성 전에 대상이 정말 한 줄인지 확인하거나, 값 주입은 "라인 지우고 새로 삽입"이 아니라 "구조를 파싱해서 키만 세팅"하는 방식이 안전하다. ③ 시크릿을 파일에 주입할 때는 성공/실패와 무관하게 **값을 stdout에 찍지 않는 경로**(길이·마스킹만 출력)로 설계하면, 파싱 에러가 값을 토해내는 사고도 줄일 수 있다.
-- **관련:** `infra/terraform/terraform.tfvars`(gitignore), PR #41 후속 배포, WORKLOG 2026-07-10 AI 라이브 배포, CLAUDE.md 규칙 D(비밀 경계).
+- **관련:** `infra/terraform/terraform.tfvars`(gitignore), PR #41 후속 배포, WORKLOG 2026-07-10 AI 라이브 배포, docs/SPEC.md 규칙 D(비밀 경계).
 
 ## TS-025 — 네이티브 프로젝션 timestamptz는 Instant로 받아야 한다(TS-016 재발) + `gh run watch` EXIT를 CI 판정으로 오신뢰
 

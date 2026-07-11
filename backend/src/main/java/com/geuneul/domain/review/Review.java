@@ -15,12 +15,12 @@ import java.time.OffsetDateTime;
 
 /**
  * 영구 후기(평판) — survival_score(휘발성 상태)와 완전히 분리된 장소 평판 콘텐츠
- * (CLAUDE.md §1 UGC 2단 구조, §5, §8 ERD reviews). 로그인 필요, 익명 불가.
+ * (docs/SPEC.md §1 UGC 2단 구조, §5, §8 ERD reviews). 로그인 필요, 익명 불가.
  *
  * 정책: <b>장소당 1건 upsert</b> — 같은 유저가 같은 장소에 다시 작성하면 기존 후기를 갱신한다
- * (구글맵의 "계정당 업체 1건" 관행과 동일, WORKLOG 2026-07-09 근거). DB 유니크 제약은 두지 않았다
- * (reviews 테이블은 이미 라이브 스키마 V2 — 신규 마이그레이션 없이 서비스 레이어에서 upsert로 강제,
- * ReviewService.create 참고. 동시 이중 제출 레이스는 이론상 가능하나 로그인 필요 + 저빈도 UGC라 MVP 허용 리스크).
+ * (구글맵의 "계정당 업체 1건" 관행과 동일, WORKLOG 2026-07-09 근거). V19의
+ * {@code reviews(user_id, place_id)} UNIQUE 인덱스가 최종 방어선이고, 서비스는 동시 작성 충돌을
+ * 기존 후기 갱신으로 흡수한다(ReviewService.create 참고).
  *
  * place/user는 연관 로딩이 필요 없어 FK id 컬럼만 매핑한다(Report와 동일 경량 패턴 — 검증은 서비스에서).
  */

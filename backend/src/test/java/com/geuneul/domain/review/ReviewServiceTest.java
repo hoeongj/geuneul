@@ -12,6 +12,7 @@ import com.geuneul.domain.review.dto.ReviewResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -59,7 +60,7 @@ class ReviewServiceTest {
         reviewService = new ReviewService(reviewRepository, placeRepository, userRepository,
                 trustScoreService, JsonMapper.builder().build(), photoService);
 
-        when(placeRepository.existsById(1L)).thenReturn(true);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(1L)).thenReturn(true);
         when(userRepository.findById(10L)).thenReturn(Optional.of(user(10L, "그늘러버")));
     }
 
@@ -115,7 +116,7 @@ class ReviewServiceTest {
     @Test
     @DisplayName("없는 장소면 404 — 유령 장소에 후기가 쌓이지 않는다")
     void unknownPlaceIs404() {
-        when(placeRepository.existsById(999L)).thenReturn(false);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(999L)).thenReturn(false);
 
         assertThatThrownBy(() -> reviewService.create(10L, new ReviewCreateRequest(999L, 5, null, null)))
                 .isInstanceOf(ResponseStatusException.class)
@@ -146,9 +147,29 @@ class ReviewServiceTest {
     }
 
     @Test
+    @DisplayName("동시 신규 작성으로 UNIQUE 충돌이 나면 기존 후기를 찾아 갱신해 반환한다")
+    void uniqueRaceUpdatesExistingReview() {
+        Review existing = Review.of(10L, 1L, (short) 3, "먼저 저장됨", null);
+        when(reviewRepository.findByUserIdAndPlaceId(10L, 1L))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existing));
+        when(reviewRepository.save(any(Review.class)))
+                .thenThrow(new DataIntegrityViolationException("uq_reviews_user_place"))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        ReviewResponse response = reviewService.create(10L,
+                new ReviewCreateRequest(1L, 5, "동시 요청의 최신 내용", List.of("https://img/1.jpg")));
+
+        assertThat(response.rating()).isEqualTo(5);
+        assertThat(response.comment()).isEqualTo("동시 요청의 최신 내용");
+        assertThat(existing.getRating()).isEqualTo(5);
+        verify(reviewRepository, org.mockito.Mockito.times(2)).save(any(Review.class));
+    }
+
+    @Test
     @DisplayName("장소 후기 목록 — 없는 장소면 404, 있으면 페이지 응답으로 매핑")
     void listByPlace() {
-        when(placeRepository.existsById(1L)).thenReturn(true);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(1L)).thenReturn(true);
         ReviewWithAuthorView view = mock(ReviewWithAuthorView.class);
         when(view.getId()).thenReturn(1L);
         when(view.getPlaceId()).thenReturn(1L);
@@ -173,7 +194,7 @@ class ReviewServiceTest {
     @Test
     @DisplayName("없는 장소의 후기 목록 조회는 404")
     void listUnknownPlaceIs404() {
-        when(placeRepository.existsById(999L)).thenReturn(false);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(999L)).thenReturn(false);
         assertThatThrownBy(() -> reviewService.listByPlace(999L, 0, 20))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");

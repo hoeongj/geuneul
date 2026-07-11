@@ -7,6 +7,7 @@ import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.report.dto.PopularTimesSlot;
 import com.geuneul.domain.report.dto.ReportCreateRequest;
 import com.geuneul.domain.report.dto.ReportResponse;
+import com.geuneul.global.web.ApiRequests;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,6 +16,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
@@ -46,9 +48,10 @@ public class ReportService {
     @Transactional
     public ReportResponse create(JwtService.AuthPrincipal principal, ReportCreateRequest request) {
         requirePlace(request.placeId());
+        requireReporterLocation(request);
         Long userId = principal == null ? null : principal.userId();
         // 비로그인이면 무조건 익명(신원 자체가 없음). 로그인 유저는 "익명으로 표시" 선택과 무관하게
-        // userId는 기록해 trust_score 가중을 유지한다(CLAUDE.md §6, Report.of 주석 참고).
+        // userId는 기록해 trust_score 가중을 유지한다(docs/SPEC.md §6, Report.of 주석 참고).
         boolean anonymousFlag = userId == null || request.anonymousOrDefault();
         // GPS 방문 인증(ADR-0005 §④): 제보자 좌표가 왔고 장소 100m 이내면 verified — 허위제보 억제,
         // V10 뷰에서 신뢰도 가중. 좌표 미제공이면 false(기존 동작과 동일, 스코어 불변).
@@ -94,9 +97,19 @@ public class ReportService {
     }
 
     private void requirePlace(long placeId) {
-        if (!placeRepository.existsById(placeId)) {
+        if (!placeRepository.existsByIdAndDeletedAtIsNull(placeId)) {
             throw new ResponseStatusException(NOT_FOUND, "place not found: " + placeId);
         }
+    }
+
+    private static void requireReporterLocation(ReportCreateRequest request) {
+        if (request.lat() == null && request.lng() == null) {
+            return;
+        }
+        if (request.lat() == null || request.lng() == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "GPS 방문 인증 좌표는 lat/lng를 함께 보내야 합니다");
+        }
+        ApiRequests.requireValidLatLng(request.lat(), request.lng());
     }
 
     private static String normalize(String comment) {

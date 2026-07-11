@@ -73,9 +73,11 @@ resource "aws_iam_role" "github_actions" {
       Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
+      # sub를 main 브랜치로 한정 — 다른 브랜치/태그/포크 PR의 워크플로우가 이 롤을 assume하지 못한다.
+      # (deploy.yml은 push:main + workflow_dispatch(main)에서만 돌므로 운영 영향 없음.)
       Condition = {
         StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*" }
+        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/main" }
       }
     }]
   })
@@ -103,9 +105,17 @@ resource "aws_iam_role_policy" "github_actions" {
         Resource = aws_ecr_repository.backend.arn
       },
       {
-        Sid      = "ECSDeploy"
+        # 서비스 갱신은 이 클러스터의 geuneul 서비스로 한정.
+        Sid      = "ECSService"
         Effect   = "Allow"
-        Action   = ["ecs:DescribeServices", "ecs:UpdateService", "ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition"]
+        Action   = ["ecs:DescribeServices", "ecs:UpdateService"]
+        Resource = aws_ecs_service.app.id
+      },
+      {
+        # 태스크 정의 API는 리소스 수준 제한을 지원하지 않아 "*" 필수(AWS 제약).
+        Sid      = "ECSTaskDef"
+        Effect   = "Allow"
+        Action   = ["ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition"]
         Resource = "*"
       },
       {
@@ -113,6 +123,8 @@ resource "aws_iam_role_policy" "github_actions" {
         Effect   = "Allow"
         Action   = ["iam:PassRole"]
         Resource = [aws_iam_role.ecs_task_execution.arn, aws_iam_role.ecs_task.arn]
+        # ECS 태스크 실행 외 용도로 롤을 넘기지 못하게 고정.
+        Condition = { StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" } }
       }
     ]
   })
