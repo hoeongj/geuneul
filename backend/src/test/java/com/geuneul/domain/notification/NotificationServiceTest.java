@@ -2,6 +2,7 @@ package com.geuneul.domain.notification;
 
 import com.geuneul.domain.alert.dto.SurgeInfo;
 import com.geuneul.domain.notification.dto.NotificationRuleRequest;
+import com.geuneul.domain.report.MeaningfulReportView;
 import com.geuneul.domain.place.PlaceDistanceView;
 import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.weather.HeatComfort;
@@ -41,6 +42,7 @@ class NotificationServiceTest {
     private WeatherService weatherService;
     private PlaceRepository placeRepository;
     private com.geuneul.domain.push.PushService pushService;
+    private com.geuneul.domain.report.ReportRepository reportRepository;
     private NotificationService service;
 
     @BeforeEach
@@ -50,8 +52,9 @@ class NotificationServiceTest {
         weatherService = mock(WeatherService.class);
         placeRepository = mock(PlaceRepository.class);
         pushService = mock(com.geuneul.domain.push.PushService.class);
+        reportRepository = mock(com.geuneul.domain.report.ReportRepository.class);
         service = new NotificationService(ruleRepository, deliveryRepository, weatherService, placeRepository,
-                pushService);
+                pushService, reportRepository);
     }
 
     @Test
@@ -101,6 +104,68 @@ class NotificationServiceTest {
         verify(deliveryRepository).insertSurgeNearby(eq(185L), eq(37.514), eq(126.942),
                 anyString(), anyString(), anyLong());
         verify(deliveryRepository).insertBookmarkSurge(eq(185L), anyString(), anyString(), anyLong());
+    }
+
+    private static MeaningfulReportView meaningful(String type, java.time.Instant createdAt) {
+        return new MeaningfulReportView() {
+            @Override public String getReportType() { return type; }
+            @Override public java.time.Instant getCreatedAt() { return createdAt; }
+        };
+    }
+
+    @Test
+    @DisplayName("관심 장소에 침수 단건 제보 → BOOKMARK_STATUS 발송 + §6 중립 문구 + RETURNING 유저만 푸시(C3)")
+    void onBookmarkStatusInsertsAndPushesForFlood() {
+        when(reportRepository.findRecentMeaningfulReports(eq(185L), any(), any()))
+                .thenReturn(List.of(meaningful("FLOOD", java.time.Instant.now())));
+        when(deliveryRepository.insertBookmarkStatusReturning(eq(185L), eq("FLOOD"), anyString(), anyString(), anyLong()))
+                .thenReturn(List.of(7L)); // 이 호출이 실제 삽입한 유저
+
+        service.onBookmarkStatus(185L);
+
+        // §6 중립 단수 문구('위험!' 없이 우회 권장), 급증과 분리된 bmstatus 발송.
+        verify(deliveryRepository).insertBookmarkStatusReturning(eq(185L), eq("FLOOD"), eq("관심 장소 소식"),
+                contains("우회"), anyLong());
+        verify(pushService).sendToUser(eq(7L), anyString(), contains("침수"), anyString());
+    }
+
+    @Test
+    @DisplayName("최근 유의미 제보가 없으면(COOL 등) BOOKMARK_STATUS 발송·푸시 없이 skip")
+    void onBookmarkStatusSkipsWhenNoMeaningfulReport() {
+        when(reportRepository.findRecentMeaningfulReports(eq(185L), any(), any())).thenReturn(List.of());
+
+        service.onBookmarkStatus(185L);
+
+        verify(deliveryRepository, never()).insertBookmarkStatusReturning(anyLong(), anyString(), anyString(), anyString(), anyLong());
+        verify(pushService, never()).sendToUser(anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("RETURNING이 빈 목록이면(다른 인스턴스가 이미 삽입) 푸시하지 않는다 — 멀티 인스턴스 정확히 1회")
+    void onBookmarkStatusNoPushWhenNothingInserted() {
+        when(reportRepository.findRecentMeaningfulReports(eq(185L), any(), any()))
+                .thenReturn(List.of(meaningful("SLIPPERY", java.time.Instant.now())));
+        when(deliveryRepository.insertBookmarkStatusReturning(anyLong(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(List.of()); // 다른 인스턴스가 이미 삽입(ON CONFLICT DO NOTHING) → RETURNING 빈 목록
+
+        service.onBookmarkStatus(185L);
+
+        verify(pushService, never()).sendToUser(anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("FLOOD·SLIPPERY가 함께 최근이면 둘 다 각각 발송한다(타입별 dedup_key)")
+    void onBookmarkStatusInsertsPerType() {
+        when(reportRepository.findRecentMeaningfulReports(eq(185L), any(), any()))
+                .thenReturn(List.of(meaningful("FLOOD", java.time.Instant.now()),
+                        meaningful("SLIPPERY", java.time.Instant.now())));
+        when(deliveryRepository.insertBookmarkStatusReturning(anyLong(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(List.of(7L));
+
+        service.onBookmarkStatus(185L);
+
+        verify(deliveryRepository).insertBookmarkStatusReturning(eq(185L), eq("FLOOD"), anyString(), anyString(), anyLong());
+        verify(deliveryRepository).insertBookmarkStatusReturning(eq(185L), eq("SLIPPERY"), anyString(), anyString(), anyLong());
     }
 
     @Test

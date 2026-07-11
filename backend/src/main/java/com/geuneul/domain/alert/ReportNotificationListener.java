@@ -124,18 +124,31 @@ public class ReportNotificationListener implements SmartLifecycle {
         }
     }
 
-    /** NOTIFY 페이로드(place_id 문자열) → 급증 재확인 → SSE 브로드캐스트. 한 건 실패가 루프를 죽이지 않게 격리. */
+    /**
+     * NOTIFY 페이로드(place_id 문자열) 처리. 두 갈래를 <b>독립적으로</b> 예외 격리한다(한쪽 실패가 다른쪽·루프를 안 죽임):
+     * (1) 급증이면 SSE 배지 브로드캐스트 + 급증 알림 규칙 평가(ADR-0018), (2) 급증 여부와 무관하게 관심 장소 단건
+     * 상태 알림(침수·미끄럼)을 무조건 평가(C3·ADR-0026 — 단건은 급증 게이트 밖).
+     */
     private void handle(String payload) {
+        long placeId;
         try {
-            long placeId = Long.parseLong(payload.trim());
+            placeId = Long.parseLong(payload.trim());
+        } catch (NumberFormatException e) {
+            log.warn("[alert] 알 수 없는 NOTIFY 페이로드(무시): {}", payload);
+            return;
+        }
+        try {
             surgeService.surgeForPlace(placeId).ifPresent(surge -> {
                 registry.broadcast(surge);       // A4 지도 배지(SSE)
                 notificationService.onSurge(surge); // B1 알림 규칙 평가·발송(ADR-0018)
             });
-        } catch (NumberFormatException e) {
-            log.warn("[alert] 알 수 없는 NOTIFY 페이로드(무시): {}", payload);
         } catch (RuntimeException e) {
-            log.warn("[alert] 급증 처리 실패(무시하고 계속): placeId={}", payload, e);
+            log.warn("[alert] 급증 처리 실패(무시하고 계속): placeId={}", placeId, e);
+        }
+        try {
+            notificationService.onBookmarkStatus(placeId); // C3 관심 장소 단건 상태 알림(급증 게이트 밖·무조건)
+        } catch (RuntimeException e) {
+            log.warn("[alert] 관심장소 상태 알림 실패(무시하고 계속): placeId={}", placeId, e);
         }
     }
 

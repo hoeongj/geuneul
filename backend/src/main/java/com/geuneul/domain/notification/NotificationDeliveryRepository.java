@@ -7,7 +7,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface NotificationDeliveryRepository extends JpaRepository<NotificationDelivery, Long> {
+public interface NotificationDeliveryRepository
+        extends JpaRepository<NotificationDelivery, Long>, NotificationDeliveryRepositoryCustom {
 
     /** 알림 센터 — 유저 최신순(idx_notification_deliveries_user). 최근 50건이면 충분. */
     List<NotificationDelivery> findTop50ByUserIdOrderByCreatedAtDesc(long userId);
@@ -52,6 +53,10 @@ public interface NotificationDeliveryRepository extends JpaRepository<Notificati
             """, nativeQuery = true)
     int insertBookmarkSurge(@Param("placeId") long placeId,
                             @Param("title") String title, @Param("body") String body, @Param("bucket") long bucket);
+
+    // BOOKMARK_STATUS 발송(C3, ADR-0026)은 INSERT ... RETURNING user_id가 필요해 커스텀 조각으로 분리했다
+    // (NotificationDeliveryRepositoryCustom#insertBookmarkStatusReturning) — 이 트랜잭션이 실제 삽입한 유저만 푸시해
+    // 사전 SELECT 스냅샷과 실제 삽입 집합의 괴리(누락·중복 푸시)를 없앤다.
 
     /**
      * HEAT_ESCAPE 발송 — 폭염 확인 시 규칙별 1건(ADR-0020). 급증과 달리 날씨·쉼터가 Java 계산이라

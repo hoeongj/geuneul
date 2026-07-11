@@ -11,10 +11,16 @@ import com.geuneul.domain.bookmark.BookmarkRepository;
 import com.geuneul.domain.place.Place;
 import com.geuneul.domain.place.PlaceCategory;
 import com.geuneul.domain.place.PlaceRepository;
+import com.geuneul.domain.report.Report;
+import com.geuneul.domain.report.ReportRepository;
+import com.geuneul.domain.report.ReportType;
 import com.geuneul.global.geo.GeoUtils;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.time.OffsetDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -57,6 +63,9 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     PlaceRepository placeRepository;
 
     @Autowired
+    ReportRepository reportRepository;
+
+    @Autowired
     UserRepository userRepository;
 
     @Autowired
@@ -68,6 +77,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     @BeforeEach
     void setUp() {
         deliveryRepository.deleteAll();
+        reportRepository.deleteAll();
         ruleRepository.deleteAll();
         bookmarkRepository.deleteAll();
         placeRepository.deleteAll();
@@ -84,6 +94,68 @@ class NotificationFlowIT extends AbstractIntegrationTest {
 
     private SurgeInfo surge() {
         return SurgeInfo.of(placeId, "노량진 지하보도", LAT, LNG, 4, "FLOOD");
+    }
+
+    /** 유효(미만료·미숨김) 익명 제보 1건 저장 — created_at은 @CreationTimestamp(방금)이라 since 창 안. */
+    private void saveReport(ReportType type) {
+        reportRepository.save(Report.of(null, placeId, type, null, null, true, false,
+                OffsetDateTime.now().plusHours(12)));
+    }
+
+    private void createBookmarkSurgeRule() throws Exception {
+        mvc.perform(post("/notifications/rules").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"BOOKMARK_SURGE\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("BOOKMARK_STATUS: 관심 장소 침수 단건 제보 → 인앱 1건(§6 중립) + 재호출 dedup (C3)")
+    void bookmarkStatusFloodNotifiesOnce() throws Exception {
+        createBookmarkSurgeRule();
+        User me = userRepository.findAll().get(0);
+        bookmarkRepository.save(Bookmark.of(me.getId(), placeId, null));
+        saveReport(ReportType.FLOOD); // 급증(≥3) 아님 — 단건
+
+        notificationService.onBookmarkStatus(placeId);
+        notificationService.onBookmarkStatus(placeId); // 같은 cooldown 버킷 → dedup
+
+        mvc.perform(get("/notifications").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1)) // 중복 없이 1건
+                .andExpect(jsonPath("$.items[0].type").value("BOOKMARK_SURGE"))
+                .andExpect(jsonPath("$.items[0].title").value("관심 장소 소식"))
+                .andExpect(jsonPath("$.items[0].placeId").value(placeId))
+                .andExpect(jsonPath("$.items[0].body", Matchers.containsString("우회"))) // §6 우회 권장
+                .andExpect(jsonPath("$.items[0].body", Matchers.not(Matchers.containsString("위험")))); // 공포 조장 금지
+    }
+
+    @Test
+    @DisplayName("BOOKMARK_STATUS: 비유의미 단건 제보(COOL)는 알림 없음 (C3)")
+    void bookmarkStatusIgnoresNonMeaningful() throws Exception {
+        createBookmarkSurgeRule();
+        User me = userRepository.findAll().get(0);
+        bookmarkRepository.save(Bookmark.of(me.getId(), placeId, null));
+        saveReport(ReportType.COOL); // 유의미(FLOOD·SLIPPERY) 아님
+
+        notificationService.onBookmarkStatus(placeId);
+
+        mvc.perform(get("/notifications").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("BOOKMARK_STATUS: 북마크 안 하면 침수 제보여도 알림 없음 (C3)")
+    void bookmarkStatusRequiresBookmark() throws Exception {
+        createBookmarkSurgeRule(); // 규칙만, 북마크 없음
+        saveReport(ReportType.FLOOD);
+
+        notificationService.onBookmarkStatus(placeId);
+
+        mvc.perform(get("/notifications").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
     }
 
     @Test

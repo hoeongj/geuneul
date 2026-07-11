@@ -48,4 +48,25 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
             ORDER BY 1, 2
             """, nativeQuery = true)
     List<PlaceCongestionSlotView> congestionByPlace(@Param("placeId") long placeId);
+
+    /**
+     * 관심 장소 상태 변화 알림(C3, ADR-0026) — 장소의 <b>최근(since 이후) 유의미(침수·미끄럼) 제보를 타입별 1건</b>씩.
+     * {@code DISTINCT ON (report_type) ... ORDER BY report_type, created_at DESC}로 타입마다 최신 1건만 반환한다
+     * (FLOOD·SLIPPERY가 거의 동시에 들어와도 둘 다 알림받게 — LIMIT 1이면 더 최근 타입이 오래된 타입 알림을 가림).
+     * since(=now-cooldown)로 오래된 제보를 거르고, expires_at·hidden으로 스코어와 동일한 유효성 기준을 쓴다.
+     * createdAt은 서비스가 dedup 버킷(벽시계 아님)을 산정하는 데 쓴다. idx_reports_place_created 경로.
+     */
+    @Query(value = """
+            SELECT DISTINCT ON (report_type) report_type AS "reportType", created_at AS "createdAt"
+            FROM reports
+            WHERE place_id = :placeId
+              AND report_type IN (:types)
+              AND NOT hidden
+              AND expires_at > now()
+              AND created_at >= :since
+            ORDER BY report_type, created_at DESC
+            """, nativeQuery = true)
+    List<MeaningfulReportView> findRecentMeaningfulReports(@Param("placeId") long placeId,
+                                                           @Param("types") List<String> types,
+                                                           @Param("since") OffsetDateTime since);
 }
