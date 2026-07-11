@@ -72,6 +72,19 @@ body {
   overscroll-behavior: none;
 }
 
+/* 데스크톱 인터랙션 — 클릭 요소 포인터 커서 + 키보드 포커스 링(:focus-visible라 마우스 클릭엔 안 뜸). */
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 2px;
+}
+
 /* 야외 시인성 = 라이트 모드 우선. 다크 강제 없음. */
 
 /* ── 애니메이션(핸드오프 모션 스펙) ───────────────────────────────────────── */

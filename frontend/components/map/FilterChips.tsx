@@ -28,10 +28,10 @@ function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={
-        "flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-bold " +
+        "flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-bold transition-colors " +
         (active
-          ? "border-forest bg-forest text-cream"
-          : "border-line-chip bg-white text-ink-2")
+          ? "border-forest bg-forest text-cream lg:hover:bg-forest/90"
+          : "border-line-chip bg-white text-ink-2 lg:hover:border-forest/40 lg:hover:bg-mint-3/50")
       }
     >
       <Icon name={icon} size={16} />
