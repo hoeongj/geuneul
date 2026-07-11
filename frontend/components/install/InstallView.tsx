@@ -70,6 +70,23 @@ export function InstallView() {
           </p>
         )}
 
+        {/* APK 직접 다운로드(안드로이드) — WebAPK 원탭이 안 될 때/파일로 받고 싶을 때. iOS는 불가라 숨김. */}
+        {platform !== "ios" && !installed && (
+          <div className="mt-4 w-full">
+            <a
+              href="/geuneul.apk"
+              download="geuneul.apk"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-line-cream bg-white px-5 py-3.5 text-[13px] font-bold text-ink-2 transition-colors hover:border-teal/50"
+            >
+              <DownloadIcon />
+              APK 파일 직접 다운로드 <span className="font-medium text-ink-3">(안드로이드)</span>
+            </a>
+            <p className="mt-2 text-center text-[11px] leading-relaxed text-muted">
+              서명된 TWA 빌드 · 설치 시 “출처를 알 수 없는 앱” 허용이 필요해요. 간편 설치는 위의 <b className="text-ink-3">앱 설치</b>(WebAPK)를 권장.
+            </p>
+          </div>
+        )}
+
         {/* 왜 설치? */}
         <ul className="mt-10 grid w-full grid-cols-2 gap-3">
           <Feature icon="mapicon" title="전체화면 지도" desc="주소창 없이 넓게" />
