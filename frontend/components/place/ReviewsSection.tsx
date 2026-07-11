@@ -7,6 +7,7 @@ import { ApiError, toggleReaction } from "@/lib/api";
 import { useSelectedUser } from "@/lib/context/selectedUser";
 import { useToast } from "@/lib/context/toast";
 import { usePhotoUpload } from "@/lib/hooks";
+import { FlagButton } from "./FlagButton";
 import {
   useCreateReview,
   useCreateReviewComment,
@@ -194,7 +195,11 @@ function ReviewList({ placeId, loggedIn }: { placeId: number; loggedIn: boolean 
               </button>
               <Stars value={r.rating} />
             </div>
-            <span className="shrink-0 text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-[11px] text-muted">{formatRelativeTime(r.createdAt)}</span>
+              {/* 신고 진입점(C1) — §9 최소·비노출. 후기(영구 평판)라 항상 작성자가 있으니 REVIEW로 신고. */}
+              <FlagButton targetType="REVIEW" targetId={r.id} />
+            </div>
           </div>
           {r.comment && <p className="mt-1 text-[12.5px] text-ink-3">{r.comment}</p>}
           {/* 첨부 사진(N1) — 백엔드가 조회 시점 presigned GET URL로 내려준다(비공개 S3 403 해소). 가로 스크롤 썸네일. */}

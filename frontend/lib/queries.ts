@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import type { NotificationRuleType } from "@/types/notification";
 import type { MapBounds, ReportCreatePayload, Scenario } from "@/types/place";
 import type { ReviewCreatePayload } from "@/types/review";
+import type { FlagStatus } from "@/types/flag";
 import {
   addBookmark,
   createNotificationRule,
@@ -11,6 +12,8 @@ import {
   createReview,
   createReviewComment,
   deleteNotificationRule,
+  fetchAdminFlags,
+  resolveFlag,
   fetchByBounds,
   fetchMyBookmarks,
   fetchNotificationRules,
@@ -266,6 +269,28 @@ export function useMarkNotificationsRead() {
   return useMutation({
     mutationFn: markNotificationsRead,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+// 관리자 검수 큐(C1) — ADMIN 전용. 화면이 useMe role로 게이팅한 뒤에만 enabled. 상태·페이지별 조회.
+// page를 queryKey에 넣어 이력 탭(RESOLVED/DISMISSED, createdAt ASC)의 20건 초과분도 이전/다음으로 도달 가능.
+export function useAdminFlags(status: FlagStatus, page: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-flags", status, page],
+    queryFn: () => fetchAdminFlags(status, page),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+    retry: false,
+  });
+}
+
+// 신고 처리 토글(C1) — 성공 시 큐(전 상태) 무효화. RESOLVED/DISMISSED 처리 후 목록에서 빠진다.
+export function useResolveFlag() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: "RESOLVED" | "DISMISSED" }) => resolveFlag(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-flags"] }),
   });
 }
 
