@@ -2,7 +2,7 @@
 
 - 상태: 승인(MVP 구현 반영, 2026-07-10). 도로 폴리라인·그늘/비 경로는 follow-up.
 - 관련: `domain.route`(신규), `PlaceRepository.findBestToiletWaypoint`(공간쿼리), ADR-0001(geography GIST),
-  ADR-0004(BFF 프록시), CLAUDE.md §0-2(과설계 금지)·§6(공포 조장 금지), TS-026(외부 API 계약검증)
+  ADR-0004(BFF 프록시), SPEC.md §0-2(과설계 금지)·§6(공포 조장 금지), TS-026(외부 API 계약검증)
 
 ## 문제(Context)
 

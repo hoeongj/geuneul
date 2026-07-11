@@ -37,6 +37,7 @@ function snapHeightCss(snap: SheetSnap): string {
 
 export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSelectPlace, onWiden }: BottomSheetProps) {
   const sheetRef = useRef<HTMLElement>(null);
+  const suppressNextClickRef = useRef(false);
   // 드래그 세션 상태(리렌더 유발 안 하는 값은 ref로). currentH는 pointerup 시 최종 높이 판정에 쓴다.
   const dragRef = useRef<{ startY: number; startH: number; containerH: number; currentH: number; dragged: boolean } | null>(null);
   const [dragH, setDragH] = useState<number | null>(null); // 드래그 중 라이브 px 높이, 아니면 null
@@ -74,11 +75,16 @@ export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSel
     const nearest = order.reduce((best, s) =>
       Math.abs(snapHeightPx(s, d.containerH) - d.currentH) < Math.abs(snapHeightPx(best, d.containerH) - d.currentH)
         ? s : best, order[0]);
+    suppressNextClickRef.current = true;
     onSnapChange(nearest);
   };
 
   // 탭(드래그 아님) → 단계 전환. peek→half(목록 열기)·half→full·full→half. peek로 완전히 접기는 아래로 드래그.
   const onToggle = () => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
     if (dragRef.current?.dragged) return;
     onSnapChange(snap === "peek" ? "half" : snap === "full" ? "half" : "full");
   };

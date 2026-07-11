@@ -8,10 +8,12 @@ import com.geuneul.domain.place.PlaceRepository;
 import com.geuneul.domain.review.dto.ReviewCreateRequest;
 import com.geuneul.domain.review.dto.ReviewListResponse;
 import com.geuneul.domain.review.dto.ReviewResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
@@ -51,7 +53,7 @@ public class ReviewService {
      * 기존 후기를 갱신한다(Review 클래스 주석의 근거 참고). userId는 호출부(컨트롤러)가 JWT에서
      * 뽑아 전달한다 — 요청 바디로 받지 않는다(신원 위조 방지).
      */
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ReviewResponse create(long userId, ReviewCreateRequest request) {
         requirePlace(request.placeId());
         User user = userRepository.findById(userId)
@@ -61,14 +63,7 @@ public class ReviewService {
         String comment = normalize(request.comment());
         String photosJson = toJson(request.photos());
 
-        Review review = reviewRepository.findByUserIdAndPlaceId(userId, request.placeId())
-                .map(existing -> {
-                    existing.updateContent(rating, comment, photosJson);
-                    return existing;
-                })
-                .orElseGet(() -> Review.of(userId, request.placeId(), rating, comment, photosJson));
-
-        Review saved = reviewRepository.save(review);
+        Review saved = saveUpsert(userId, request.placeId(), rating, comment, photosJson);
         // 후기도 trust_score 활동 신호다(TrustScore 근거) — 신규 작성·재작성(upsert) 모두 재계산해 둔다
         // (재작성은 count가 안 변하지만 age는 계속 흐르므로 최신 유지, 비용은 저빈도 UGC라 무시할 만함).
         trustScoreService.recalculate(userId);
@@ -88,9 +83,30 @@ public class ReviewService {
     }
 
     private void requirePlace(long placeId) {
-        if (!placeRepository.existsById(placeId)) {
+        if (!placeRepository.existsByIdAndDeletedAtIsNull(placeId)) {
             throw new ResponseStatusException(NOT_FOUND, "place not found: " + placeId);
         }
+    }
+
+    private Review saveUpsert(long userId, long placeId, short rating, String comment, String photosJson) {
+        return reviewRepository.findByUserIdAndPlaceId(userId, placeId)
+                .map(existing -> updateAndSave(existing, rating, comment, photosJson))
+                .orElseGet(() -> insertOrUpdateAfterRace(userId, placeId, rating, comment, photosJson));
+    }
+
+    private Review insertOrUpdateAfterRace(long userId, long placeId, short rating, String comment, String photosJson) {
+        try {
+            return reviewRepository.save(Review.of(userId, placeId, rating, comment, photosJson));
+        } catch (DataIntegrityViolationException race) {
+            Review existing = reviewRepository.findByUserIdAndPlaceId(userId, placeId)
+                    .orElseThrow(() -> race);
+            return updateAndSave(existing, rating, comment, photosJson);
+        }
+    }
+
+    private Review updateAndSave(Review existing, short rating, String comment, String photosJson) {
+        existing.updateContent(rating, comment, photosJson);
+        return reviewRepository.save(existing);
     }
 
     private static String normalize(String comment) {

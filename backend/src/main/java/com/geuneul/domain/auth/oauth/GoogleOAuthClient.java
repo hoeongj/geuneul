@@ -35,11 +35,8 @@ public class GoogleOAuthClient implements OAuthClient {
 
     @Autowired
     public GoogleOAuthClient(@Value("${google.oauth.client-id:}") String clientId,
-                             @Value("${google.oauth.client-secret:}") String clientSecret) {
-        this(clientId, clientSecret, RestClient.builder());
-    }
-
-    GoogleOAuthClient(String clientId, String clientSecret, RestClient.Builder builder) {
+                             @Value("${google.oauth.client-secret:}") String clientSecret,
+                             RestClient.Builder builder) {
         this.clientId = clientId == null ? "" : clientId;
         this.clientSecret = clientSecret == null ? "" : clientSecret;
         this.restClient = builder.build();

@@ -15,7 +15,7 @@
 | [0008](./0008-recommendations-scenario-weighted-ranking.md) | 추천(`/recommendations`) — survival_score에 시나리오 가중을 얹은 2단 랭킹 | 승인 |
 | [0009](./0009-weather-comfort-additive-restore.md) | survival_score comfort — 기온(체감) 신호를 comfort_score에 additive 복원 | 승인 |
 | [0010](./0010-ai-summary-openrouter-provider.md) | AI 한줄 요약 — 프로바이더 중립 OpenAI 호환 클라이언트(현재 Mistral, Anthropic 키 부재로 이탈), 상세 전용 additive | 승인 |
-| [0011](./0011-scheduled-public-data-sync.md) | 공공데이터 주기 동기화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock | 승인(스캐폴드, 미활성) |
+| [0011](./0011-scheduled-public-data-sync.md) | 공공데이터 주기 동기화 — EventBridge Scheduler(Universal Target) → ECS RunTask + Postgres advisory lock | 승인(라이브 · 월 1회 ENABLED) |
 | [0012](./0012-k6-load-explain-index-tuning.md) | 간판 성능 실증 — k6 부하테스트 + EXPLAIN 인덱스 튜닝(V8 만료 제보 인덱스) | 승인 |
 | [0013](./0013-ecs-service-autoscaling.md) | ECS Service Auto Scaling — CPU target tracking, min=1/max=3, 기본 ENABLED | 승인(apply 완료·라이브) |
 | [0014](./0014-observability-otel-micrometer-grafana.md) | 관측성 — Micrometer/Prometheus(pull)+Boot 4 OTel 스타터(push 트레이싱)+로컬 Grafana/Tempo, prometheus는 프로덕션 기본 미노출 | 승인 |

@@ -20,10 +20,21 @@ import { formatRelativeTime } from "@/lib/reports";
 // 별점 표시/입력 공용 — 채움은 Icon의 filled 오버라이드로 별마다 개별 제어(별점 인풋에는 onSelect로 클릭 가능하게).
 function Stars({ value, size = 14, onSelect }: { value: number; size?: number; onSelect?: (n: number) => void }) {
   return (
-    <span className="flex items-center gap-0.5">
+    <span
+      className="flex items-center gap-0.5"
+      role={onSelect ? "radiogroup" : undefined}
+      aria-label={onSelect ? (value > 0 ? `별점 선택 · 현재 ${value}점` : "별점 선택") : `별점 ${value}점`}
+    >
       {[1, 2, 3, 4, 5].map((n) =>
         onSelect ? (
-          <button key={n} type="button" onClick={() => onSelect(n)} aria-label={`별점 ${n}점`}>
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            onClick={() => onSelect(n)}
+            aria-label={`${n}점`}
+          >
             <Icon name="star" size={size} filled={n <= value} className={n <= value ? "text-teal" : "text-line-dashed"} />
           </button>
         ) : (
@@ -207,7 +218,13 @@ function ReviewList({ placeId, loggedIn }: { placeId: number; loggedIn: boolean 
             <div className="mt-2 flex gap-1.5 overflow-x-auto">
               {r.photos.map((src, i) => (
                 // eslint-disable-next-line @next/next/no-img-element -- presigned S3 GET URL(N1), next/image 도메인 화이트리스트 불필요
-                <img key={i} src={src} alt="" className="h-[72px] w-[72px] shrink-0 rounded-[8px] object-cover" />
+                <img
+                  key={i}
+                  src={src}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-[72px] w-[72px] shrink-0 rounded-[8px] object-cover"
+                />
               ))}
             </div>
           )}
@@ -287,7 +304,7 @@ function ReviewForm({ placeId }: { placeId: number }) {
         >
           {photo.previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- presigned S3 오브젝트(blob 미리보기 포함)
-            <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+            <img src={photo.previewUrl} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
           ) : (
             <Icon name="camera" size={16} />
           )}
@@ -313,7 +330,7 @@ function ReviewForm({ placeId }: { placeId: number }) {
 }
 
 /**
- * 장소 상세 "후기" 섹션 — 영구 평판 콘텐츠(survival_score와 완전 분리, CLAUDE.md §1/§5).
+ * 장소 상세 "후기" 섹션 — 영구 평판 콘텐츠(survival_score와 완전 분리, docs/SPEC.md §1/§5).
  * 조회(GET /places/{id}/reviews)는 공개, 작성(POST /reviews)은 로그인 필요 — 비로그인은 안내 링크만.
  */
 export function ReviewsSection({ placeId }: { placeId: number }) {

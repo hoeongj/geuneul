@@ -29,12 +29,8 @@ public class DataGoKrPublicLibraryClient implements PublicLibraryApiClient {
     private final boolean keyPresent;
 
     @Autowired
-    public DataGoKrPublicLibraryClient(@Value("${datago.service-key:}") String serviceKey) {
-        this(serviceKey, RestClient.builder());
-    }
-
-    /** 테스트용 — MockRestServiceServer를 바인딩한 builder를 주입한다. */
-    DataGoKrPublicLibraryClient(String serviceKey, RestClient.Builder builder) {
+    public DataGoKrPublicLibraryClient(@Value("${datago.service-key:}") String serviceKey,
+                                       RestClient.Builder builder) {
         this.serviceKey = serviceKey;
         this.keyPresent = serviceKey != null && !serviceKey.isBlank();
         this.restClient = builder.baseUrl("https://api.data.go.kr").build();

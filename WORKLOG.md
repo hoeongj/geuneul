@@ -23,34 +23,34 @@
 ## 로그
 
 ### 2026-07-01 — 프로젝트 기획 확정 및 레포 세팅
-- 한 일: 지도 프로젝트 기획서 검토 → **재고맵(헛걸음맵) 드롭**, **그늘 단일 플래그십으로 확정**. 폴더/스펙(`CLAUDE.md`)·git 신원·로그 문서 세팅.
+- 한 일: 지도 프로젝트 기획서 검토 → **재고맵(헛걸음맵) 드롭**, **그늘 단일 플래그십으로 확정**. 폴더/스펙(`docs/SPEC.md`)·git 신원·로그 문서 세팅.
 - 결정 & 이유(why):
-  - **재고맵 제외** — 저작권법 제93조(DB제작자 권리) + 브랜드 비공식 API 리버싱 리스크 + 재고 정확도 낮아 "헛걸음 방지"가 헛걸음을 유발하는 역설. 포트폴리오 대비 리스크가 커서 제외.
-  - **그늘 1순위** — 여름 시즌(7월)이라 실사용 테스트가 바로 가능, 공공데이터·PostGIS·AI 요약 조합이 백엔드 포트폴리오로 가장 강함.
-  - **스택**: Spring Boot 3/Java 21 + PostgreSQL/PostGIS + Next.js(PWA) + Kakao Maps + Claude API. 이유 = 백엔드 취업 포지션(Java) 정렬 + 지도 반경검색은 PostGIS가 사실상 표준.
-- 관련 파일/커밋: `CLAUDE.md`, `README.md`, `WORKLOG.md`, `TROUBLESHOOTING.md`
+  - **재고맵 제외** — 저작권법 제93조(DB제작자 권리) + 브랜드 비공식 API 리버싱 리스크 + 재고 정확도 낮아 "헛걸음 방지"가 헛걸음을 유발하는 역설. 얻는 것 대비 법적·품질 리스크가 커서 제외.
+  - **그늘 1순위** — 여름 시즌(7월)이라 실사용 테스트가 바로 가능, 공공데이터·PostGIS·AI 요약 조합이 백엔드 기술 스택으로 가장 강함.
+  - **스택**: Spring Boot 3/Java 21 + PostgreSQL/PostGIS + Next.js(PWA) + Kakao Maps + Claude API. 이유 = 주력 스택(Java/Spring) 정렬 + 지도 반경검색은 PostGIS가 사실상 표준.
+- 관련 파일/커밋: `docs/SPEC.md`, `README.md`, `WORKLOG.md`, `TROUBLESHOOTING.md`
 - 다음 할 일: W0 — Docker Compose(PostGIS+Redis), DB 스키마, Kakao Maps SDK 연결.
 
 ### 2026-07-02 — 스펙 전면 개정: 맛핀 흡수, 지리공간 심화 단일 플래그십으로 재정의
-- 한 일: 기존 포트폴리오(mp=숭실대 AI 생태계 ~84k LOC 프로덕션 / dom=기숙사매칭 / ddsc=AI채점 VN) 분석 → 그늘의 포지셔닝을 "기존이 안 가진 축"으로 재정의. 형제 지도앱 **맛핀 삭제·그늘로 흡수**. CLAUDE.md 전면 개정(스택 Boot4, ERD/API/로드맵 확장, 워크플로우 규칙 D 추가).
+- 한 일: 기존 프로젝트들을 분석해 그늘의 포지셔닝을 "기존이 안 가진 축"으로 재정의. 형제 지도앱 **맛핀 삭제·그늘로 흡수**. docs/SPEC.md 전면 개정(스택 Boot4, ERD/API/로드맵 확장, 워크플로우 규칙 D 추가).
 - 결정 & 이유(why):
-  - **그늘 = 지리공간 + 실시간 UGC 쇼케이스 (간판)** — 기존 포트폴리오가 MCP/RAG/에이전트/분산/K8s는 넘치게 증명했으나 **지리공간(PostGIS)·대용량 공공데이터 ETL·실시간 UGC 스코어링은 공백**. 그늘을 그 갭에 정확히 맞춤. AI 요약은 곁다리로 강등.
+  - **그늘 = 지리공간 + 실시간 UGC 쇼케이스 (간판)** — 기존 프로젝트들이 MCP/RAG/에이전트/분산/K8s는 이미 다뤘으나 **지리공간(PostGIS)·대용량 공공데이터 ETL·실시간 UGC 스코어링은 공백**. 그늘을 그 갭에 정확히 맞춤. AI 요약은 곁다리로 강등.
   - **맛핀 흡수(별도 앱 폐기)** — 맛핀도 지도앱이라 스택 100% 겹침 → "지도앱 2개"는 오히려 약함. 맛핀의 로그인/후기/커뮤니티/신뢰도만 그늘에 병합, **친구/그룹 그래프·스토리·Match Score는 제외**(그늘은 폐쇄 친구망이 아니라 공개 커먼스). 대안: (A)둘 다 유지 → 중복·분산, (B)공통 geo-core 공유 두 제품 → 스코프 과다. → 단일 심화가 최선.
   - **UGC 2단 설계(제보 휘발 vs 후기 영구)** — 제보는 freshness로 survival_score 구동, 후기는 장소 평판으로 분리. 맛핀 "스토리"의 낮은 부담 입력 역할은 그늘에선 제보가 이미 수행 → 스토리 불필요.
-  - **스택 Spring Boot 4 / Java 21** — 대안 Boot 3(기존 CLAUDE.md). 본인 mp가 Boot 4라 Boot 3는 구식 인상 → Boot 4로 통일. 트렌드 근거: mp 생태계 정렬 + 2026 현재 GA.
+  - **스택 Spring Boot 4 / Java 21** — 대안 Boot 3(기존 docs/SPEC.md). 본인 mp가 Boot 4라 Boot 3는 구식 인상 → Boot 4로 통일. 트렌드 근거: mp 생태계 정렬 + 2026 현재 GA.
   - **지리 스택 = Hibernate Spatial 6.6 + JTS 1.19 + PostgisDialect, `geometry(Point,4326)`; 반경 `ST_DWithin`(GiST 자동 인덱스), kNN `<->`+ORDER BY** — 웹검증(2026): ST_DWithin은 GiST 인덱스 필터 자동 적용, `<->`는 PG9.5+ 진짜 KNN, 거리/KNN엔 GiST가 최적(2025 벤치 GiST>SP-GiST). 대안 애플리케이션 레벨 거리계산 → 전체스캔이라 기각.
   - **지오코딩 = 카카오 로컬 API(주소→좌표)** — 공중화장실 표준데이터 WGS84 결측 보완. 이미 Kakao Maps 사용 → 정렬. 결과 좌표 저장으로 멱등·rate limit 회피. 대안: VWorld·국토부 지오코더(백업).
   - **인프라 = 기존 Oracle Cloud k3s + ArgoCD 재사용** — 신규 구축 대비 일 적고 생태계 일관성. 이벤트는 Redis Streams/LISTEN·NOTIFY(Kafka 과설계 금지).
   - **타깃 회사/직무 미확정 유지 + 스펙은 타깃 비종속** — 당근·배민·토스 JD 교집합(Spring Boot+PostgreSQL/JPA+테스트+캐시+대용량)이 그늘 코어와 1:1이라, 특정 회사에 안 박아도 범용으로 강함. 지리공간은 위치회사엔 직결·타 회사엔 중립~플러스. 회사 매핑은 내부노트(.local)로만.
   - **워크플로우 규칙 D 추가(개인정보·비밀)** — 대화 중 개인정보 공유는 허용, GitHub 커밋/푸시는 금지. `.gitignore`(.local/·.env) 세팅, 유출 스캔 필수.
 - 트렌드 근거(웹검색): Crunchy Data(PostGIS KNN/인덱스), PostGIS 공식 문서(ST_DWithin·`<->`), Baeldung(Hibernate Spatial), Kakao Local API, 당근 백엔드(Java) 공고(Java/Kotlin+Spring Boot+PostgreSQL 명시).
-- 관련 파일/커밋: `CLAUDE.md`(전면 개정), `.gitignore`(신규), `.local/`(myInfo·PORTFOLIO-CONTEXT), `WORKLOG.md`
+- 관련 파일/커밋: `docs/SPEC.md`(전면 개정), `.gitignore`(신규), `.local/`(myInfo·PORTFOLIO-CONTEXT), `WORKLOG.md`
 - 다음 할 일: W0 — Docker Compose(PostGIS+Redis) + Flyway 스키마 + Kakao Maps SDK + CI 스켈레톤. (API 응답 DTO 확정 시점에 claude design 착수 알림.)
 
 ### 2026-07-02 — W0: 백엔드 스캐폴드 + 로컬 인프라(PostGIS/Redis) + CI (빌드 검증까지)
 - 한 일: `backend/` Spring Boot 4 프로젝트 생성(Gradle), PostGIS+Redis `docker-compose.yml`, Flyway `V1__enable_postgis`/`V2__create_core_tables`(users/places/place_features/reports/reviews + **geom GiST 인덱스**), Testcontainers 컨텍스트 테스트, GitHub Actions CI, `.env.example`. `./gradlew build`·`compileTestJava` **성공**(로컬 Docker 없어 통합테스트는 CI에서 실행 — self-skip 설계).
 - 결정 & 이유(why):
-  - **mp(ssuMCP) 검증 컨벤션 재사용** — Boot 4.0.6 / Java 21 / Gradle 9.5.1 래퍼, Flyway(`spring-boot-flyway`+core+postgresql), Testcontainers BOM 1.20.6, JaCoCo 게이트, 보안 오버라이드(tomcat 11.0.22·pgjdbc 42.7.11). 이유: 이미 프로덕션 검증 셋업 → 리스크↓·포트폴리오 일관성↑. (그늘용으로 MCP/Spring AI/rusaint/resilience4j는 제외해 경량화.)
+  - **검증된 기존 컨벤션 재사용** — Boot 4.0.6 / Java 21 / Gradle 9.5.1 래퍼, Flyway(`spring-boot-flyway`+core+postgresql), Testcontainers BOM 1.20.6, JaCoCo 게이트, 보안 오버라이드(tomcat 11.0.22·pgjdbc 42.7.11). 이유: 이미 프로덕션 검증 셋업 → 리스크↓·프로젝트 간 일관성↑. (그늘용으로 불필요한 의존성은 제외해 경량화.)
   - **Hibernate Spatial + `geometry(Point,4326)` + GiST** — 반경(ST_DWithin)·kNN(`<->`)을 DB 인덱스로. 대안(앱 레벨 거리계산=전체스캔) 기각.
   - **Flyway = 스키마 단일 진실원천, JPA `ddl-auto=validate`** — 드리프트 방지·재현성. 자연키 `(source, source_external_id)` UNIQUE로 공공데이터 멱등 upsert 준비.
   - **Testcontainers self-skip(`disabledWithoutDocker`)** — 오프라인 로컬도 green, CI(Docker)에선 실 PostGIS로 Flyway·확장·인덱스까지 검증. H2가 놓치는 dialect 드리프트 포착.
@@ -59,27 +59,27 @@
 - 다음 할 일: (a) W0 프론트 — Next.js(PWA)+Kakao Maps SDK, 또는 (b) P1 — 공공데이터 idempotent 인제스천 + 반경/kNN 검색 API + JPA 엔티티.
 
 ### 2026-07-02 — CD 방향 재검토: mp GitOps 복제 대신 PaaS 경량 배포로 선회
-- 한 일: GitHub public 레포 생성(ghdtjdwn/geuneul) + push → **CI 실제 GREEN**(GitHub 러너에서 PostGIS/Redis 통합테스트·Flyway·GiST까지 통과, 1m33s). 이후 배포(CD) 방식을 포트폴리오 기준으로 재검토.
+- 한 일: GitHub public 레포 생성(ghdtjdwn/geuneul) + push → **CI 실제 GREEN**(GitHub 러너에서 PostGIS/Redis 통합테스트·Flyway·GiST까지 통과, 1m33s). 이후 배포(CD) 방식을 재검토.
 - 결정 & 이유(why):
-  - **mp의 k3s+ArgoCD+Helm GitOps를 그늘에 복제하지 않기로.** 판단 근거(기준 1순위=포트폴리오): mp가 이미 자가호스팅 k8s/GitOps를 최고 수준으로 증명 → 그늘이 동일 반복 시 **새 신호 0 + 솔로에 무거운 인프라 2벌 = 오버엔지니어링 신호**(mp의 "필요없는 Kafka 거부" 성숙 신호와 모순). 오히려 기준 1순위에 어긋남을 발견하고 방향 전환.
+  - **자가호스팅 k3s+ArgoCD+Helm GitOps를 그늘에 복제하지 않기로.** 판단 근거: 다른 프로젝트에서 이미 검증한 방식의 동일 반복은 **새로 배우는 것 0 + 솔로에 무거운 인프라 2벌 = 오버엔지니어링**("필요없는 Kafka 거부" 원칙과 모순). 방향 전환.
   - **PaaS 경량 채택: 백엔드 Railway + DB Supabase(PostGIS) + 프론트 Vercel.** 대안 검토: (A)기존 k3s에 thin-add=인프라 일관성이나 단일노드(4OCPU/24GB) 용량 리스크+PostGIS 클러스터 구축 필요, (C)배포 보류. → PaaS가 (1)mp와 다른 배포 패러다임=**breadth**, (2)관리형 PostGIS로 용량 리스크 제거, (3)에너지를 간판(지리공간 백엔드)에 집중, (4)push→자동배포 즉시.
   - **호스트 선택 근거(2026 웹검증):** Railway = GitHub push 자동감지·자동배포, 실질 무료 크레딧 유지. Fly.io = 2024 무료티어 폐지(CC 필수·트라이얼만) → 배제. Supabase = PostGIS 등 확장 기본 내장(Neon은 serverless라 일부 확장 제약) + pgrouting(향후 루트 기능) 보유 → Neon보다 우위.
   - **진짜 새 DevOps 신호는 P4로 이연** — mp가 안 한 것(오토스케일링/HPA를 k6 부하테스트로 증명)이 additive. 지금 억지 배포 심화 대신, 부하 스토리와 함께 만들 때 가치.
 - 트렌드 근거(웹검색): Railway Spring Boot 배포 가이드/무료티어, Fly.io 무료티어 폐지, Supabase vs Neon PostGIS 확장 비교(2026).
-- 관련: `CLAUDE.md`(§7 인프라·§10 P5 개정), 레포 `github.com/ghdtjdwn/geuneul`, CI run 28539003609(success)
+- 관련: `docs/SPEC.md`(§7 인프라·§10 P5 개정), 레포 `github.com/ghdtjdwn/geuneul`, CI run 28539003609(success)
 - 다음 할 일: 배포 아티팩트(Dockerfile, DEPLOY.md, 프로파일) 준비 → 사용자가 Supabase/Railway 계정 연결 → skeleton 라이브 확인.
 
 ### 2026-07-02 — CD 재재검토: PaaS → AWS(ECS Fargate + RDS + Terraform)로 최종 선회
 - 한 일: PaaS(Railway/Supabase) PR #1 닫고, **AWS 인프라를 Terraform으로 구축**(infra/terraform/*: VPC·RDS·ECS·ALB·ECR·IAM OIDC) + **GitHub Actions 배포 워크플로우(deploy.yml, OIDC)** + AWS용 DEPLOY.md. Redis 헬스체크 비활성(미프로비저닝 단계 ALB 헬스 방해 방지).
 - 결정 & 이유(why):
-  - **PaaS → AWS 선회 (사용자 지적 반영):** "회사가 실제 쓰는 걸 해야 취업에 유리". 국내 백엔드/DevOps JD가 요구하는 건 **AWS·컨테이너·IaC**(당근/배민=AWS, EKS/ECS/Terraform 우대). Railway/Supabase는 인디 툴이라 취업 신호 약함 → 배제. **교훈: 포트폴리오 기술선택 1순위 = 회사 실사용 스택.**
+  - **PaaS → AWS 선회 (사용자 지적 반영):** 실제 프로덕션 환경에서 널리 쓰이는 스택은 **AWS·컨테이너·IaC**다. Railway/Supabase는 운영 경험 폭이 좁아 배제. **교훈: 기술선택 1순위 = 실제 운영 환경 표준 스택.**
   - **ECS Fargate 채택**(EKS 아님): control plane 무료 vs EKS $73/월(프리 아님) + mp가 이미 k8s 증명 → 돈 대비 새 신호는 ECS로 충분. 대안 EC2+Docker(더 저렴하나 오케스트레이션 신호 약함) 검토 후 Fargate 선택.
   - **RDS PostgreSQL(PostGIS)**: 프리티어 db.t3.micro. PostGIS는 Flyway CREATE EXTENSION으로. RDS가 관리형이라 백업/가용성 확보.
-  - **Terraform(IaC) + GitHub Actions OIDC**: mp에 없던 축(IaC·키없는 배포) = 새 포트폴리오 신호. OIDC로 장기 액세스키 제거(2026 베스트프랙티스).
+  - **Terraform(IaC) + GitHub Actions OIDC**: 새로 채우는 축(IaC·키없는 배포). OIDC로 장기 액세스키 제거(2026 베스트프랙티스).
   - **비용 절감 설계**: NAT 게이트웨이 없음(Fargate 퍼블릭 서브넷+SG 잠금), ECS containerInsights off, ECR 라이프사이클(10개), RDS 프리티어. 상시 비용은 ALB ~$16/월 → $200 크레딧으로 커버. mp의 "필요없는 것 안 쓰기" 성숙 신호와 정렬.
   - **재사용:** PaaS 브랜치의 Dockerfile·application.yml(PORT/redis)은 AWS에도 그대로 유효 → 이어감.
 - 트렌드 근거(웹검색): AWS 프리티어 2026($200 크레딧, RDS 프리티어, ECS 무료/EKS $73), 국내 JD의 EKS/ECS/Terraform 우대.
-- 관련: `infra/terraform/*`, `.github/workflows/deploy.yml`, `DEPLOY.md`, `CLAUDE.md`(§7), 닫힌 PR #1
+- 관련: `infra/terraform/*`, `.github/workflows/deploy.yml`, `DEPLOY.md`, `docs/SPEC.md`(§7), 닫힌 PR #1
 - 다음 할 일: (검증) 사용자가 `terraform init/validate/plan`로 syntax 확인(로컬 terraform 미설치라 미검증) → AWS 계정 연결 → apply → skeleton 라이브. 이후 P1 백엔드 본론.
 
 ### 2026-07-02 — 🚀 AWS 라이브 배포 완료: push→자동배포 파이프라인 end-to-end 검증
@@ -101,7 +101,7 @@
 - 결정 & 이유(why): — 상세는 ADR로 분리, 여기엔 요지만.
   - **[ADR-0001] geometry(4326) 저장 + `GIST(geography(geom))` 함수 인덱스** — "반경 N미터"를 도(degree) 근사 없이 정확하게 + 인덱스 완전 활용. 대안(geography 컬럼 저장/도 단위 근사/앱 레벨 필터/컬럼 이중화) 비교 기각. 근거: Paul Ramsey(PostGIS core) 함수 인덱스 패턴 (2026-07 웹검증).
     - 구현 디테일: `geom::geography` 표기는 Spring Data 네이티브 쿼리 파서가 `:geography`를 파라미터로 오인 → 동일 의미의 함수형 `geography(geom)` 사용. null enum 파라미터는 `CAST(:category AS text)`로 PG 타입추론 실패 방지.
-  - **[ADR-0002] (source, source_external_id) 자연키 + ON CONFLICT 배치 upsert** — 재실행 멱등(CLAUDE.md 원칙 3) + 52k행 스케일 대비 JDBC 배치. 쉼터시설번호가 자연키, 없으면 sha256(name|address) 결정적 대체키. 파일 단위 단일 트랜잭션. 대안(JPA saveAll/전체 재삽입/Spring Batch/MERGE) 기각.
+  - **[ADR-0002] (source, source_external_id) 자연키 + ON CONFLICT 배치 upsert** — 재실행 멱등(docs/SPEC.md 원칙 3) + 52k행 스케일 대비 JDBC 배치. 쉼터시설번호가 자연키, 없으면 sha256(name|address) 결정적 대체키. 파일 단위 단일 트랜잭션. 대안(JPA saveAll/전체 재삽입/Spring Batch/MERGE) 기각.
   - **파서 스키마 드리프트 내성** — 표준데이터 좌표 필드 존재가 문서상 미확정(2025-02 공중화장실 좌표 정책 변경 전례) → 헤더 별칭 매칭 + 좌표 결측 행 skipped 계수(지오코딩 백로그 근거 수치). 인코딩(UTF-8/CP949) 주입 가능.
   - **테스트 전략** — 파서는 순수 단위(오프라인 상시), 공간쿼리 정확성·멱등성은 실 PostGIS IT(반경 미터 단위 검증: 1.5km→2곳/500m→1곳, kNN 순서, bounds, 2회 적재 중복 0, DO UPDATE 갱신). 컨테이너는 base class static 공유로 CI 시간 절약.
   - **시드는 Repeatable 마이그레이션(R__)** — 체크섬 변경 시에만 재실행 + upsert 수렴. 데모용 지도 공백 방지, 실데이터가 대체.
@@ -122,9 +122,9 @@
 - 다음 할 일: **API 응답 DTO 확정됨 → claude design 착수 적기.** 백엔드는 공중화장실 표준데이터(52k, 지오코딩 보완 포함) 인제스천 → P2 UGC+인증(카카오/구글 OAuth, 제보/후기 2단).
 
 ### 2026-07-02 — 커버리지 프레임 교정: "숭실대 출시"가 아니라 "전국 적재 + 동작구 검증"
-- 한 일: 사용자 지적("지도 데이터 전체에서 필터링해 보여주는 건데 왜 숭실대만?")을 반영해 CLAUDE.md·README의 커버리지 표현 전면 교정.
+- 한 일: 사용자 지적("지도 데이터 전체에서 필터링해 보여주는 건데 왜 숭실대만?")을 반영해 docs/SPEC.md·README의 커버리지 표현 전면 교정.
 - 결정 & 이유(why): **공공데이터 레이어와 UGC 레이어를 구분.** ①공공데이터는 전국 표준데이터를 그대로 적재 — 범위 제한이 비용을 아끼지 않고(배치 upsert), 데이터가 많을수록 "대용량 지리검색" 간판이 강해짐. 지도는 어디서든 동작. ②"좁게 집중"은 콜드스타트가 있는 UGC·검증·마케팅에만 적용(동작구 필드테스트 = 당근의 판교식 하이퍼로컬 런칭). ③숭실대 브랜딩 제거 — mp가 이미 학교색이라 그늘은 범용 위치 서비스로 포지셔닝(코드는 원래 위치 무관이라 변경 없음).
-- 관련: `CLAUDE.md`(헤더·비목표·P5), `README.md`
+- 관련: `docs/SPEC.md`(헤더·비목표·P5), `README.md`
 - 다음 할 일: 전국 무더위쉼터 + 공중화장실 표준데이터 전량 인제스천(수십만 포인트 → P4 부하테스트 스토리 강화).
 
 ### 2026-07-02 — 인제스천 소스 제네릭화(+공중화장실) · 운영 적재 경로(ECS one-off) · 디자인 브리프
@@ -142,15 +142,15 @@
 - 결론: **아니오 — 데이터 층마다 신선도 전략이 다르다.** ①공공데이터(화장실/쉼터 위치)=물리 인프라, 원천 자체가 지자체의 주기 스냅샷이라 실시간 원천이 없음 → 자체 DB + 주기 동기화(업계 표준, 카카오/네이버도 자체 POI DB). ②날씨=분 단위 → 실시간 호출+Redis TTL 캐시(P3). ③"지금 시원한지" 같은 진짜 실시간 = 어떤 공공 API도 제공 안 함 → **유저 제보 freshness가 담당(그늘의 존재 이유)**.
 - 매 요청 공공 API 프록시를 기각한 기술 근거: PostGIS 반경/kNN 인덱스 상실(간판 불가) · rate limit/지연 · 가용성 결합.
 - 반영: 멱등 upsert(ADR-0002)가 이미 재실행 안전 → **주기 동기화 스케줄(EventBridge→ECS RunTask)을 P3 로드맵에 추가**(수동 재적재의 자동화, dom의 월간 크론 패턴과 동일).
-- 관련: `CLAUDE.md` §10 P3
+- 관련: `docs/SPEC.md` §10 P3
 
 ### 2026-07-02 — 설계 Q&A 후속: 주기 동기화의 삭제(폐쇄) 케이스 식별
 - 사용자 멘탈모델("주기적으로 긁어서 변한 것만 반영") = 현 설계와 일치 확인 — 멱등 upsert가 diff 확인·반영을 한 문장으로 흡수(변경분만 갱신, IT 검증됨).
 - 이 대화에서 발견한 갭: **스냅샷에서 사라진 행(화장실 폐쇄 등)은 upsert가 못 지움** → P3 동기화에 "미출현 (source, external_id) soft-delete 비활성화" 추가(하드 삭제는 제보/후기 FK 파괴라 기각). + 오픈API serviceKey 확보 시 다운로드까지 무인 루프.
-- 관련: `CLAUDE.md` §10 P3
+- 관련: `docs/SPEC.md` §10 P3
 
 ### 2026-07-02 — 지오코딩 파이프라인: 화장실 표준데이터의 좌표 소멸(2025-02)에 대응
-- 한 일: 실측으로 **공중화장실정보.csv(59,768행)에 좌표 컬럼이 아예 없음**을 확인(CLAUDE.md가 경고했던 2025-02 정책 변경의 실물) → **카카오 지오코딩 파이프라인** 구현. 파서에 BOM+따옴표 정규화·행안부(safetydata) 영문코드 헤더(LA/LO)·이중헤더 라벨행 차단 추가. 데이터 품질 검사(관리번호 중복 0·주소 결측 0 = 전량 지오코딩 가능).
+- 한 일: 실측으로 **공중화장실정보.csv(59,768행)에 좌표 컬럼이 아예 없음**을 확인(docs/SPEC.md가 경고했던 2025-02 정책 변경의 실물) → **카카오 지오코딩 파이프라인** 구현. 파서에 BOM+따옴표 정규화·행안부(safetydata) 영문코드 헤더(LA/LO)·이중헤더 라벨행 차단 추가. 데이터 품질 검사(관리번호 중복 0·주소 결측 0 = 전량 지오코딩 가능).
 - 결정 & 이유(why): — 상세 ADR-0003.
   - **geocode-before-insert** (geom NOT NULL 유지 — "places에 있으면 반드시 지도에 찍힌다" 불변식) vs 대안(nullable geom=유령 행, 별도 캐시 테이블=중복) 기각.
   - **저장 좌표 재사용** — geocoded=true + 주소 불변이면 재호출 스킵 → 주기 동기화가 쿼터를 재소모 안 함. IT로 "2차 실행 시 성공분 호출 0회" 검증.
@@ -182,14 +182,14 @@
 - 한 일: 공개 문서 전체를 다각도 감사(에이전트 워크플로우: 문서별 8 + 횡단/비밀 2, 발견 후 적대적 검증). 세션 한도로 검증 단계 일부가 죽어 원발견 15건을 journal에서 회수해 **직접 사실 대조 후 전량 수정**.
 - 수정한 결함(코드와 대조하면 드러날 것들):
   - **k3s 잔재**: docker-compose.yml 헤더가 "프로덕션=k3s+ArgoCD"로 남아있던 것(실제 AWS) → 교정. (high)
-  - **수치 불일치**: 화장실 건수 CLAUDE.md "약 52,255건" → 실측 59,768행. ADR-0002 "52k"→60k. "일부 좌표 미제공"→전량 미제공. (medium)
+  - **수치 불일치**: 화장실 건수 docs/SPEC.md "약 52,255건" → 실측 59,768행. ADR-0002 "52k"→60k. "일부 좌표 미제공"→전량 미제공. (medium)
   - **ADR-0002 노후화**: 관련 클래스명 `CoolingShelterCsvParser`(삭제됨)→`StandardCsvParser`; 결정3 "파일 단위 트랜잭션"→ADR-0003 개정 반영; 결정4 skipped 의미가 지오코딩 후보 도입으로 바뀐 것 반영. (high/medium)
   - **코드 인용 불일치**: TS-002의 `DockerClientFactory.isDockerAvailable()`→`.instance().isDockerAvailable()`; 재시도 횟수 "3회"→"총 3회 시도(최대 재시도 2회)"(ADR-0003 + javadoc 동기화). (low)
   - **라이브 현실 반영**: README API 예시 category=TOILET(미적재)→COOLING_SHELTER(전국 적재분)+부산 예시; design-brief 에러포맷 "RFC7807 ProblemDetail"(미설정)→Spring 기본 오류 JSON(라이브 실측); DEPLOY.md에 KAKAO 키 전달법·paths 필터·Fargate 비용($12/월) 추가. (medium)
   - TS-001 커밋 참조 placeholder→8488eb6.
 - 비밀 스캔: git 추적 68파일 전수 — AKIA키·비번·학번·서버IP·Gemini키 0건, tfstate/tfvars/jar 실수 커밋 0. ✅
 - 결정 & 이유(why): 검증 에이전트가 죽었어도 원발견을 버리지 않고 **직접 코드 대조로 재검증**(빠뜨리면 오히려 문서 신뢰도 훼손). 과거 WORKLOG 항목의 당시 수치(52k 추정)는 역사 기록이라 보존하되, 살아있는 스펙/ADR/README만 실측치로 교정.
-- 관련: CLAUDE.md·README·DEPLOY·TROUBLESHOOTING·docker-compose·docs/adr/0002·0003·design-brief, KakaoGeocodingClient(주석)
+- 관련: docs/SPEC.md·README·DEPLOY·TROUBLESHOOTING·docker-compose·docs/adr/0002·0003·design-brief, KakaoGeocodingClient(주석)
 - 다음 할 일: 카카오 REST 키 수령 후 화장실 60k 지오코딩 적재 → P2(UGC+인증).
 
 ### 2026-07-02 — 화장실 60k 지오코딩 버그 수정(TS-004): Jackson 3 record + 실 파싱 테스트
@@ -270,9 +270,9 @@
   - **태스크데프 ignore_changes 우회 = CLI 리비전 등록**: ecs.tf가 `ignore_changes[container_definitions]`(CI가 이미지 관리)라 secrets 편집이 TF로 안 먹음 → 실행 중 리비전을 describe→시크릿 주입→register→update-service로 라이브 반영(deploy.yml 관례와 동일 경로). ecs.tf에도 문서화용 추가(fresh apply 대비).
   - **egress 가변 환경의 검증법**: "XFF 회전 시 429" 직접 테스트는 샌드박스 egress IP가 요청마다 바뀌면 최우측도 바뀌어 무결론 → X-Proxy-Auth/X-Client-Ip를 고정한 헤더 시뮬레이션으로 결정적 검증(관측 IP에 의존 안 함).
 - 관련: `infra/terraform/{ssm,variables,ecs}.tf`, SSM `/geuneul/proxy_secret`, 태스크데프 geuneul:13, Vercel env, 시크릿은 `.local/proxy-secret.env`(gitignore)
-- 다음: 레포 전수 품질 감사(포트폴리오 완성도).
+- 다음: 레포 전수 품질 감사(레포 완성도).
 
-### 2026-07-04 — 포트폴리오 품질 감사(다중 에이전트) + 32건 개선
+### 2026-07-04 — 레포 품질 감사(다중 에이전트) + 32건 개선
 - 한 일: 레포 전수를 7영역(백엔드 도메인·테스트/설정·프론트 컴포넌트·프론트 lib·인프라·문서·레포위생)으로 나눠 다중 에이전트 병렬 감사 → 각 지적을 "실제 개선인가" 적대적 검증(38 제기 → 32 확정) → 우선순위대로 적용(PR #18–21). 코드/문서를 한 줄씩 정독한다는 기준으로.
 - 주요 개선 & 이유(why):
   - **간판 기능(M1)**: 반경/최근접의 표시 거리를 애플리케이션 하버사인(구체)으로 재계산하던 것을 제거하고 쿼리가 정렬식과 동일한 타원체 `ST_Distance`로 반환(PlaceDistanceView) → 표시=정렬 일치·이중계산 제거. "이중계산 방지" 주석과 코드의 모순도 해소.
@@ -287,7 +287,7 @@
 - 한 일: 카공맵류(카공맵·유사앱 리뷰·GitHub `awesome-cafe`/`Buzzzzing`·Workfrom·누클) 다중 에이전트 조사 → ADR-0005(흡수 전략) 수립 → **최우선 항목(실시간 자리 여유/혼잡 제보) 백엔드+프론트 라이브**(PR #22). SEAT_OK/CROWDED enum 추가(스키마 무변경, TTL 2h), E2E 검증(직접+Vercel, 최근제보 반영, 잘못된 타입 400).
 - 결정 & 이유(why):
   - **카공 = 별개 도메인이 아니라 그늘 '여름 실내 오래 버티기'의 부분집합**: 카공 조건(냉방+앉을곳+콘센트+눈치안봄+자리여유)이 그늘 여름 실내 피난과 정확히 포개짐. → 별도 앱/브랜드/CAFE 카테고리 신설(정체성 희석) 대신, **간판(지리공간+실시간 UGC 스코어링)을 키우는 데이터축·실시간 상태만 흡수**.
-  - **리뷰앱화 거부(CLAUDE.md §9)**: aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터는 dilution으로 게이트. 커뮤니티/후기는 '살'로만 유지.
+  - **리뷰앱화 거부(docs/SPEC.md §9)**: aspect 별점 UI 주인공·예약/결제·리워드·소셜 팔로우·가격필터는 dilution으로 게이트. 커뮤니티/후기는 '살'로만 유지.
   - **자리 여유를 1탄으로**: 조사에서 '자리없음·헛걸음'이 카공/카페 최대 불만 + '도착 전 좌석확인' 재사용의향 80%. survival_score freshness로 굴러갈 킬러 신호인데 enum만 추가라 비용 최소·정체성 유지(여름 라벨).
 - 관련: `docs/adr/0005`, `ReportType`(SEAT_OK/CROWDED), 프론트 REPORT_META/GRID, 조사 워크플로 wf_d23510d2, PR #22
 - 다음(방향 확인 후): survival_score(P3)·GPS 방문인증·place_features 등급화 등 ADR-0005 나머지. OAuth는 사용자 콘솔 선행.
@@ -295,7 +295,7 @@
 ### 2026-07-04 — 공부 가능 공간 데이터 확장 계획(다중 에이전트 조사) — ADR-0006
 - 한 일: "공부 가능한 카페 + 공공 공부공간(노들서가류) 전부 넣고 싶다" 요청을 다중 에이전트로 조사(공공 공부공간 데이터셋·노들서가류·카페 데이터·스키마 모델링, wf_e524daf8) → ADR-0006 수립. 데이터 다운로드 가능성 타진(odcloud/상권정보 API는 serviceKey 없이 401, 서울열린데이터 sample만 5행).
 - 결정 & 이유(why):
-  - **이건 UGC 기능이 아니라 데이터 커버리지 확장** → CLAUDE.md §3 커버리지 원칙("전국 표준데이터 그대로 적재") 정합, 간판(대용량 지리검색+idempotent ETL) 직접 강화. places 15만+(화장실6만+카페9만+도서관1.5만)로 커져 k6 부하테스트(P4) 소재.
+  - **이건 UGC 기능이 아니라 데이터 커버리지 확장** → docs/SPEC.md §3 커버리지 원칙("전국 표준데이터 그대로 적재") 정합, 간판(대용량 지리검색+idempotent ETL) 직접 강화. places 15만+(화장실6만+카페9만+도서관1.5만)로 커져 k6 부하테스트(P4) 소재.
   - **카테고리 최소 응집**: category(장소 kind)에 CAFE/STUDY_CAFE 2개만. '공부 가능'은 cross-cutting → place_features(study_ok/quiet). enum 남발은 지도 필터/색상만 복잡. 상업/커먼스 분리는 is_commercial 플래그(공개 커먼스 정체성 방어).
   - **카페 좌표는 소상공인 상권정보(WGS84 내장)** — LOCALDATA(EPSG:5174 재투영·지오코딩 폭증) 대신. 지오코딩 0건이라 화장실 6만 적재 파이프라인 규모 내.
   - **'공부 가능'은 공공데이터에 없음** → 전량 적재 + UGC 태깅(카공맵도 100% 크라우드소싱). STUDY_CAFE/도서관만 defaultFeatures로 study_ok 자동부여(낮은 confidence).
@@ -313,7 +313,7 @@
 ### 2026-07-04 — survival_score(P3) 구현: 간판 "실시간 UGC 시공간 스코어링" 완성 — ADR-0007
 - 한 일: 콘솔·자격증명 없이 가능한 최우선(HANDOFF ▶세션 인계 지목)인 **survival_score를 풀스택으로 완성**. 백엔드(SQL 시공간 신호 뷰 + 순수 함수 조립 + 스코어드 반경/bounds/단건 API) + 프론트(마커 3색·리스트/상세 상태 배지 — 예약 슬롯 채움). 간판 헤드라인의 미구현분(지리검색·제보는 라이브였으나 점수 자체가 없었음)을 채웠다.
 - 결정 & 이유(why) — 상세는 [ADR-0007](docs/adr/0007-survival-score-sql-signals-java-compose.md):
-  - **하이브리드 계산(시공간 집계=SQL 뷰, 가중치 조립·등급=순수 함수)**: CLAUDE.md §5 "시공간 랭킹은 DB에서" 준수(장소별 제보 최근성/신뢰도 집계를 `place_report_signals` 뷰가 계산 → 전체스캔·N+1 회피). 최종 `0.25·distance+0.20·comfort+0.20·freshness−0.15·risk`와 등급 분기는 **DB 없이 8개 단위테스트되는** `SurvivalScore` 순수 함수로. 튜닝 잦은 "정책"은 함수, 무거운 집계는 SQL — 역할 분리.
+  - **하이브리드 계산(시공간 집계=SQL 뷰, 가중치 조립·등급=순수 함수)**: docs/SPEC.md §5 "시공간 랭킹은 DB에서" 준수(장소별 제보 최근성/신뢰도 집계를 `place_report_signals` 뷰가 계산 → 전체스캔·N+1 회피). 최종 `0.25·distance+0.20·comfort+0.20·freshness−0.15·risk`와 등급 분기는 **DB 없이 8개 단위테스트되는** `SurvivalScore` 순수 함수로. 튜닝 잦은 "정책"은 함수, 무거운 집계는 SQL — 역할 분리.
   - **트렌드 근거(2026-07 웹 확인)**: 시간감쇠 스코어링의 정설 트레이드오프가 "**SQL 레이어=대용량 성능 / 앱 레이어=복잡·유연 로직**". 본 설계가 그 절충의 표준형 → 근거로 방어 가능. (출처: julesjacobs 지수감쇠 likes, Tacnode Data Freshness vs Latency 2025, Crunchy Data PostGIS 인덱싱.)
   - **결측 성분은 지어내지 않고 재정규화**: open_hours(운영시간)·place_features가 실데이터에 사실상 결측 → open_now 성분 제외 후 가용 가중치 재정규화(가짜 0.5 주입 거부). 데이터 붙으면 가중치 복원만으로 additive 확장.
   - **거리 의미 분리**: 마커(bounds)·단건은 거리 성분을 빼고 "장소 자체가 지금 좋은가", 반경/최근접만 거리 0.25 넣어 "지금 갈만함" — 뷰포트 마커에 거리 착시를 넣지 않음.
@@ -340,7 +340,7 @@
 ### 2026-07-05 — 추천 라이브 반영: 전 문서 정합 감사(다중 에이전트) 8건 수정
 - 한 일: `/recommendations`(PR #24) 머지·배포 후 전 문서를 4축 병렬 읽기전용 감사 에이전트로 코드·라이브 상태와 대조 → 확증 드리프트 8건 수정(수정은 중앙에서 일괄 적용, 커밋 `50cc30d`).
 - 수정 요지(전부 코드/라이브 실측 대조): HANDOFF 삭제된 브랜치 토큰(feat/p3-*)→PR #23/#24·라이브 태스크데프 rev17→**rev19**(AWS describe 확인)·survival_score/추천 "구현"→"라이브"·최종 갱신일·프로덕션 실측 근거 / README P3 추천 라이브 마일스톤 불릿 추가 / frontend/README "급해요=nearest 팬아웃·병합"→"백엔드 /recommendations 프록시" / design-brief 급해요 탭 서술(거리순 kNN→시나리오 가중 랭킹·reason)+API 계약에 /recommendations 추가 / WORKLOG 07-05 엔트리 관련(PR·commit·rev) 트레이스 라인.
-- 결정 & 이유(why): 문서는 제출용 산출물이라 **"코드가 진실원천, 문서는 그와 일치"**. 새 기능 머지가 7개 문서에 드리프트를 낳아, 단일 리뷰어보다 4축 병렬 감사로 촘촘히 잡음(2026-07-04 감사와 동일 방식). **감사 확인·수정 불요**: ADR-0008 가중치/카테고리 표가 `RecommendationScenario.java`와 정확히 일치, CLAUDE.md 스펙 정합, TROUBLESHOOTING(TS-001~009 연속)·DEPLOY 무드리프트, WORKLOG 테스트 카운트 산술(단위15·IT3·SurvivalScore8 회귀0) 정확. 비밀/개인정보 유출 0건(gitleaks green).
+- 결정 & 이유(why): 문서는 제출용 산출물이라 **"코드가 진실원천, 문서는 그와 일치"**. 새 기능 머지가 7개 문서에 드리프트를 낳아, 단일 리뷰어보다 4축 병렬 감사로 촘촘히 잡음(2026-07-04 감사와 동일 방식). **감사 확인·수정 불요**: ADR-0008 가중치/카테고리 표가 `RecommendationScenario.java`와 정확히 일치, docs/SPEC.md 스펙 정합, TROUBLESHOOTING(TS-001~009 연속)·DEPLOY 무드리프트, WORKLOG 테스트 카운트 산술(단위15·IT3·SurvivalScore8 회귀0) 정확. 비밀/개인정보 유출 0건(gitleaks green).
 - 관련: 커밋 `50cc30d`, 감사 에이전트 4축(CLAUDE/README · HANDOFF · ADR/design-brief · WORKLOG/TS/DEPLOY)
 
 ### 2026-07-05 — 코드·문서 품질 하드닝: 3축 심층 리뷰 + README 재작성 + 문서 톤 중립화
@@ -349,18 +349,18 @@
   - fix: `RecommendationReason`이 부정 제보만 있는 곳을 "좋은 제보"로 오표기하던 결함(긍정 comfort 없으면 중립 "최근 제보 n건") + 프론트 최근제보 로딩 실패를 "제보 없음"으로 뭉개던 것(에러 분기) + 제보 성공 시 survival 반영되게 place·places 쿼리 무효화.
   - refactor: 컨트롤러 복붙 검증을 `ApiRequests`로 일원화 · 아이콘 이름 `IconName` 타입으로 컴파일 타임 검증(satisfies) · 미사용 필드 제거 · ingest 카운터 보존(RuntimeException 집계) · a11y(aria-label) · Dockerfile 스택 표기 교정.
 - 문서(표현·구조):
-  - **README 재작성** — 내부 changelog 톤 → 제품/아키텍처 README로: 라이브 링크·CI 배지, 무엇/왜(핵심 차별점), **ASCII 아키텍처 다이어그램**, **survival_score 공식+작동 원리**, **로컬 빠른 시작(docker compose→gradlew→pnpm)**, /recommendations 포함 API, 문서 색인, License. 구현 이력은 `<details>`로 접음. (기존엔 README가 사람을 CLAUDE.md로 보냈음 → 자체완결화.)
+  - **README 재작성** — 내부 changelog 톤 → 제품/아키텍처 README로: 라이브 링크·CI 배지, 무엇/왜(핵심 차별점), **ASCII 아키텍처 다이어그램**, **survival_score 공식+작동 원리**, **로컬 빠른 시작(docker compose→gradlew→pnpm)**, /recommendations 포함 API, 문서 색인, License. 구현 이력은 `<details>`로 접음. (기존엔 README가 사람을 docs/SPEC.md로 보냈음 → 자체완결화.)
   - **ADR 색인**(`docs/adr/README.md`) 신설 — 0001~0008 한 줄 요약 표.
   - **LICENSE(MIT)** 추가 · `.editorconfig`(Java 4 / TS 2) 추가.
-  - **문서 톤 중립화** — CLAUDE.md/WORKLOG/TROUBLESHOOTING의 노골적 "면접·포트폴리오" 메타 문구를 중립 개발 문서 톤으로(의사결정 근거·트렌드 확인·why 기록 규율은 유지). 회사/전략 메모는 이미 `.local/PORTFOLIO-CONTEXT.md`(gitignore).
+  - **문서 톤 중립화** — docs/SPEC.md/WORKLOG/TROUBLESHOOTING의 노골적 "면접·포트폴리오" 메타 문구를 중립 개발 문서 톤으로(의사결정 근거·트렌드 확인·why 기록 규율은 유지). 회사/전략 메모는 이미 `.local/PORTFOLIO-CONTEXT.md`(gitignore).
 - 결정 & 이유(why): 리뷰 지적을 그대로 반영하지 않고 "실제 개선인가/리스크 없는가"로 취사선택(라이브 프로덕션이라 위험한 리팩터는 배제). 문서 톤 중립화·LICENSE·다이어그램·로컬 실행법은 처음 보는 사람의 이해·신뢰를 높이는 표준 정비. 코드 변경은 백엔드 test+coverage·프론트 typecheck/lint/build green + CI 실 PostGIS IT 통과 후 머지(PR #25), 프로덕션 배포 확인.
 - 관련: PR #25, 리뷰 에이전트 3축, `docs/adr/README.md`·`LICENSE`·`.editorconfig`, 사용자 결정(LICENSE=MIT·문서 중립화)
 
 ### 2026-07-09 — 날씨 API(기상청 초단기실황) + Redis TTL 캐시 (P3, 1부: 백엔드+인프라)
 - 한 일: HANDOFF ▶세션 인계가 지목한 "콘솔 없이 바로 가능한 다음"인 **날씨**를 착수. 좌표→기상청 격자 변환, 초단기실황 조회 클라이언트, Redis TTL 캐시, `GET /weather?lat=&lng=` 엔드포인트, ElastiCache Terraform까지. (survival_score 기온 성분 복원은 2부에서 additive하게 — 이 커밋은 데이터 소스+캐시+노출.)
 - 결정 & 이유(why):
-  - **소스 = 초단기실황(getUltraSrtNcst), 예보(Fcst) 아님**: 앱 테제가 "지금 상태"라 **관측 기온·습도·강수(T1H/REH/RN1/PTY)** 가 survival_score 기온 성분에 더 정확하다. 예보는 향후 "곧 비 옴" 알림(P4/심화)용으로 남긴다. CLAUDE.md §4/§7 문구는 "초단기예보"였으나, 목적(=지금 체감 기온 복원)엔 실황이 맞아 정제 선택(범위 확장 아님).
-  - **캐시 백엔드 = ElastiCache Redis (사용자 결정)**: 인프로세스(Caffeine) 대신. CLAUDE.md §7 스펙 정합 + "캐시 전략" 포트폴리오 포인트 실증 + 분산 캐시(다중 태스크 공유). `cache.t3.micro`(신규계정 프리티어 750h/월·12개월 대상), 사설 서브넷 + SG로 ECS만 6379 접근.
+  - **소스 = 초단기실황(getUltraSrtNcst), 예보(Fcst) 아님**: 앱 테제가 "지금 상태"라 **관측 기온·습도·강수(T1H/REH/RN1/PTY)** 가 survival_score 기온 성분에 더 정확하다. 예보는 향후 "곧 비 옴" 알림(P4/심화)용으로 남긴다. docs/SPEC.md §4/§7 문구는 "초단기예보"였으나, 목적(=지금 체감 기온 복원)엔 실황이 맞아 정제 선택(범위 확장 아님).
+  - **캐시 백엔드 = ElastiCache Redis (사용자 결정)**: 인프로세스(Caffeine) 대신. docs/SPEC.md §7 스펙 정합 + "캐시 전략" 스펙(§7) 실증 + 분산 캐시(다중 태스크 공유). `cache.t3.micro`(신규계정 프리티어 750h/월·12개월 대상), 사설 서브넷 + SG로 ECS만 6379 접근.
   - **캐시 경계 = 외부 HTTP 호출(@Cacheable "weather")**: 키=`nx:ny:baseDate:baseTime`. 발표시각이 매시각 바뀌어 키가 자연 회전하고, 같은 슬롯 재조회를 막아 기상청 rate limit을 아낀다. TTL 30분. 빈 결과(장애)는 `unless`+`disableCachingNullValues`로 미캐시(일시 장애가 굳지 않게).
   - **가용성을 캐시에 결합하지 않음(CacheErrorHandler)**: Redis 장애·미프로비저닝이어도 캐시 오류를 삼키고 기상청을 직접 호출. 나아가 **ALB 헬스체크에 Redis를 넣지 않는다**(`management.health.redis.enabled: false` 유지) — 캐시는 non-critical 부가 계층이라 Redis 블립이 태스크를 죽이면 안 됨. (HANDOFF의 "헬스체크 재활성" 메모를 이 근거로 대체: 재활성은 가용성 저하 위험이라 의도적으로 하지 않음.)
   - **격자 변환은 순수 함수 + 기준값 테스트**: 기상청 DFS_XY_CONV 공식을 그대로. 서울(60,127)·부산(98,76)·상도(59,125)로 못 박음(조용한 오답 방지).
@@ -387,7 +387,7 @@
   2. 라이브 태스크데프에 위 4개 secret 추가한 새 rev 등록 + `update-service --force-new-deployment`(proxy-secret rev13 패턴).
   3. 그다음 **프론트**: 로그인 버튼 → 제공자 authorize 리다이렉트 → BFF 콜백(`/api/auth/{provider}/callback`)이 code를 `/auth/{provider}`로 프록시 → JWT를 httpOnly 쿠키로 → `/me`.
   4. 이후 **후기(review)**·trust_score(로그인 제보 가중, V4 뷰가 이미 준비됨).
-- 관련: 브랜치 `feat/oauth-jwt`, `domain/auth/*`, `global/security/*`, CLAUDE.md §9(인증 API), ERD §8(users). 스택 근거 jjwt 0.13(jwtk/jjwt).
+- 관련: 브랜치 `feat/oauth-jwt`, `domain/auth/*`, `global/security/*`, docs/SPEC.md §9(인증 API), ERD §8(users). 스택 근거 jjwt 0.13(jwtk/jjwt).
 
 ### 2026-07-09 — 프론트 로그인 플로우 (OAuth end-to-end, feat/oauth-jwt)
 - 한 일: 백엔드 OAuth에 이어 **프론트 로그인 UI + BFF 콜백**을 붙여 소셜 로그인을 end-to-end 완성. 로그인 버튼(카카오/구글) → 제공자 authorize 리다이렉트 → BFF 콜백이 code를 백엔드로 교환 → JWT를 httpOnly 쿠키로 → `/me`. MVP에 없던 **"내 정보" 탭 신설**.
@@ -413,7 +413,7 @@
 
 ### 2026-07-09 — 소셜 로그인 실사용 검증 완료(구글·카카오) + 카카오 콘솔 3중 함정 해소
 - 한 일: 배포된 OAuth를 브라우저에서 실제 로그인까지 검증. **구글은 첫 시도에 프로필까지 성공**. **카카오는 콘솔 설정 3건 해소 후 성공**(TS-013): (A) 로그인 Redirect URI를 [고급]의 로그아웃 칸이 아닌 [플랫폼 키]>[REST API 키]의 로그인 칸에 정확히 등록(KOE006 해소), (B) 호출 허용 IP 127.0.0.1 제거, (C) Client Secret 활성화 ON이라 백엔드에 SSM 배선 — 스크린샷 시크릿의 I/l 오독 정정 후 KOE010 해소. → 라이브 rev26.
-- 결정 & 이유(why): Client Secret은 **ON 유지 + 백엔드 배선**(OFF보다 보안·포트폴리오 우위). 정정은 SSM 값 갱신 + `force-new-deployment`(ECS secret은 태스크 시작 시 주입). "구글이 같은 코드로 되면 카카오 실패는 콘솔 문제"로 범위를 좁혀 코드 무변경으로 해결.
+- 결정 & 이유(why): Client Secret은 **ON 유지 + 백엔드 배선**(OFF보다 보안 우위). 정정은 SSM 값 갱신 + `force-new-deployment`(ECS secret은 태스크 시작 시 주입). "구글이 같은 코드로 되면 카카오 실패는 콘솔 문제"로 범위를 좁혀 코드 무변경으로 해결.
 - 검증(프로덕션 실사용): 구글 로그인 → 프로필(가_홍성주…·Google·이메일·신뢰도0), 카카오 로그인 → 프로필(홍성주·카카오·신뢰도0). 로그인 P2 **실질 완성**.
 - 산출물: SSM `kakao_client_secret`(rev26), TS-013. 코드 변경 없음(콘솔·시크릿만).
 - 다음(새 세션): ① 날씨 2부(survival_score 기온 반영) ② 후기(review) 백엔드+trust_score ③ 공부공간 데이터 적재. 상세는 HANDOFF ▶세션 인계.
@@ -445,7 +445,7 @@
 - 산출물: 백엔드 `domain/review/`(Review·ReviewRepository·ReviewWithAuthorView·ReviewService·ReviewController + dto/{ReviewCreateRequest·ReviewResponse·ReviewListResponse})·`SecurityConfig`(POST /reviews 보호). 프론트 `types/review.ts`·`lib/api.ts`(fetchPlaceReviews·createReview)·`lib/queries.ts`(usePlaceReviews·useCreateReview)·`lib/backend.ts`(proxyAuthedPost — 세션쿠키→Bearer 신규 헬퍼)·`app/api/reviews/route.ts`·`app/api/places/[id]/reviews/route.ts`·`components/place/ReviewsSection.tsx`(목록+별점폼)·`components/place/PlaceDetailOverlay.tsx`(P2 플레이스홀더 교체)·`components/ui/Icon.tsx`(인스턴스별 `filled` 오버라이드)·`lib/icon-paths.ts`(star 아이콘).
 
 ### 2026-07-09 — 모더레이션(신고+검수 큐) 백엔드 (P2): `POST /flags` + `GET·POST /admin/flags/**`
-- 한 일: CLAUDE.md §0-7("제보·후기는 허위·명예훼손 관리 필수, 신고/검수 큐를 처음부터 염두")이 지목한 마지막 P2 UGC 조각. `POST /flags`(로그인 필요, 제보/후기 신고)·`GET /admin/flags/pending`(ADMIN 전용, 페이지네이션+대상 요약)·`POST /admin/flags/{id}/resolve`(ADMIN 전용, PENDING→RESOLVED/DISMISSED)를 신설. Flyway **V7__flags.sql**(V5·V6은 다른 브랜치 선점이라 오케스트레이터 지시대로 V7만 사용).
+- 한 일: docs/SPEC.md §0-7("제보·후기는 허위·명예훼손 관리 필수, 신고/검수 큐를 처음부터 염두")이 지목한 마지막 P2 UGC 조각. `POST /flags`(로그인 필요, 제보/후기 신고)·`GET /admin/flags/pending`(ADMIN 전용, 페이지네이션+대상 요약)·`POST /admin/flags/{id}/resolve`(ADMIN 전용, PENDING→RESOLVED/DISMISSED)를 신설. Flyway **V7__flags.sql**(V5·V6은 다른 브랜치 선점이라 오케스트레이터 지시대로 V7만 사용).
 - 결정 & 이유(why):
   - **스키마 = ERD 초안의 reports_flags/reviews_flags 2테이블이 아니라 통합 `flags` 테이블(target_type, target_id 다형 참조)**: 신고→검수 라이프사이클(사유·상태·처리시각)이 대상 종류와 무관하게 완전히 동일하고, 관리자 큐(`GET /admin/flags/pending`)는 제보 신고·후기 신고를 **한 화면에서 최신순으로** 봐야 하는데 분리 테이블이면 UNION 조회가 필요해진다. 신고 대상이 늘어도(예: 장소 자체) target_type 값만 추가하면 되는 확장성도 이점 — 오케스트레이터 지시의 "권장" 옵션을 그대로 채택하고 V7 주석에 근거를 남겼다. target은 다형이라 강제 FK를 걸지 않고 (target_type, target_id) 인덱스 + 서비스 레벨 존재 검증으로 대체(Report/Review의 경량 FK-id 패턴과 동일 계열).
   - **중복 신고 방지 = 사전 체크(existsBy...) + DB 유니크 제약(uq_flags_target_reporter) 이중 방어, 위반 시 409**: "멱등 or 409" 중 409를 택함 — 신고는 멱등하게 재시도할 대상이 아니라(중복 신고는 UGC 스팸 공격 벡터이기도 함) 클라이언트가 명확히 "이미 신고함"을 알아야 하는 사용자 행동이라 실패를 숨기지 않는 게 맞다고 판단. 서비스 레이어 사전 체크로 정상 경로에서 DB 예외 스택트레이스 없이 깔끔한 409를 주고, `DataIntegrityViolationException` catch를 레이스 컨디션(사전 체크~save 사이의 동시 이중 제출)의 최종 방어선으로 추가 — Review의 "동시 이중 제출은 저빈도 UGC라 리스크 허용"보다 한 단계 더 방어적인 이유는 신고는 스팸/보복성 남용 가능성이 후기보다 크기 때문.
@@ -462,7 +462,7 @@
 - 결정 & 이유(why):
   - **LIBRARY = CSV가 아니라 JSON 오픈API로 경로 전환(구현 중 실측으로 정정)**: 착수 시엔 ADR 원안대로 CSV 다운로드 경로(`SourceSpec.LIBRARY`)를 만들었으나, `.local/datago.env`의 `DATA_GO_KR_SERVICE_KEY`로 `tn_pubr_public_lbrry_api`를 직접 curl 해보니 지역 파라미터 없이 페이지네이션만으로 **전국 3,555건**을 반환함을 확인(TS-017) — "오픈API=경기도만" 이었던 과거 추정이 틀렸다. CSV 경로를 되돌리고 JSON 오픈API 기반으로 재설계. 레코드마다 `seatCo`(열람좌석수)를 직접 주기 때문에 ADR 원안의 "열람좌석수>0만 백필" 조건을 **정밀하게(레코드 단위)** 구현할 수 있었다(CSV 경로였다면 컬럼 파싱을 얹어야 했을 것을 카테고리 균일 근사로 단순화했을 것).
   - **is_commercial = 컬럼 입력이 아니라 PlaceCategory 파생값**: `PlaceCategory.commercial()`이 upsert 시점에 계산한다(카페류=true). 별도 입력 없이 항상 카테고리와 정합하고, ADR-0006 §1 "카테고리 최소 응집 + 속성 분리" 원칙과도 맞는다(카테고리가 결정하는 값을 별도로 입력받을 이유가 없다).
-  - **deleted_at soft-delete는 opt-in(기본 false)**: `IngestionService.ingest(...)`/`PublicLibraryIngestionService.ingestAll(...)`에 `deactivateStale` boolean을 추가하되 기본은 꺼둔다. 전량 스냅샷이 아닌 소스(현재 쉼터 샘플·화장실 실패건 재시도처럼 "부분 파일"을 반복 적재하는 소스)가 실수로 나머지 데이터를 지우는 사고를 막는 안전장치 — CLAUDE.md 원칙3(idempotent, 그러나 파괴적이지 않아야) 정합. `PlaceBulkUpsertRepository.deactivateStale()`도 대상 external_id 집합이 비면 no-op(파싱 실패로 스냅샷이 통째로 비는 사고 방지).
+  - **deleted_at soft-delete는 opt-in(기본 false)**: `IngestionService.ingest(...)`/`PublicLibraryIngestionService.ingestAll(...)`에 `deactivateStale` boolean을 추가하되 기본은 꺼둔다. 전량 스냅샷이 아닌 소스(현재 쉼터 샘플·화장실 실패건 재시도처럼 "부분 파일"을 반복 적재하는 소스)가 실수로 나머지 데이터를 지우는 사고를 막는 안전장치 — docs/SPEC.md 원칙3(idempotent, 그러나 파괴적이지 않아야) 정합. `PlaceBulkUpsertRepository.deactivateStale()`도 대상 external_id 집합이 비면 no-op(파싱 실패로 스냅샷이 통째로 비는 사고 방지).
   - **feature 백필은 ON CONFLICT DO NOTHING(UGC 우선)**: 자동 백필(source=PUBLIC, 낮은 confidence)이 이미 유저가 채운 제보/후기 기반 값을 덮어쓰지 않는다 — "UGC가 진실"이라는 그늘의 신뢰도 철학(§5)과 정합. `StudySpaceCoverageIT`에 회귀 테스트로 고정.
   - **상권정보(STUDY_CAFE/CAFE)는 반경 검색(storeListInRadius) 채택, 행정동코드(storeListInDong) 아님**: 후자는 전국 행정동코드 목록(또 다른 데이터셋)이 있어야 순회 가능한데, 우리는 이미 PostGIS 반경검색(`/places?lat=&lng=&radius=`)이 핵심 정신모델이라 같은 패턴(중심좌표+반경)으로 격자 순회하면 별도 코드 목록 없이 전국을 커버할 수 있다. 단, 이 API는 **활용신청 미승인(403 실측)** 이라 계약을 확증 못 했다 — 코드·테스트는 공식 매뉴얼 기반 최선 추정으로 준비하고 클래스 주석·ADR에 "계약 미검증, 승인 후 재검증 필요"를 명시했다(추측을 검증된 것처럼 포장하지 않는다).
   - **업종 분류는 코드가 아니라 상권업종소분류명(indsSclsNm) 텍스트 매칭(StoreCategoryMapper)**: 2023년 개편된 업종코드 매핑표(15067631)를 아직 실측하지 못해, 코드값을 하드코딩하는 대신 "독서실/스터디카페/스터디룸"·"커피/카페/다방" 키워드 매칭을 1차 판별로 쓴다. 코드가 확정되면 이 클래스만 교체하면 되고 호출부(StoreIngestionService)는 영향받지 않는다 — 불확실성을 한 곳에 격리.
@@ -475,19 +475,19 @@
 - 다음(사용자 실행): ① 도서관 프로덕션 실적재(`--ingest.source=library`, 안전 검토 후 `deactivate-stale=true`로 최초 풀스냅샷). ② 상권정보(`study_cafe`/`cafe`) "상가업소정보" 오픈API 활용신청 승인 대기 → 승인되면 `SmallBusinessStoreApiClient` 실 호출로 계약 재검증(필드명·에러 포맷) 후 격자 좌표 순회로 실적재. ③ 업종코드 매핑표(15067631) 실측해 `StoreCategoryMapper`를 코드 기반으로 교체(선택, 텍스트 매칭도 당장은 동작).
 - 관련: 브랜치 `feat/study-space-coverage-p3`, ADR-0006(Proposed→Accepted, "구현 정정" 섹션), TS-017, `docs/adr/0006-study-space-coverage-expansion.md`.
 ### 2026-07-09 — trust_score 계산 + 제보 가중 실배선 (P2, 브랜치 `feat/trust-score-p2`)
-- 한 일: CLAUDE.md §5 "제보는 trust_score로 가중"의 남은 조각을 완성. **정확히 확인해 보니 SQL 쪽(가중 공식 자체)은 ADR-0007/V4에서 이미 완성돼 있었다** — `place_report_signals` 뷰가 처음부터 `users` LEFT JOIN + `0.7 + 0.3·min(trust_score/100,1)`로 comfort/risk를 가중한다. **진짜 빠진 것은 두 가지**: ① `users.trust_score`가 한 번도 계산되지 않아 모든 로그인 유저가 신규 유저와 동일하게 0(=익명과 동일 0.7 가중치)이었다는 점, ② `POST /reports`가 애초에 로그인 여부를 전혀 안 봐서(컨트롤러에 `@AuthenticationPrincipal`조차 없음) 로그인 유저도 항상 `user_id=NULL`로 저장되고 있었다는 점(`Report.anonymous()` 팩토리에 userId 파라미터 자체가 없었다 — 코드 주석에 "P2 인증 붙으면 채워진다"로 이미 예고돼 있던 미완 조각). 즉 신뢰도 가중 파이프라인은 배관은 있었지만 물이 한 방울도 안 흐르고 있었다.
+- 한 일: docs/SPEC.md §5 "제보는 trust_score로 가중"의 남은 조각을 완성. **정확히 확인해 보니 SQL 쪽(가중 공식 자체)은 ADR-0007/V4에서 이미 완성돼 있었다** — `place_report_signals` 뷰가 처음부터 `users` LEFT JOIN + `0.7 + 0.3·min(trust_score/100,1)`로 comfort/risk를 가중한다. **진짜 빠진 것은 두 가지**: ① `users.trust_score`가 한 번도 계산되지 않아 모든 로그인 유저가 신규 유저와 동일하게 0(=익명과 동일 0.7 가중치)이었다는 점, ② `POST /reports`가 애초에 로그인 여부를 전혀 안 봐서(컨트롤러에 `@AuthenticationPrincipal`조차 없음) 로그인 유저도 항상 `user_id=NULL`로 저장되고 있었다는 점(`Report.anonymous()` 팩토리에 userId 파라미터 자체가 없었다 — 코드 주석에 "P2 인증 붙으면 채워진다"로 이미 예고돼 있던 미완 조각). 즉 신뢰도 가중 파이프라인은 배관은 있었지만 물이 한 방울도 안 흐르고 있었다.
 - 결정 & 이유(why):
   - **trust_score 공식 = `100 · volumeScore^0.7 · ageScore^0.3`(가중기하평균, "곱" 결합)** — `volumeScore = clamp01(ln(1+contributions)/ln(51))`(로그 스케일 diminishing returns, contributions = reportCount + 2·reviewCount — 후기는 로그인 필수·영구 콘텐츠라 제보보다 고신뢰 신호), `ageScore = clamp01(accountAgeDays/30)`. 웹 검색(2026-07)으로 확인: 위키피디아 autoconfirmed는 **계정연령(4일) AND 편집수(10회)를 동시에 요구**하는 이중 게이트다(나이만으로도, 활동만으로도 승격 불가) — 이 프로젝트의 스팸 억제 목적과 정확히 같은 문제다. 처음엔 가중합(`0.7·volume+0.3·age`)을 검토했으나, 레이트리밋(분당3·시간당10) 안에서도 새 계정이 몇 시간 안에 volumeScore를 포화시켜 age=0인데도 70점대가 나오는 걸 발견 — "스팸 억제"라는 목적을 정면으로 비껴갔다. **곱(지수합=1인 가중기하평균)으로 바꾸면 두 조건을 동시에 요구**해 한쪽이 0에 가까우면 전체도 0에 가깝게 끌려간다(위키피디아 AND 게이트를 연속값으로 일반화). `TrustScore.java` 클래스 주석에 수치 예시와 함께 근거를 남겼다.
   - **trust_score는 0~100 스케일 유지(0~1 아님)** — 오케스트레이터 지시 초안은 "0~1 정규화"를 언급했으나, `users.trust_score`(V2 DDL `DOUBLE PRECISION`)와 V4 뷰의 `COALESCE(u.trust_score,0)/100.0` 나눗셈이 **이미 0~100 스케일을 전제로 라이브 중**이다. 0~1로 저장하면 trust=1.0(만점)도 `1/100=0.01`로 나눠져 사실상 익명과 구분이 안 되는 회귀 버그가 된다. 내부 서브 성분(volumeScore·ageScore)은 0~1로 정규화하되 최종 출력만 기존 계약(0~100)에 맞췄다 — "0~1 정규화"라는 지시의 취지(정규화된 성분 조합)는 살리고, 이미 라이브인 저장 계약은 깨지 않는 절충.
   - **V6 마이그레이션은 뷰를 재작성하지 않고, 인덱스 + 코멘트만 추가** — 오케스트레이터는 "뷰를 재생성하는 V6"를 명시했지만, 위에서 확인했듯 뷰의 가중 SQL 자체(`tf.f` 서브쿼리)는 이미 정답이라 다시 쓸 이유가 없다(뷰 시맨틱을 깨지 말라는 지시와도 정합 — 손대지 않는 게 가장 안전하게 지키는 방법). 대신 V6(`V6__place_report_signals_trust_weight.sql`, 예약 번호는 그대로 사용)에는 **진짜 필요했던 것**: `TrustScoreService`의 `countByUserId` 쿼리가 전체스캔하지 않도록 `idx_reports_user`(부분 인덱스, `user_id IS NOT NULL` — 아직 익명이 다수라 크기 절약)와 `idx_reviews_user`(전체 인덱스, user_id NOT NULL 컬럼)를 추가하고, 뷰에 `COMMENT ON VIEW`로 "trust_score 산출은 P2 TrustScoreService가 담당한다"는 감사 기록만 남겼다(CREATE OR REPLACE로 동일 정의를 재선언하는 no-op은 하지 않음 — 아무 효과 없이 리스크만 지는 행위). **명시적 이탈이라 최종 보고에서 오케스트레이터에게 다시 플래그함.**
-  - **재계산 시점 = 온디맨드(배치 아님)** — 유저가 제보/후기를 저장하는 그 트랜잭션 안에서 `TrustScoreService.recalculate(userId)`를 호출(카운트 쿼리 2회 + 저장 1회). 배치(EventBridge 등 전체 유저 주기 재계산)를 검토했으나 ① UGC가 레이트리밋으로 저빈도라 배치가 얻을 성능 이득이 없고 ② 이 프로젝트의 스케줄러 인프라는 P3 공공데이터 동기화용으로만 계획돼 있어 trust_score 하나 때문에 새 인프라를 얹는 건 과설계(CLAUDE.md §0.2)다. 온디맨드는 뷰가 조회 시점에 최신값을 읽으므로 "방금 로그인해 첫 제보를 남긴 유저"도 다음 제보부터 즉시 신뢰도가 반영돼 배치 지연이 없다는 제품 경험 이점도 있다.
-  - **로그인 제보의 userId는 "익명으로 표시" 선택과 무관하게 항상 기록** — CLAUDE.md §6 MVP 화면표는 "제보하기: … 익명 여부(로그인 시 신뢰도 반영)"라고 명시한다. 즉 로그인 유저가 UI에서 "익명으로 제보"를 선택해도(닉네임을 안 보여줘도) 신뢰도 가중은 그대로 반영돼야 한다는 뜻으로 읽었다 — `is_anonymous`는 순수 표시 여부, `user_id`는 별개로 항상 기록. 비로그인(토큰 없음)만 진짜 `user_id=NULL`.
+  - **재계산 시점 = 온디맨드(배치 아님)** — 유저가 제보/후기를 저장하는 그 트랜잭션 안에서 `TrustScoreService.recalculate(userId)`를 호출(카운트 쿼리 2회 + 저장 1회). 배치(EventBridge 등 전체 유저 주기 재계산)를 검토했으나 ① UGC가 레이트리밋으로 저빈도라 배치가 얻을 성능 이득이 없고 ② 이 프로젝트의 스케줄러 인프라는 P3 공공데이터 동기화용으로만 계획돼 있어 trust_score 하나 때문에 새 인프라를 얹는 건 과설계(docs/SPEC.md §0.2)다. 온디맨드는 뷰가 조회 시점에 최신값을 읽으므로 "방금 로그인해 첫 제보를 남긴 유저"도 다음 제보부터 즉시 신뢰도가 반영돼 배치 지연이 없다는 제품 경험 이점도 있다.
+  - **로그인 제보의 userId는 "익명으로 표시" 선택과 무관하게 항상 기록** — docs/SPEC.md §6 MVP 화면표는 "제보하기: … 익명 여부(로그인 시 신뢰도 반영)"라고 명시한다. 즉 로그인 유저가 UI에서 "익명으로 제보"를 선택해도(닉네임을 안 보여줘도) 신뢰도 가중은 그대로 반영돼야 한다는 뜻으로 읽었다 — `is_anonymous`는 순수 표시 여부, `user_id`는 별개로 항상 기록. 비로그인(토큰 없음)만 진짜 `user_id=NULL`.
   - **`POST /reports`는 여전히 permitAll, 인증은 선택** — SecurityConfig를 안 건드렸다(레이트리밋 XFF 신뢰경계 등 기존 계약 무회귀). `JwtAuthenticationFilter`가 모든 요청에서 Bearer 토큰이 있으면 SecurityContext를 채우는(permitAll 여부와 무관) 기존 동작을 그대로 활용해 `@AuthenticationPrincipal`을 nullable로 받았다 — 토큰이 없거나 무효면 null(기존 완전 익명 동작과 100% 동일, 회귀 없음), 있으면 principal이 채워진다.
 - 검증: `TrustScoreTest`(7, 신규유저=0·활동+연령 충분=high·연령0이면 활동무관 억제="곱 결합" 핵심 증명·연령만 있고 활동0이면 0·후기 2배 가중 등가성·범위 방어·단조성) + `TrustScoreServiceTest`(3, 카운트→공식→저장·유저없음 방어·신규유저 0) + `ReportServiceTest`(4, 비로그인 무-userId·로그인 userId기록+재계산 트리거·"익명표시"여도 신뢰도 유지·404시 재계산 안 함, 신규) + `ReportControllerTest`(+3: 비로그인 principal null 확인, Authorization 헤더 있으면 principal 전달, 무효토큰이면 permitAll이라 401 아니라 익명 폴백 — ReviewControllerTest의 `@Import(SecurityConfig+ServletWebSecurityAutoConfiguration+SecurityFilterAutoConfiguration)` 패턴, TS-015 재사용) + `ReviewServiceTest`(+2: 후기 작성 시 재계산 호출·404시 미호출). `./gradlew clean check` 로컬 **175건 green, 실패/에러 0**(skip 34건=Testcontainers IT, colima 이슈로 로컬 skip — TS-009 패턴, CI가 최종 게이트). 신규/변경 스위트만 별도 확인: TrustScoreTest 7/7·TrustScoreServiceTest 3/3·ReportServiceTest 4/4·ReportControllerTest 9/9·ReviewServiceTest 7/7 전부 green.
 - 산출물: 백엔드 `domain/auth/TrustScore.java`(신규, 순수 함수)·`domain/auth/TrustScoreService.java`(신규, 온디맨드 재계산)·`domain/auth/User.java`(`updateTrustScore` 추가)·`domain/report/Report.java`(`of(userId,...)` 팩토리 추가, `anonymous()`는 위임 유지)·`domain/report/ReportController.java`(`@AuthenticationPrincipal` 선택적 추가)·`domain/report/ReportService.java`(principal 파라미터, trust 재계산 호출)·`domain/report/ReportRepository.java`(`countByUserId`)·`domain/review/ReviewRepository.java`(`countByUserId`)·`domain/review/ReviewService.java`(trust 재계산 호출). 테스트 `TrustScoreTest`·`TrustScoreServiceTest`·`ReportServiceTest`(신규 3파일) + `ReportControllerTest`·`ReviewServiceTest`(기존 갱신). 마이그레이션 `V6__place_report_signals_trust_weight.sql`(인덱스 2개 + 뷰 코멘트, 뷰 SELECT 로직은 무변경).
 - 다음: 공부공간 데이터 적재(§⑤) · AI 한줄 요약(Claude) · GPS 방문 인증(verified, §④ 백로그) — verified가 붙으면 trust_score의 volumeScore에 "검증된 활동만" 가중치를 더 얹는 확장점으로 설계해 뒀다(공식이 이미 활동량 기반이라 additive 확장 가능).
 ### 2026-07-09 — S3 사진 업로드 presign (P2): 제보/후기 사진 슬롯 풀스택
-- 한 일: HANDOFF·CLAUDE.md §7·§9가 지목한 **사진 업로드**를 풀스택으로 완성. 백엔드 `POST /photos/presign`(S3Presigner로 presigned PUT URL 발급, 파일은 서버를 거치지 않음) + 인프라(S3 버킷·CORS·태스크롤 IAM) + 프론트(제보/후기 폼에 실 카메라 슬롯, presign→S3 직접 PUT→objectUrl을 제출 바디에 첨부). `reports.photo_url`·`reviews.photos_json`은 V2에 이미 있는 컬럼이라 **신규 Flyway 불필요** — `Report` 엔티티에 photoUrl 매핑만 추가했고, `Review`/`ReviewCreateRequest`는 review 브랜치(PR #31)가 이미 `photos: string[]` 슬롯을 준비해둬서 백엔드 변경이 필요 없었다(presign 결과를 그 배열에 얹기만 하면 됨).
+- 한 일: HANDOFF·docs/SPEC.md §7·§9가 지목한 **사진 업로드**를 풀스택으로 완성. 백엔드 `POST /photos/presign`(S3Presigner로 presigned PUT URL 발급, 파일은 서버를 거치지 않음) + 인프라(S3 버킷·CORS·태스크롤 IAM) + 프론트(제보/후기 폼에 실 카메라 슬롯, presign→S3 직접 PUT→objectUrl을 제출 바디에 첨부). `reports.photo_url`·`reviews.photos_json`은 V2에 이미 있는 컬럼이라 **신규 Flyway 불필요** — `Report` 엔티티에 photoUrl 매핑만 추가했고, `Review`/`ReviewCreateRequest`는 review 브랜치(PR #31)가 이미 `photos: string[]` 슬롯을 준비해둬서 백엔드 변경이 필요 없었다(presign 결과를 그 배열에 얹기만 하면 됨).
 - 결정 & 이유(why):
   - **AWS SDK v2 `software.amazon.awssdk:s3` 직접 사용, spring-cloud-aws 배제**: 필요한 건 `S3Presigner` 하나뿐이라(파일을 서버가 다루지 않음) spring-cloud-aws의 자동구성 전체(S3Client·리소스로더 등)는 과설계. BOM `software.amazon.awssdk:bom:2.46.6`(2026-07 시점 최신 안정 라인, 웹 확인)으로 버전만 고정.
   - **정적 액세스키 없이 IAM 롤로만**: `S3Presigner`는 자격증명을 지정하지 않고 SDK 기본 체인에 맡긴다 — ECS에서는 태스크 롤(`iam.tf` 신규 `ecs_task_s3_photos`, 버킷 ARN 한정 PutObject/GetObject만), 로컬은 `~/.aws`. 규칙 D(비밀은 SSM/env로만, 코드에 안 둠)와 정합 — 애초에 발급할 "정적 키"가 없다.
@@ -500,21 +500,21 @@
 - 검증: 백엔드 신규 유닛 21건 로컬 green — `PhotoServiceTest`(9, 정상 발급·기본 purpose·review 인증/미인증·화이트리스트 밖 400·8MB 초과 400·잘못된 purpose 400·버킷 미설정 IllegalStateException·키 유일성 — **실 AWS 자격증명·네트워크 없이 정적 자격증명으로 presign 로컬 서명만 검증**), `PhotoControllerTest`(7, 200·400×2·429·미인증 authenticated=false 전파·Bearer 인증 authenticated=true 전파·서비스발 401 전파, `ReviewControllerTest`가 확립한 `ServletWebSecurityAutoConfiguration`+`SecurityFilterAutoConfiguration` Import 패턴 재사용), `PhotoPresignRateLimiterTest`(5, ReportRateLimiterTest와 동형). `ReportControllerTest`·`ReportFlowIT`에 photoUrl 왕복·검증 테스트 추가(https 아니면 400, 없으면 선택 필드로 통과). 전체 `./gradlew clean check` 로컬 green(신규 실패 0, IT는 colima로 skip — TS-009). `terraform validate` green(`aws_s3_bucket_lifecycle_configuration`에 `filter {}` 명시 필요 — 최신 프로바이더가 filter/prefix 없는 규칙을 경고). 프론트 `typecheck`·`lint`·`build` 전부 green(`/api/photos/presign` 라우트 등록 확인).
 - 산출물: 백엔드 `domain/photo/`(PhotoPurpose·PhotoService·PhotoPresignRateLimiter·PhotoController + dto/{PhotoPresignRequest·PhotoPresignResponse})·`global/config/S3Config`(S3Presigner 빈)·`Report.java`(photoUrl 매핑, 5-인자 팩토리 오버로드로 기존 4-인자 호출부 무회귀)·`ReportCreateRequest`/`ReportResponse`/`ReportService`(photoUrl 왕복)·`build.gradle`(AWS SDK BOM+s3)·`application.yml`(aws.s3.bucket/region). 인프라 `infra/terraform/s3.tf`(신규 — 버킷·퍼블릭차단·CORS·라이프사이클)·`iam.tf`(ecs_task_s3_photos 정책)·`ecs.tf`(S3_BUCKET_NAME·AWS_REGION env, 문서화용)·`outputs.tf`(s3_photos_bucket). 프론트 `types/photo.ts`(신규)·`types/place.ts`(Report/ReportCreatePayload photoUrl)·`lib/api.ts`(presignPhoto·uploadPhotoToS3)·`lib/backend.ts`(proxyPhotoPresign — report 익명 XFF 보존 + review는 쿠키 있으면 Bearer 첨부, 없어도 차단하지 않음)·`lib/hooks.ts`(usePhotoUpload 공용 훅)·`app/api/photos/presign/route.ts`(신규)·`app/(shell)/report/page.tsx`(실 카메라 슬롯으로 교체)·`components/place/ReviewsSection.tsx`(후기 폼에 사진 슬롯 추가)·`components/place/PlaceDetailOverlay.tsx`(최근 제보 사진 썸네일).
 - 다음(배포 절차, orchestrator가 실행): ① `terraform apply`(S3 버킷+CORS+라이프사이클, IAM 정책 — plan 요약은 PR 보고 참고, 비용 거의 0). ② 라이브 태스크데프에 `S3_BUCKET_NAME`(=terraform output `s3_photos_bucket`)·`AWS_REGION=ap-northeast-2` env 추가한 새 rev 등록 + `update-service --force-new-deployment`(proxy-secret rev13 패턴). ③ 실측: 제보 화면에서 사진 촬영→업로드→최근 제보 썸네일 확인, 후기 폼에서도 동일. ④ 이후: presigned GET 또는 CloudFront로 실제 뷰잉 열기(지금은 objectUrl 저장만, 비공개 버킷이라 직접 접근은 403) — HANDOFF 다음 조각.
-- 관련: 브랜치 `feat/photo-presign-p2`, `domain/photo/*`, `s3.tf`, CLAUDE.md §7(Storage)·§9(POST /photos/presign), TS-008(레이트리미터 설계 계승).
+- 관련: 브랜치 `feat/photo-presign-p2`, `domain/photo/*`, `s3.tf`, docs/SPEC.md §7(Storage)·§9(POST /photos/presign), TS-008(레이트리미터 설계 계승).
 ### 2026-07-10 — AI 한줄 요약 (P3, 곁다리, 브랜치 `feat/ai-summary-p3`, ADR-0010)
-- 한 일: CLAUDE.md §3/§6이 지정한 마지막 P3 조각 — 장소 상세(`GET /places/{id}`)에 "최근 제보 기준" 한국어 한 문장 AI 요약을 additive로 추가. `domain/ai`(신규 패키지)에 `OpenRouterClient`(OpenAI 호환 Chat Completions, WeatherClient 회복탄력 패턴 그대로)와 `AiSummaryService`(유효 제보 조회→프롬프트 조립→호출→Redis 캐시)를 만들고, `PlaceSearchService.getById`에서만 호출해 목록/반경/bounds 경로는 건드리지 않았다.
-- 결정 & 이유(why): **프로바이더 = OpenRouter(Anthropic 아님)** — 이 환경에 Anthropic API 키가 없어(`claude-api` 스킬의 인증 해석 순서를 전부 확인했으나 어느 것도 사용 가능하지 않음) CLAUDE.md §8 "Claude API 기본"에서 명시적으로 이탈했다(§0-B 프로토콜에 따라 여기·ADR-0010에 기록). 사용자가 대화 중 명시 허용한 멀티프로바이더 무료/저가 폴백 키체인(`.local/ai.env`) 중 `SSUAI_OPENROUTER_API_KEY`를 프라이머리로 썼다. 상세 근거·검토한 대안(오토라우터·유료 기본모델·제보없음 정적문구 캐시 등)은 전부 **ADR-0010**에 정리 — 이 항목은 요약만 남긴다.
+- 한 일: docs/SPEC.md §3/§6이 지정한 마지막 P3 조각 — 장소 상세(`GET /places/{id}`)에 "최근 제보 기준" 한국어 한 문장 AI 요약을 additive로 추가. `domain/ai`(신규 패키지)에 `OpenRouterClient`(OpenAI 호환 Chat Completions, WeatherClient 회복탄력 패턴 그대로)와 `AiSummaryService`(유효 제보 조회→프롬프트 조립→호출→Redis 캐시)를 만들고, `PlaceSearchService.getById`에서만 호출해 목록/반경/bounds 경로는 건드리지 않았다.
+- 결정 & 이유(why): **프로바이더 = OpenRouter(Anthropic 아님)** — 이 환경에 Anthropic API 키가 없어(`claude-api` 스킬의 인증 해석 순서를 전부 확인했으나 어느 것도 사용 가능하지 않음) docs/SPEC.md §8 "Claude API 기본"에서 명시적으로 이탈했다(§0-B 프로토콜에 따라 여기·ADR-0010에 기록). 사용자가 대화 중 명시 허용한 멀티프로바이더 무료/저가 폴백 키체인(`.local/ai.env`) 중 `SSUAI_OPENROUTER_API_KEY`를 프라이머리로 썼다. 상세 근거·검토한 대안(오토라우터·유료 기본모델·제보없음 정적문구 캐시 등)은 전부 **ADR-0010**에 정리 — 이 항목은 요약만 남긴다.
   - **모델은 설정값(`ai.openrouter.model`), 하드코딩 아님** — 기본값 `qwen/qwen3-next-80b-a3b-instruct:free`. 2026-07 웹검색으로 Qwen3 계열이 119개 언어를 지원하며 한중일 성능이 특히 우수하다는 근거를 확인했고(ADR-0010 References), OpenRouter 무료 티어(20 req/min)로 이 프로젝트 트래픽(요청당 1회, 캐시로 재사용)엔 충분하다. 무료 모델 라인업이 주기적으로 회전하는 리스크는 "설정만 바꾸면 교체 가능"으로 흡수했다.
   - **캐시 = Redis "aiSummary"(장소별, TTL 3h)** — WeatherClient/RedisCacheConfig의 기존 패턴(TS-011 타입 바인드 직렬화·TS-012 캐시히트 500 재발 방지)을 그대로 재사용해 `JacksonJsonRedisSerializer<String>` + `disableCachingNullValues`로 구성했다. TTL은 지시 범위(1~6h)의 중간값 — 너무 짧으면 비용 방어 효과가 작고, 너무 길면 새 제보가 와도 요약이 안 바뀐다.
   - **유효 제보 0건이면 AI를 호출하지 않는다(정적 문구 대신 null)** — 지시사항이 허용한 두 대안 중 "생성 안 함"을 택했다: 상세 화면이 이미 "최근 제보 없음"을 별도로 보여주고, 정적 문구를 캐시했다면 그 TTL 동안 새 제보가 들어와도 갱신이 안 됐을 것이다. `AiSummaryService.summarize`가 리포지토리 조회만 하고 empty를 반환하면(캐시 미적용, unless SpEL) 다음 호출에서 곧바로 재평가된다.
   - **graceful degradation은 새로 만들 필요 없이 WeatherClient 패턴을 복제** — `OpenRouterClient.complete`가 키 미설정·네트워크 오류·타임아웃(연결 1.5s·읽기 2.5s)·5xx·빈 응답·JSON 파싱 실패를 전부 여기서 삼켜 `Optional.empty()`로 반환한다. `PlaceSearchService.getById`는 `.orElse(null)`로 단순 위임 — AI가 죽어도 상세 API는 항상 200이다.
   - **`PlaceResponse`에 4-인자 오버로드(aiSummary 인자)만 신설, 기존 3-인자는 위임 유지** — ADR-0009가 세운 "레거시 오버로드 위임" 패턴 재사용. `RecommendationService`·`PlaceSearchService.searchRadius/searchBounds`는 기존 3-인자 호출부를 전혀 안 건드려 무회귀.
   - **입력 프롬프트는 새 쿼리를 만들지 않고 기존 `findTop20ByPlaceIdAndExpiresAtAfterOrderByCreatedAtDesc` 재사용** — "최근 제보" 섹션과 같은 소스. 타입별 최신 1건만 남기고(중복 제거) 최신순 상한 8종만 담아 토큰·비용을 방어한다.
-  - **시스템 프롬프트에 공포 조장 금지 규칙을 명시 텍스트로 강제**(CLAUDE.md §0-6) — "위험!" 대신 "최근 침수 제보 있음, 우회 권장" 식 표현을 지시하고, 단위테스트로 프롬프트 문자열을 못 박았다.
+  - **시스템 프롬프트에 공포 조장 금지 규칙을 명시 텍스트로 강제**(docs/SPEC.md §0-6) — "위험!" 대신 "최근 침수 제보 있음, 우회 권장" 식 표현을 지시하고, 단위테스트로 프롬프트 문자열을 못 박았다.
 - 검증: 백엔드 신규 유닛 24건 로컬 green — `OpenRouterClientTest`(8, MockRestServiceServer로 요청 바디/헤더(Authorization Bearer·model·messages 역할·max_tokens)·응답 파싱 계약 검증(TS-004 교훈) + 빈 choices·blank content·5xx·429·malformed JSON·키 없음·키 blank 전부 empty), `AiSummaryServiceTest`(6, 제보없음→AI미호출·제보있음→위임·클라이언트실패→empty전파·공포조장금지 프롬프트 검증·동일타입 중복제거(최신값 유지)·8종 상한), `AiSummaryCacheProxyTest`(2, WeatherCacheProxyTest와 동형 — present 결과 캐시+2회차 리포지토리/클라이언트 재호출 없음, empty 결과는 캐시 안 됨). `PlaceSearchServiceTest`에 6건 추가(getById 1회 호출+응답반영·AI실패시 null폴백·searchRadius/searchBounds/searchNearest 3경로 모두 AI 미호출 — "상세 전용" 계약을 명시적으로 못 박음). `./gradlew clean check` 로컬 **271건 total, 실패/에러 0**(skip 43=Testcontainers IT, colima 이슈로 로컬 skip — TS-009 패턴, CI가 최종 게이트). `terraform validate`·`terraform fmt -check` green(ssm.tf·variables.tf·ecs.tf 신규 리소스/변수).
 - 산출물: 백엔드 `domain/ai/`(OpenRouterClient·AiSummaryService, 신규)·`domain/place/dto/PlaceResponse`(aiSummary 필드 + 4-인자 오버로드)·`domain/place/PlaceSearchService`(AiSummaryService 주입, getById에서만 호출)·`global/config/RedisCacheConfig`(aiSummary 캐시 신설)·`application.yml`(ai.openrouter.api-key/base-url/model). 인프라 `infra/terraform/ssm.tf`(openrouter_api_key SecureString)·`variables.tf`(openrouter_api_key 변수)·`ecs.tf`(OPENROUTER_API_KEY secret 항목) — **apply 안 함, 스캐폴드만**. 테스트 `OpenRouterClientTest`·`AiSummaryServiceTest`·`AiSummaryCacheProxyTest`(신규 3파일) + `PlaceSearchServiceTest`(갱신). 문서 `docs/adr/0010-ai-summary-openrouter-provider.md`(신규).
 - 다음(배포 절차, orchestrator가 실행): ① SSM 파라미터 `/geuneul/openrouter_api_key`(SecureString) 생성 — `terraform apply`(tfvars에 `openrouter_api_key` 값 추가 필요, `.local/ai.env`의 `SSUAI_OPENROUTER_API_KEY` 값 사용). ② 라이브 태스크데프에 `OPENROUTER_API_KEY` secret 항목이 반영된 새 rev 등록(`describe`→env/secret 추가→`register`→`update-service --force-new-deployment`, proxy-secret rev13 패턴) — task role/execution role IAM은 `/geuneul/*` 와일드카드라 무변경. ③ 실측: 제보가 있는 장소 상세에서 `aiSummary` 필드 확인, 제보 없는 장소는 null 확인, 캐시 히트(같은 장소 재조회 시 지연 감소) 확인.
-- 관련: 브랜치 `feat/ai-summary-p3`, `domain/ai/*`, ADR-0010, CLAUDE.md §0-B(의사결정 프로토콜)·§0-8/9(AI는 곁다리)·§3/§6(AI 요약 MVP)·§8(AI 스택), ADR-0009(같은 "요청당 1회·graceful degradation·레거시 오버로드 위임" 패턴 재사용), TS-011/TS-012(캐시 직렬화 하드닝 계승).
+- 관련: 브랜치 `feat/ai-summary-p3`, `domain/ai/*`, ADR-0010, docs/SPEC.md §0-B(의사결정 프로토콜)·§0-8/9(AI는 곁다리)·§3/§6(AI 요약 MVP)·§8(AI 스택), ADR-0009(같은 "요청당 1회·graceful degradation·레거시 오버로드 위임" 패턴 재사용), TS-011/TS-012(캐시 직렬화 하드닝 계승).
 
 ### 2026-07-10 — 공공데이터 주기 동기화 무인화 (P3, EventBridge Scheduler → ECS RunTask, 브랜치 `feat/scheduled-sync-p3`)
 - 한 일: 로드맵 P3의 마지막 조각 "공공데이터 주기 동기화 스케줄(멱등 upsert 재실행 + 스냅샷 소실 행 soft-delete + 오픈API serviceKey 다운로드 무인화)"을 마무리했다. 멱등 upsert·soft-delete diff(`deactivateStale`)는 ADR-0002/0006에서 이미 완성돼 있어, 이번 범위는 그 파이프라인을 **사람 없이** 정기 실행하는 오케스트레이션 3가지: ① EventBridge Scheduler(월1회)→ECS RunTask 배선, ② `library` 소스가 무인 환경에서도 다운로드까지 자족하도록 `DATA_GO_KR_SERVICE_KEY`를 상시 SSM/ECS secret으로 승격, ③ 스케줄 중복·수동 실행 동시성으로부터 인제스천을 보호하는 앱 레벨 가드.
@@ -522,15 +522,15 @@
   - **스케줄러→ECS 연결에 Terraform `aws_scheduler_schedule`의 네이티브 `ecs_parameters` 블록 대신 Universal Target(`arn:aws:scheduler:::aws-sdk:ecs:runTask`)을 썼다.** 웹 검색(2026-07)으로 `ecs_parameters`가 container overrides를 지원하지 않는다는 걸 확인했다(hashicorp/terraform-provider-aws#34057, 2023년 제기 후 여전히 오픈) — `--ingest.source=library` 같은 커맨드 오버라이드를 실을 방법이 없어, AWS 공식 "Universal Target"(2023 출시, SDK 액션을 ARN으로 직접 호출)으로 전환했다. `input` JSON은 ECS RunTask API 그대로(camelCase)라 `prod-ingest.sh`의 `aws ecs run-task --overrides`와 같은 셰이프 — 두 실행 경로(수동·무인)가 같은 정신모델을 공유한다.
   - **스케줄 대상은 `library` 하나만.** CSV 소스(쉼터/화장실)는 스냅샷이 GitHub Release 고정 자산이라 "주기 재동기화"의 의미가 약함(멱등이라 안전하지만 재실행이 무의미). `library`(전국도서관표준데이터, ADR-0006)는 오픈API 원본 자체가 갱신되고 파일/URL 없이 페이지네이션으로 전량 자체 수집 — P3 문구 "다운로드까지 무인화"가 정확히 이 소스를 가리킨다.
   - **다운로드 무인화의 실체 = `DATA_GO_KR_SERVICE_KEY`를 다른 시크릿(kma/kakao 등)과 동일 패턴으로 SSM SecureString + ECS task def secrets에 상시 배선.** 인제스천 로직 자체는 ADR-0006에서 이미 완성돼 있었고, 진짜 빠진 건 "무인 환경에도 키가 있는가" 하나였다(지금까지는 `prod-ingest.sh`처럼 사람이 매번 셸 환경변수로 넘겨야 했음).
-  - **동시 실행 방지는 새 인프라(SQS 락, DynamoDB 조건부쓰기) 대신 Postgres 세션 수준 advisory lock(`IngestBatchLock`, `pg_try_advisory_lock`).** 월1회 저빈도 스케줄에 새 인프라를 얹는 건 CLAUDE.md §0.2 과설계 금지 위반 — 이미 있는 RDS로 논블로킹 상호배제를 얻는다. 락을 못 얻으면 "실패"가 아니라 "건너뜀"으로 처리해 exitCode=0(알림 노이즈 방지, 다음 스케줄이 사실상 재시도). `IngestionRunner.run()`을 dispatch 로직 분리 + `batchLock.runExclusive(...)` 감싸기로 리팩터링해서, **library뿐 아니라 모든 `--ingest.source=` 실행(CSV 포함)**이 이 가드를 통과하게 했다 — 나중에 스케줄 대상을 늘려도 재작업이 필요 없다.
+  - **동시 실행 방지는 새 인프라(SQS 락, DynamoDB 조건부쓰기) 대신 Postgres 세션 수준 advisory lock(`IngestBatchLock`, `pg_try_advisory_lock`).** 월1회 저빈도 스케줄에 새 인프라를 얹는 건 docs/SPEC.md §0.2 과설계 금지 위반 — 이미 있는 RDS로 논블로킹 상호배제를 얻는다. 락을 못 얻으면 "실패"가 아니라 "건너뜀"으로 처리해 exitCode=0(알림 노이즈 방지, 다음 스케줄이 사실상 재시도). `IngestionRunner.run()`을 dispatch 로직 분리 + `batchLock.runExclusive(...)` 감싸기로 리팩터링해서, **library뿐 아니라 모든 `--ingest.source=` 실행(CSV 포함)**이 이 가드를 통과하게 했다 — 나중에 스케줄 대상을 늘려도 재작업이 필요 없다.
   - **HikariCP + advisory lock 함정을 구현 전에 미리 잡았다(TS-019).** `JdbcTemplate`처럼 매번 커넥션을 열고-닫으면, 풀이 물리 커넥션(=Postgres 세션)을 재사용하는 한 lock/unlock이 다른 물리 커넥션으로 갈 수 있어 락이 샌다. `IngestBatchLock`은 `DataSource.getConnection()`으로 얻은 **단 하나의 Connection을 lock부터 unlock까지 계속 물고 있다가** close한다.
   - **`terraform apply`·스케줄 활성화는 이번 스코프에서 실행하지 않는다(오케스트레이터 지시).** `var.ingest_schedule_enabled`(기본 false)로 `aws_scheduler_schedule.state`를 DISABLED로 고정 — 코드 레벨에서 "검토 없이 적용해도 자동 실행 안 됨"을 강제했다.
 - 검증: 신규 `IngestBatchLockTest`(4건, Mockito — 락 획득 시 action 실행+unlock, 미획득 시 action 미실행+unlock 미호출, action 예외 시에도 unlock은 수행+예외 전파, SQLException은 IllegalStateException으로 래핑) 전부 로컬 green. 신규 `IngestBatchLockIT`(2건, 실 PostGIS Testcontainers — ① 두 스레드가 동시에 락을 다투면 하나만 이기고 하나는 논블로킹으로 즉시 false, ② 락 해제 후 재시도는 다시 성공/누수 없음)는 로컬 colima 이슈로 skip(TS-009 패턴), CI에서 최종 검증. `IngestionRunner`는 `dispatch()` 메서드로 분기 로직을 분리하고 `run()`을 `IngestBatchLock.runExclusive(Callable<Void>)`로 감쌌다(체크 예외 IOException을 그대로 흘려보내기 위해 `run()` throws 절을 `IOException`→`Exception`으로 넓히고, catch도 RuntimeException/체크예외 구분 없이 하나로 합쳤다 — 기존 exit-after 코드 경로 동작은 그대로 보존). `./gradlew clean check` 로컬 **256건 실행, 실패/에러 0**(skip 45건=Testcontainers IT, CI가 최종 게이트). `terraform validate`·`terraform fmt -check` 모두 green(provider v5.100.0으로 init, apply는 미실행).
 - 산출물: 백엔드 `domain/ingest/IngestBatchLock.java`(신규, advisory lock 래퍼)·`domain/ingest/IngestionRunner.java`(dispatch 분리 + 락 배선). 테스트 `domain/ingest/IngestBatchLockTest.java`(신규, Mockito 단위)·`domain/ingest/IngestBatchLockIT.java`(신규, 실 PostGIS 동시성). 인프라 `infra/terraform/scheduler.tf`(신규 — EventBridge Scheduler 실행 롤+정책+스케줄 본체, Universal Target)·`variables.tf`(`datago_service_key`·`ingest_schedule_enabled`)·`ssm.tf`(`datago_service_key` SecureString)·`ecs.tf`(task def secrets에 `DATA_GO_KR_SERVICE_KEY` 추가, ignore_changes라 다음 수동 rev 등록 때 실제 반영)·`outputs.tf`(`ingest_schedule_name`·`ingest_schedule_state`). 문서 `docs/adr/0011-scheduled-public-data-sync.md`(신규)·`docs/adr/README.md`(테이블 추가)·`docs/adr/0006-study-space-coverage-expansion.md`(착수순서 §7 업데이트)·`TROUBLESHOOTING.md`(TS-019).
 - 다음(오케스트레이터가 검토 후 실행 — 아래 최종 보고의 "terraform plan 요약/apply 명령/추가 SSM 파라미터명" 참고): ① `.local/datago.env`의 `DATA_GO_KR_SERVICE_KEY` 값을 `TF_VAR_datago_service_key`로 `terraform apply`. ② 라이브 태스크데프에 `DATA_GO_KR_SERVICE_KEY` secret 추가한 새 rev 등록 + `update-service --force-new-deployment`(container_definitions가 ignore_changes라 apply만으론 라이브에 안 실림, S3_BUCKET_NAME 때와 동일 절차). ③ 스케줄 실측 검증(`aws scheduler get-schedule` + 1회 수동 트리거 또는 임시 즉시-cron으로 실행해 RunTask가 실제로 도는지 확인) — Universal Target의 `input` JSON은 Terraform이 타입 체크를 못 해주는 자유 형식이라 여기서 실측이 특히 중요. ④ 검증되면 `var.ingest_schedule_enabled=true`로 재적용해 월1회 스케줄 활성화.
-- 관련: 브랜치 `feat/scheduled-sync-p3`, ADR-0011, TS-019, CLAUDE.md 로드맵 P3(마지막 조각 완료), ADR-0002(멱등)·ADR-0006(soft-delete diff·오픈API 다운로드 경로).
+- 관련: 브랜치 `feat/scheduled-sync-p3`, ADR-0011, TS-019, docs/SPEC.md 로드맵 P3(마지막 조각 완료), ADR-0002(멱등)·ADR-0006(soft-delete diff·오픈API 다운로드 경로).
 ### 2026-07-10 — P4 간판 성능 실증: k6 부하테스트 + EXPLAIN 인덱스 튜닝 (브랜치 `feat/k6-load-explain-p4`, ADR-0012)
-- 한 일: CLAUDE.md §10 P4 첫 산출물 "k6 부하테스트 + EXPLAIN 인덱스 튜닝"을 완성. **간판(PostGIS 반경/kNN/bounds 대용량 지리검색)이 GiST 인덱스로 실제로 빠른지를 부하 수치 + 실행계획으로 실증**했다. 로컬 colima에 docker-compose PostGIS를 직접 기동(TS-009의 Testcontainers 하네스 이슈와 별개로, 부하·EXPLAIN은 실 PostGIS에 직접 실측), 합성 시드로 places 30만 + reports 21만(유효 1만·만료 20만)을 만들어 (1) 세 공간쿼리 + 스코어드/추천 쿼리의 EXPLAIN ANALYZE로 인덱스 사용 확증, (2) k6 4엔드포인트 부하로 p95/p99·처리량 실측, (3) 튜닝 대상(만료 제보 누적)을 Flyway V8 인덱스 하나로 좁혀 before/after를 측정했다. 신규 `perf/`(k6·seed·explain·RESULTS) + `docs/adr/0010` + V8. **백엔드 코드(엔티티/쿼리/서비스)는 변경 없음** — 튜닝은 인덱스(V8)와 스크립트/문서뿐이라 무회귀.
+- 한 일: docs/SPEC.md §10 P4 첫 산출물 "k6 부하테스트 + EXPLAIN 인덱스 튜닝"을 완성. **간판(PostGIS 반경/kNN/bounds 대용량 지리검색)이 GiST 인덱스로 실제로 빠른지를 부하 수치 + 실행계획으로 실증**했다. 로컬 colima에 docker-compose PostGIS를 직접 기동(TS-009의 Testcontainers 하네스 이슈와 별개로, 부하·EXPLAIN은 실 PostGIS에 직접 실측), 합성 시드로 places 30만 + reports 21만(유효 1만·만료 20만)을 만들어 (1) 세 공간쿼리 + 스코어드/추천 쿼리의 EXPLAIN ANALYZE로 인덱스 사용 확증, (2) k6 4엔드포인트 부하로 p95/p99·처리량 실측, (3) 튜닝 대상(만료 제보 누적)을 Flyway V8 인덱스 하나로 좁혀 before/after를 측정했다. 신규 `perf/`(k6·seed·explain·RESULTS) + `docs/adr/0010` + V8. **백엔드 코드(엔티티/쿼리/서비스)는 변경 없음** — 튜닝은 인덱스(V8)와 스크립트/문서뿐이라 무회귀.
 - 결정 & 이유(why):
   - **공간 인덱스는 추가하지 않았다(EXPLAIN이 이미 최적이라 확인)** — 반경은 `Bitmap Index Scan on idx_places_geom_geography`(geography GiST, ADR-0001), kNN은 `Index Scan using idx_places_geom_geography` + KNN 정렬(actual ~30ms, 웹 검색으로 재확인한 "인덱스 시 `<->` 최대 ~1800배" 특성과 정합 — Crunchy Data/PostGIS 워크숍), bounds는 **선택적 박스**에서 `idx_places_geom`(geometry GiST) 실측 1.7ms. "없는 문제를 인덱스로 덮지 않는다"(§0-2·§0-4)는 원칙대로, 진짜 필요한 곳에만 인덱스를 넣었다.
   - **bounds 대박스의 Seq Scan은 버그가 아니라 조사 후 "정상"으로 판정** — 밀집 대박스(서울 도심) + `LIMIT 100` + `ORDER BY` 없음이면 플래너가 조기종료 Seq Scan을 고른다(시드 70%가 수도권이라 첫 ~9천 행에서 100건 충족). 희소/작은 박스에서는 geometry GiST를 실제로 탄다(실측). §0-4의 취지는 "전체스캔 방지"지 "무조건 인덱스"가 아니므로 힌트로 강제하지 않았다. 이 판별을 위해 sparse/dense 박스를 각각 EXPLAIN으로 대조(TS-021에 사고 기록).
@@ -541,10 +541,10 @@
 - 검증: **k6 green(exit 0)** — PEAK_VUS=4 warm run에서 kNN p95 213ms(med 85) · bounds p95 493ms(med 221) · 반경 p95 1.40s(med 515) · 추천 p95 1.24s(med 726), 실패율 0%(564/564 체크), ~8 RPS. 스모크(`--vus 1 --duration 5s`) 100% 체크 통과. EXPLAIN은 30만 데이터에 실 PostGIS로 실행해 인덱스 사용 캡처. **V8은 로컬에서 백엔드 재기동 시 Flyway가 실제 적용됨을 확인**(`flyway_schema_history` version=8 success=t, `idx_reports_expires` 생성 확인). 백엔드 코드 무변경이라 `check`는 문서/스크립트/마이그레이션만 — CI가 실 PostGIS로 V8 포함 마이그레이션 + 기존 IT를 재검증한다.
 - 산출물: `perf/k6/spatial_load.js`(부하 시나리오)·`perf/seed/seed_synthetic_places.sql`(합성 30만 시드)·`perf/explain/explain_spatial_queries.sql`(EXPLAIN)·`perf/explain/RESULTS.md`·`perf/README.md`(재현) · `backend/.../db/migration/V8__reports_expires_index.sql`(신규 인덱스) · `docs/adr/0012-k6-load-explain-index-tuning.md`(신규) · `docs/adr/README.md`(인덱스 갱신).
 - 다음: P4 나머지 — ECS Service Auto Scaling(이 부하와 묶어), 실시간 이벤트(제보 급증), 관측성(OTel/Grafana), 네이티브 CI에서 arrival-rate 정식 회귀 게이트.
-- 관련: 브랜치 `feat/k6-load-explain-p4`, ADR-0012, TS-021, `perf/*`, `V8__reports_expires_index.sql`, CLAUDE.md §0-4·§7·§10 P4·§11.
+- 관련: 브랜치 `feat/k6-load-explain-p4`, ADR-0012, TS-021, `perf/*`, `V8__reports_expires_index.sql`, docs/SPEC.md §0-4·§7·§10 P4·§11.
 
 ### 2026-07-10 — ECS Service Auto Scaling (P4 심화, 브랜치 `feat/ecs-autoscaling-p4`, ADR-0013)
-- 한 일: CLAUDE.md §7·로드맵 P4가 지정한 "오토스케일링/HPA=ECS Service Auto Scaling, k6 부하테스트와 함께 additive" 조각. 별도 파일 `infra/terraform/autoscaling.tf`에 `aws_appautoscaling_target`(ECS 서비스, min/max)과 `aws_appautoscaling_policy`(CPU target tracking)만 추가 — 기존 `ecs.tf`는 `ignore_changes` 주석 한 줄만 보강했다(과설계 금지, 다른 브랜치와 충돌 최소화 지시 준수).
+- 한 일: docs/SPEC.md §7·로드맵 P4가 지정한 "오토스케일링/HPA=ECS Service Auto Scaling, k6 부하테스트와 함께 additive" 조각. 별도 파일 `infra/terraform/autoscaling.tf`에 `aws_appautoscaling_target`(ECS 서비스, min/max)과 `aws_appautoscaling_policy`(CPU target tracking)만 추가 — 기존 `ecs.tf`는 `ignore_changes` 주석 한 줄만 보강했다(과설계 금지, 다른 브랜치와 충돌 최소화 지시 준수).
 - 결정 & 이유(why) — 상세 근거는 [ADR-0013](./docs/adr/0013-ecs-service-autoscaling.md)에 전부 기록, 요지만:
   - **지표 = CPU 이용률(`ECSServiceAverageCPUUtilization`), ALB `RequestCountPerTarget` 아님.** 2026-07 웹검색으로 AWS 공식 문서·실무 가이드를 확인한 결과 일반 웹서비스는 요청수 지표가 더 권장되는 경향이 있지만, 그늘의 ECS 앱 계층은 두 이유로 예외다: ① 태스크가 이미 0.25vCPU(`var.task_cpu=256`)로 얇아 CPU 포화가 요청수 스파이크보다 먼저 온다. ② `/places`(bounds)·`/places/{id}`(survival 조립)·`/recommendations`(2단 재랭킹)·AI 요약(외부 I/O)이 요청당 CPU 비용이 크게 달라 균질 목표값이 필요한 RequestCountPerTarget과 안 맞는다. PostGIS 반경/kNN 연산 자체는 RDS에서 도는 별개 리소스라 이 정책의 스케일 대상(ECS 앱 계층)과 무관 — 여기서 재는 CPU는 Jackson 직렬화·JTS 좌표 변환 등 앱 계층 자체의 포화다. target=60%(AWS 권장 50~70% 중간값).
   - **min=1·max=`var.autoscaling_max`(기본 3), 기본 ENABLED.** max=3이면 최악의 경우도 베이스라인(~$12/월) 대비 최대 3배(~$36/월)로 유계. ADR-0011(공공데이터 스케줄)이 기본 DISABLED였던 것과 상반된 선택인데, 위험 성격이 다르기 때문 — ADR-0011의 위험은 "사람 없이 soft-delete까지 도는 비가역·조용한 데이터 변경"이었지만 이 기능의 위험은 "유계·가역적 비용"뿐이라 같은 안전장치를 복제할 이유가 없다고 판단했다(그래도 `var.autoscaling_enabled=false`로 즉시 끌 수 있는 스위치는 동일하게 제공).
@@ -554,15 +554,15 @@
 - 검증: `terraform fmt`(자동 정렬 적용, 이후 `-check` clean) → `terraform init -backend=false`(provider v5.100.0 재사용) → `terraform validate` **Success**. 로컬에 실 tfstate·tfvars·AWS 자격증명 컨텍스트가 없어(이 워크트리는 별도 체크아웃) `terraform plan`은 의미 있는 실행이 아니라 생략(오케스트레이터 지시대로 validate/fmt 위주) — 예상 리소스·비용은 아래 최종 보고에 수기로 정리. 백엔드·Flyway 무변경(순수 인프라 스코프)이라 `./gradlew check` 재실행은 생략.
 - 산출물: `infra/terraform/autoscaling.tf`(신규)·`variables.tf`(`autoscaling_enabled`·`autoscaling_max`)·`ecs.tf`(주석 1줄)·`outputs.tf`(`autoscaling_status`). 문서 `docs/adr/0013-ecs-service-autoscaling.md`(신규)·`docs/adr/README.md`(테이블 추가).
 - 다음(오케스트레이터가 검토 후 실행): ① `terraform apply`(아래 최종 보고의 plan 요약 참고 — 신규 리소스만 add, 기존 리소스 변경 없음). ② apply 직후 CloudWatch/ECS 콘솔에서 `autoscaling_status` 아웃풋과 실제 태스크 수 확인. ③ D1(k6 부하테스트) 실행 시 CPU 60% 이상이 600초 넘게 유지되는지, 그에 따라 태스크가 2~3개로 늘었다가 부하 종료 후 600초 뒤 1개로 복귀하는지 실측 관찰 — 이번 스코프는 Terraform 코드까지이고 실부하 검증은 D1과 함께 이뤄진다(설계상 짝 구성, ADR-0013 명시).
-- 관련: 브랜치 `feat/ecs-autoscaling-p4`, ADR-0013, CLAUDE.md §7(오토스케일링 P4 additive 지시)·§0.2(과설계 금지)·로드맵 P4, ADR-0011(위험 성격 비교 기준점), D1(k6 부하테스트, 짝 산출물).
+- 관련: 브랜치 `feat/ecs-autoscaling-p4`, ADR-0013, docs/SPEC.md §7(오토스케일링 P4 additive 지시)·§0.2(과설계 금지)·로드맵 P4, ADR-0011(위험 성격 비교 기준점), D1(k6 부하테스트, 짝 산출물).
 
 ### 2026-07-10 — P4 관측성: Micrometer/Prometheus + Boot 4 OTel 스타터(트레이싱) + 로컬 Grafana/Tempo (브랜치 `feat/observability-otel-p4`, ADR-0014)
 - 한 일: 로드맵 P4 마지막 심화 조각 "관측성(OTel/Grafana)"를 마무리했다. 착수 전 `application.yml`을 읽다가 `management.endpoints.web.exposure.include: health,info,prometheus`가 이미 하드코딩돼 있는 걸 발견하고 실제 프로덕션 ALB URL로 확인한 결과, **`/actuator/prometheus`가 이미 인증 없이 공개돼 있었다**(TS-022) — 이번 작업의 첫 결정은 그래서 "새 기능 추가"가 아니라 "이미 라이브에 있는 노출 구멍을 닫는 것"이었다. 그 위에 ① Boot 4.0 공식 OTel 스타터로 트레이싱을 추가하고 ② 간판(반경 ST_DWithin·kNN `<->`) 공간쿼리에 커스텀 latency Timer 2개를 계측하고 ③ docker-compose `observability` 프로필(Prometheus+Grafana+Tempo)을 additive로 얹었다.
 - 결정 & 이유(why) — 상세 근거는 [ADR-0014](./docs/adr/0014-observability-otel-micrometer-grafana.md)에 전부 기록, 요지만:
   - **`/actuator/prometheus` 노출 = 프로덕션 기본 미노출(옵트인), 관리 포트 분리·별도 인증 계층은 안 만든다.** `management.endpoints.web.exposure.include`를 `${MANAGEMENT_EXPOSURE:health,info}`로 바꿨다 — ECS가 이 env를 안 주므로 프로덕션은 항상 이 안전한 기본값이다. 관리 포트 분리(`management.server.port`)는 ALB target group이 8080 하나만 바라보고 `/actuator/health`가 바로 그 포트에서 헬스체크에 응답해야 해 SG·target group 변경(인프라 apply)이 필요해져 지시 제약("ECS/인프라 변경은 코드/문서만")과 충돌한다고 판단해 기각 — 옵트인은 코드 레벨에서 즉시 닫히면서 인프라 변경이 전혀 없다. 이 레포에 이미 확립된 "값 미설정=안전한 기본" 패턴(`GEUNEUL_PROXY_SECRET`·`OPENROUTER_API_KEY`)과도 정합된다.
-  - **트레이싱 프로바이더 = `org.springframework.boot:spring-boot-starter-opentelemetry`(Boot 4.0 공식 스타터, 2025-11 출시).** CLAUDE.md §7이 "micrometer-tracing-bridge-otel + OTLP exporter, 또는 Boot의 OTel 스타터" 둘 다 허용해, Maven Central에서 이 프로젝트의 정확한 Boot 버전(4.0.6)으로 존재함을 POM 직접 확인 후 채택했다 — 세 의존성(micrometer-tracing-bridge-otel·opentelemetry-exporter-otlp·micrometer-registry-otlp)을 수동으로 버전 맞추는 대신 스타터 하나로 Boot BOM이 정합을 보장한다. 프로퍼티 이름(`management.opentelemetry.tracing.export.otlp.endpoint` 등)은 문서가 아니라 **실제 4.0.6 아티팩트의 `spring-configuration-metadata.json`을 직접 열어** 확인했다(버전 드리프트 리스크 회피).
+  - **트레이싱 프로바이더 = `org.springframework.boot:spring-boot-starter-opentelemetry`(Boot 4.0 공식 스타터, 2025-11 출시).** docs/SPEC.md §7이 "micrometer-tracing-bridge-otel + OTLP exporter, 또는 Boot의 OTel 스타터" 둘 다 허용해, Maven Central에서 이 프로젝트의 정확한 Boot 버전(4.0.6)으로 존재함을 POM 직접 확인 후 채택했다 — 세 의존성(micrometer-tracing-bridge-otel·opentelemetry-exporter-otlp·micrometer-registry-otlp)을 수동으로 버전 맞추는 대신 스타터 하나로 Boot BOM이 정합을 보장한다. 프로퍼티 이름(`management.opentelemetry.tracing.export.otlp.endpoint` 등)은 문서가 아니라 **실제 4.0.6 아티팩트의 `spring-configuration-metadata.json`을 직접 열어** 확인했다(버전 드리프트 리스크 회피).
   - **메트릭은 Prometheus(pull) 1순위, OTLP 메트릭(push)은 옵트인으로 꺼둔다** — 같은 지표를 두 경로로 중복 발행하는 걸 피했다. 트레이싱만 필연적으로 push(OTLP)다.
-  - **커스텀 메트릭 2개 = `geuneul.place.search.radius`/`geuneul.place.search.nearest`(category 태그).** `PlaceSearchService`에 `MeterRegistry`를 주입해 `Timer.Sample`로 **PostGIS 쿼리 실행 구간만**(앱 매핑·날씨 호출은 제외) 감쌌다 — CLAUDE.md 핵심 차별점("PostGIS 대용량 지리검색 반경/kNN")을 그대로 계측 대상으로 삼았고, ADR-0012(k6)가 이미 이 두 경로의 p95/p99를 외부 관점에서 보고하므로 내부 관점(Micrometer)을 같은 백분위 기준으로 맞춰 교차검증 가능하게 했다. `category` 태그는 `PlaceCategory` enum(고정 카디널리티)만 써 Prometheus 카디널리티 폭발을 피했다. `management.metrics.distribution.percentiles-histogram`을 이 둘 + `http.server.requests`에만 켜 히스토그램 버킷(→ `histogram_quantile` 가능)을 확보하면서 저장 비용은 최소화했다.
+  - **커스텀 메트릭 2개 = `geuneul.place.search.radius`/`geuneul.place.search.nearest`(category 태그).** `PlaceSearchService`에 `MeterRegistry`를 주입해 `Timer.Sample`로 **PostGIS 쿼리 실행 구간만**(앱 매핑·날씨 호출은 제외) 감쌌다 — docs/SPEC.md 핵심 차별점("PostGIS 대용량 지리검색 반경/kNN")을 그대로 계측 대상으로 삼았고, ADR-0012(k6)가 이미 이 두 경로의 p95/p99를 외부 관점에서 보고하므로 내부 관점(Micrometer)을 같은 백분위 기준으로 맞춰 교차검증 가능하게 했다. `category` 태그는 `PlaceCategory` enum(고정 카디널리티)만 써 Prometheus 카디널리티 폭발을 피했다. `management.metrics.distribution.percentiles-histogram`을 이 둘 + `http.server.requests`에만 켜 히스토그램 버킷(→ `histogram_quantile` 가능)을 확보하면서 저장 비용은 최소화했다.
   - **로컬 스택 = Prometheus + Grafana + Tempo(single-binary, OTel Collector 없이 백엔드가 직접 push), docker-compose `observability` 프로필(옵트인, 기존 `docker compose up` 흐름 무변경).** Tempo 설정은 `grafana/tempo` 공식 예제를 이 레포 규모로 축소(k6 합성 트래픽·Alloy·vulture·서비스그래프 remote-write는 과설계라 제외). Grafana는 로컬 전용 익명 Admin(로그인 절차 생략, 절대 프로덕션 미노출 — 프로필 자체가 옵트인이고 ECS에도 존재하지 않음)으로 대시보드 1개(`geuneul-overview.json`, 6패널: 반경/kNN p95·HTTP 처리율/p95·JVM 힙·CPU)를 자동 프로비저닝한다.
   - **프로덕션 반영은 전혀 없다** — ECS 태스크데프·SSM은 이번 PR에서 안 건드렸다. 관리형 트레이스 백엔드 연결 방법은 ADR-0014 §5에 "이렇게 붙인다"만 문서화(다른 비밀들과 동일 패턴으로 `OTEL_EXPORTER_OTLP_ENDPOINT`를 ECS secrets에 추가하면 됨).
 - 검증(실 Docker로 전체 루프 실측 — 이 맥의 colima Docker 데몬은 살아있고 `docker`/`docker-compose` CLI가 정상 동작함을 이번에 확인, TS-009는 Testcontainers의 docker-java 라이브러리 문제이지 Docker 자체 문제가 아님을 재확인):
@@ -572,8 +572,8 @@
   4. **같은 env 없이(기본값) 재기동해 `ActuatorExposureIT`의 계약을 수동으로 재현**: `/actuator/health`=200, `/actuator/prometheus`=404, `/actuator/env`=404 — CI에서 이 IT가 어떤 결과를 낼지 사전 검증.
   5. 로컬 검증 중 PostGIS init 스크립트 레이스(TS-023)를 만나 원인을 좁혀 기록.
 - 산출물: 백엔드 `build.gradle`(spring-boot-starter-opentelemetry)·`application.yml`(management.endpoints/metrics/tracing/opentelemetry/otlp 블록)·`domain/place/PlaceSearchService`(MeterRegistry 주입 + `timed()` 헬퍼) · 테스트 `PlaceSearchServiceTest`(+2)·`global/observability/ActuatorExposureIT`(신규)·`global/observability/ActuatorPrometheusOptInIT`(신규) · 로컬 스택 `docker-compose.yml`(observability 프로필: prometheus·grafana·tempo)·`observability/`(신규 디렉터리 — `prometheus/prometheus.yml`·`tempo/tempo.yaml`·`grafana/provisioning/{datasources,dashboards}`·`grafana/dashboards/geuneul-overview.json`) · 문서 `docs/adr/0014-observability-otel-micrometer-grafana.md`(신규)·`docs/adr/README.md`(인덱스)·`TROUBLESHOOTING.md`(TS-022·TS-023).
-- 다음: 관리형 트레이스 백엔드 연결(원할 때, ADR-0014 §5 절차)·실시간 이벤트(제보 급증 알림). CLAUDE.md 로드맵 P4의 "OTel/Grafana" 항목은 이걸로 완료 — ECS Service Auto Scaling은 이 작업 중 별도 세션(#39)이 이미 병합해 P4 남은 항목에서 제외.
-- 관련: 브랜치 `feat/observability-otel-p4`, ADR-0014, TS-022, TS-023, CLAUDE.md §0-2(과설계 금지)·§7(Test/Ops)·§10 P4, ADR-0012(같은 반경/kNN 경로의 p95/p99를 k6가 이미 외부 관점에서 측정 — 이번 Micrometer 계측이 내부 관점으로 교차검증).
+- 다음: 관리형 트레이스 백엔드 연결(원할 때, ADR-0014 §5 절차)·실시간 이벤트(제보 급증 알림). docs/SPEC.md 로드맵 P4의 "OTel/Grafana" 항목은 이걸로 완료 — ECS Service Auto Scaling은 이 작업 중 별도 세션(#39)이 이미 병합해 P4 남은 항목에서 제외.
+- 관련: 브랜치 `feat/observability-otel-p4`, ADR-0014, TS-022, TS-023, docs/SPEC.md §0-2(과설계 금지)·§7(Test/Ops)·§10 P4, ADR-0012(같은 반경/kNN 경로의 p95/p99를 k6가 이미 외부 관점에서 측정 — 이번 Micrometer 계측이 내부 관점으로 교차검증).
 
 ### 2026-07-10 — AI 요약 프로바이더 설정 중립화(리네임) + Mistral 전환 (브랜치 `feat/ai-provider-neutral-rename`, ADR-0010 갱신)
 - 한 일: ADR-0010(P3 AI 한줄 요약)에서 이름이 특정 프로바이더(OpenRouter)에 고정돼 있던 걸 실체(OpenAI 호환 범용 클라이언트)에 맞춰 중립 리네임했다. `domain/ai/OpenRouterClient` → `ChatCompletionClient`(파일명·클래스명·Javadoc·생성자 전부), 테스트 `OpenRouterClientTest` → `ChatCompletionClientTest`, `application.yml`의 `ai.openrouter.*` → `ai.summary.*`(env `OPENROUTER_API_KEY/BASE_URL/MODEL` → `AI_SUMMARY_API_KEY/BASE_URL/MODEL`), `infra/terraform`의 `openrouter_api_key` 변수/SSM 리소스/ECS secret → `ai_summary_api_key`. 같은 PR에서 프로바이더 기본값도 Mistral로 교체(base-url `https://api.mistral.ai/v1`, model `mistral-small-latest`) — **동작/로직 변경 없음, 순수 리네임 + 기본값 변경**(타임아웃·MAX_TOKENS·프롬프트·캐시·graceful degradation 전부 그대로).
@@ -583,14 +583,14 @@
 - 검증: `./gradlew compileJava compileTestJava` green, `./gradlew test`(domain.ai 패키지 유닛) green — `ChatCompletionClientTest`(8)·`AiSummaryServiceTest`(6)·`AiSummaryCacheProxyTest`(2) 전부 통과(Testcontainers IT는 이 머신 colima 이슈로 skip, TS-009 패턴). `grep -rni openrouter backend/src infra/terraform/*.tf` **0건** 확인(tfstate/tfvars 제외).
 - 산출물: `domain/ai/ChatCompletionClient.java`(리네임)·`domain/ai/AiSummaryService.java`(참조 갱신)·테스트 `ChatCompletionClientTest.java`(리네임)·`AiSummaryServiceTest.java`·`AiSummaryCacheProxyTest.java`(참조 갱신)·`application.yml`(`ai.summary.*`)·`infra/terraform/ssm.tf`·`variables.tf`·`ecs.tf`(`ai_summary_api_key`, ecs.tf에 `AI_SUMMARY_BASE_URL`/`AI_SUMMARY_MODEL` 비-시크릿 env 추가)·`docs/adr/0010-ai-summary-openrouter-provider.md`(갱신, §4 신설).
 - 다음(오케스트레이터가 검토 후 실행): ① `terraform apply`로 `ai_summary_api_key` SSM 파라미터 재생성(기존 `openrouter_api_key`는 리소스명이 바뀌어 destroy+create로 처리됨 — 값은 tfvars에서 새로 주입). ② 라이브 태스크데프에 `AI_SUMMARY_API_KEY`/`AI_SUMMARY_BASE_URL`/`AI_SUMMARY_MODEL`이 반영된 새 rev 등록(describe→env/secret 교체→register→update-service). ③ 유효한 Mistral 키를 SSM에 넣고 실측(제보 있는 place 상세에서 `aiSummary` 비-null 확인).
-- 관련: 브랜치 `feat/ai-provider-neutral-rename`, ADR-0010(갱신), CLAUDE.md §0-B(의사결정 프로토콜)·§8(AI 스택, Claude API 기본에서 이탈 근거 갱신)·규칙 D(비밀은 .local/.env로만, 실제 키 하드코딩 금지).
+- 관련: 브랜치 `feat/ai-provider-neutral-rename`, ADR-0010(갱신), docs/SPEC.md §0-B(의사결정 프로토콜)·§8(AI 스택, Claude API 기본에서 이탈 근거 갱신)·규칙 D(비밀은 .local/.env로만, 실제 키 하드코딩 금지).
 
 ### 2026-07-10 — AI 요약 라이브 배포(Mistral 전환 실행·검증) — PR #41 후속 배포 단계
 - 한 일: 위 리네임 PR(#41) 머지 후 실제 프로덕션 전환을 완료했다. ① `terraform.tfvars`(gitignore) 변수 `openrouter_api_key`→`ai_summary_api_key`로 교체 + Mistral 키 주입 → `terraform apply`(SSM 파라미터 `/geuneul/openrouter_api_key` destroy + `/geuneul/ai_summary_api_key` create, 1 add·1 destroy). ② 머지가 트리거한 자동배포(rev40, 신 이미지+구 `OPENROUTER_API_KEY` env — 이 시점 aiSummary는 graceful null)가 stable해진 걸 확인한 뒤, rev40을 베이스로 secret `OPENROUTER_API_KEY`→`AI_SUMMARY_API_KEY`(신 파라미터 ARN) 교체 + env `AI_SUMMARY_BASE_URL=https://api.mistral.ai/v1`·`AI_SUMMARY_MODEL=mistral-small-latest` 추가한 **rev41 수동 등록** → `update-service --force-new-deployment` → `wait services-stable`로 안정화 확인. ③ 실측: `GET /places/185`(유효 제보 1건 COOL) → `aiSummary="시원하다는 제보가 최근에 있습니다."`(Mistral 생성, 비-null). 목록 `/places`는 설계대로 aiSummary=null(상세 getById 전용). ECS 로그에 `[ai]` warn/ERROR 없음(성공은 무로그).
 - 왜(배포 순서): 자동배포 rev40(구 파라미터 참조)이 stable해지기 **전에** terraform이 구 SSM 파라미터를 파괴하면 rev40 태스크 기동이 실패할 수 있어, "rev40 stable 확인 → terraform apply(파라미터 교체) → 즉시 rev41 등록" 순으로 파괴-창을 최소화했다. min=1·무부하라 실행 중 태스크는 env가 이미 주입돼 영향 없고, apply와 rev41 등록을 back-to-back으로 처리해 재기동 창을 닫았다.
 - 검토한 대안: SSM 파라미터를 destroy 없이 신규 추가만 하고 구 파라미터를 rev41 전환 후 별도 apply로 지우는 2단 apply(파괴-창 완전 제거)도 가능했으나, tfvars/코드가 이미 리네임돼 있어 terraform이 구 리소스를 자동 파괴하는 게 상태-현실 정합상 더 단순 — 무부하 창의 실질 리스크가 낮아 단일 apply를 택했다.
 - 산출물(인프라, 코드/문서 변경 없음): SSM `/geuneul/ai_summary_api_key`(SecureString, Mistral 키) · 태스크데프 **rev41**(라이브) · `.local` tfvars(gitignore) 갱신. 라이브 rev는 `ignore_changes`라 terraform이 아닌 수동 rev로 반영(HANDOFF 패턴).
-- 관련: PR #41, ADR-0010(§4), TS-024(tfvars 멀티라인 함정), CLAUDE.md 규칙 A(신원)·D(비밀 .local/SSM만)·HANDOFF 운영 치트시트(AI 프로바이더 교체 복붙 갱신).
+- 관련: PR #41, ADR-0010(§4), TS-024(tfvars 멀티라인 함정), docs/SPEC.md 규칙 A(신원)·D(비밀 .local/SSM만)·HANDOFF 운영 치트시트(AI 프로바이더 교체 복붙 갱신).
 
 ### 2026-07-10 — ALB 무료 HTTPS: CloudFront 기본 도메인(ADR-0015) + EventBridge 스케줄 활성화 + 화장실 재적재
 - 한 일(3건, 로드맵 후속 "외부 스위치"):
@@ -600,18 +600,18 @@
 - 왜: 전부 "외부 키/스위치" 잔여 항목. HTTPS는 도메인 부재라 CloudFront 기본 도메인이 유일한 무료·즉시 경로(§0-B 웹 확인, ADR-0015 대안표). 스케줄·화장실은 콘솔 없이 바로 가능한 것부터.
 - 블로커(사용자 콘솔 필요, 자율 불가): **쉼터 전국** — 전국무더위쉼터 표준데이터 API가 `resultCode 12`(미승인/폐기), safetydata 전용 키 없음. **상권정보 STUDY_CAFE/CAFE** — 같은 datago 키로 library=정상(resultCode 00)인데 상가업소 API(B553077)만 **403 Forbidden** = 활용신청 미승인. 둘 다 data.go.kr/safetydata 콘솔에서 사용자가 활용신청 승인받아야 풀림.
 - 산출물: `infra/terraform/cloudfront.tf`(신규)·`outputs.tf`(https_url)·`variables.tf`(ingest default true)·`docs/adr/0015-*.md`(신규)·`docs/adr/README.md`(0015 색인+0010 제목 정정). 라이브: CloudFront 배포 E2WO35VKYGKAGX, 스케줄 ENABLED, 화장실 52,334.
-- 관련: PR #42(스케줄), CloudFront PR, ADR-0015, CLAUDE.md §7·§10 P4·§0-B, HANDOFF 남은목록.
+- 관련: PR #42(스케줄), CloudFront PR, ADR-0015, docs/SPEC.md §7·§10 P4·§0-B, HANDOFF 남은목록.
 
 ### 2026-07-10 — 실시간 제보 급증 알림: Postgres LISTEN/NOTIFY → SSE (브랜치 `feat/realtime-report-surge-p4`, ADR-0016)
 - 한 일: 로드맵 P4 간판의 마지막 미완 조각 "실시간 이벤트(제보 급증 알림)"를 구현했다. 두 레이어로 분리 — **감지(간판·시공간 SQL)** + **전파(LISTEN/NOTIFY→SSE)**. ① 감지: `place_report_signals`와 같은 정신모델의 순수 건수 쿼리(`ReportSurgeRepository.countRecent`/`findSurge`/`findSurgingInBounds`) — "최근 windowMinutes(기본10) 분 안에 유효(미만료) 제보 ≥ minReports(기본3)"인 장소를 판정, bounds는 `places`를 `geom && ST_MakeEnvelope`(V2 GiST)로 공간조인. `mode() WITHIN GROUP`으로 최빈 제보 타입까지 뽑아 안내 문구 생성. ② 전파: Flyway **V9**가 `reports` AFTER INSERT 트리거로 `pg_notify('geuneul_report_surge', place_id)` — 각 앱 인스턴스가 전용 커넥션으로 LISTEN(`ReportNotificationListener`, SmartLifecycle 백그라운드 스레드, 끊기면 백오프 재연결)하다가 알림을 받으면 급증 재확인 후 SSE 구독자(`SurgeEmitterRegistry`)에 브로드캐스트. API: `GET /alerts/surge?bounds=`(폴백/초기 스냅샷)·`GET /alerts/stream`(SSE, `text/event-stream`) 둘 다 permitAll(공개 커먼스). 기능 플래그 `geuneul.realtime.enabled`(기본 true)로 리스너 격리 — IT에선 false.
 - 왜(why): P4 "실시간 이벤트"를 어느 전파 메커니즘으로 할지가 핵심 결정이었다. **LISTEN/NOTIFY**를 골랐다 — 이미 ECS Service Auto Scaling(min1/**max3**, ADR-0013)이 붙어 인스턴스가 최대 3대까지 뜨는데, 제보 insert 인스턴스 ≠ SSE 구독 인스턴스일 수 있어 인프로세스 이벤트(`ApplicationEventPublisher`)로는 전파가 끊긴다. LISTEN/NOTIFY는 어느 인스턴스가 insert하든 전 인스턴스가 알림을 받아 이 팬아웃을 **새 인프라 0**(이미 있는 RDS)으로 해결한다. 감지를 앱 메모리 카운터가 아니라 DB SQL로 둔 것도 같은 이유(인스턴스별 카운터는 갈라져 부정확 — 간판=DB 시공간, §5). SSE는 단방향 서버→클라 알림에 정확히 맞고 HTTP라 BFF(ADR-0004)·CloudFront(ADR-0015)를 그대로 통과·자동 재연결.
-- 검토한 대안: ① **Kafka** — 브로커 운영 부담이 저빈도 알림에 과설계, CLAUDE.md §7이 명시적 금지("필요 입증 후에만"). ② **Redis Streams** — Redis가 "지워도 되는 선택적 캐시"(ADR-0009)라 알림을 결합시키면 그 성질이 깨짐 + 소스오브트루스(PG)에 트리거로 걸면 제보 트랜잭션과 원자적(유실 창 0). ③ **인프로세스 ApplicationEvent만** — max3 오토스케일링에서 타 인스턴스 구독자 전파 불가. ④ **WebSocket** — 양방향이라 단방향 알림엔 과설계. ⑤ **순수 폴링만** — 실시간성 부족(단, SSE 폴백 겸 스냅샷으로 `/alerts/surge`는 남김).
-- 트렌드 근거(2026): SSE(`EventSource`)가 단방향 서버푸시의 표준(WebSocket 대비 경량, 브라우저 자동 재연결 내장). Postgres LISTEN/NOTIFY는 "이미 DB가 있을 때" 경량 실시간 팬아웃의 정석 — 제보 트랜잭션과 같은 커밋에 묶여 유실 창이 없고 페이로드(place_id 하나)가 8000바이트 제한과 무관. CLAUDE.md §7의 "Redis Streams / Postgres LISTEN·NOTIFY" 지시에 정합.
+- 검토한 대안: ① **Kafka** — 브로커 운영 부담이 저빈도 알림에 과설계, docs/SPEC.md §7이 명시적 금지("필요 입증 후에만"). ② **Redis Streams** — Redis가 "지워도 되는 선택적 캐시"(ADR-0009)라 알림을 결합시키면 그 성질이 깨짐 + 소스오브트루스(PG)에 트리거로 걸면 제보 트랜잭션과 원자적(유실 창 0). ③ **인프로세스 ApplicationEvent만** — max3 오토스케일링에서 타 인스턴스 구독자 전파 불가. ④ **WebSocket** — 양방향이라 단방향 알림엔 과설계. ⑤ **순수 폴링만** — 실시간성 부족(단, SSE 폴백 겸 스냅샷으로 `/alerts/surge`는 남김).
+- 트렌드 근거(2026): SSE(`EventSource`)가 단방향 서버푸시의 표준(WebSocket 대비 경량, 브라우저 자동 재연결 내장). Postgres LISTEN/NOTIFY는 "이미 DB가 있을 때" 경량 실시간 팬아웃의 정석 — 제보 트랜잭션과 같은 커밋에 묶여 유실 창이 없고 페이로드(place_id 하나)가 8000바이트 제한과 무관. docs/SPEC.md §7의 "Redis Streams / Postgres LISTEN·NOTIFY" 지시에 정합.
 - 표현 규율(§6): 급증 안내 문구(`SurgeInfo.message`)는 공포 조장 금지 — 침수·미끄럼 위험 계열도 "위험!"이 아니라 "최근 침수 제보가 몰리고 있어요 · 우회를 권장해요" 톤으로 순화(단위테스트로 "위험!" 미포함 검증). 백엔드는 사실(placeId·count·최빈타입)만 싣고 최종 톤은 프론트(⑧)가 렌더.
 - 검증: 단위 `SurgeInfoTest`(6, 문구 매핑·§6 순화·중복'최근' 버그 수정)·`SurgeEmitterRegistryTest`(3, 등록/집계·죽은 emitter 정리) green. IT `ReportSurgeIT`(임계 경계·만료 제외·시간창 밖 제외·bounds 필터·**NOTIFY 트리거 실발화**)는 실 PostGIS라 CI 위임(로컬 colima skip, TS-009 패턴). `./gradlew compileJava compileTestJava` green. 개발 중 잡은 버그 2건: (a) 기본 문구 "최근" 중복, (b) 갓 만든 SseEmitter는 early-send 버퍼링으로 send가 안 던져 테스트가 `complete()`로 죽은 emitter를 명시해야 정확.
 - 산출물: `domain/alert/`(신규 도메인 — `ReportSurgeService`·`ReportSurgeRepository`·`SurgingPlaceView`·`SurgeEmitterRegistry`·`ReportNotificationListener`·`AlertController`·`dto/SurgeInfo`) · `db/migration/V9__report_surge_notify_trigger.sql`(신규) · `application.yml`(`geuneul.realtime.*`) · `AbstractIntegrationTest`(IT에서 realtime off) · 테스트 3파일 · `docs/adr/0016-realtime-report-surge-listen-notify-sse.md`(신규).
 - 다음: 프론트(⑧)에서 지도 급증 배지 + EventSource 구독(초기 스냅샷은 `/alerts/surge`). 임계값(window/minReports)은 P5 동작구 필드테스트에서 시딩 밀도에 맞춰 조정.
-- 관련: 브랜치 `feat/realtime-report-surge-p4`, ADR-0016, ADR-0013(오토스케일링 — 팬아웃 정당화)·ADR-0007(시공간 신호)·ADR-0009(Redis 선택적 캐시)·ADR-0004(BFF)·ADR-0015(CloudFront), CLAUDE.md §7(실시간 메커니즘)·§5(DB 시공간)·§6(표현 규율)·§10 P4.
+- 관련: 브랜치 `feat/realtime-report-surge-p4`, ADR-0016, ADR-0013(오토스케일링 — 팬아웃 정당화)·ADR-0007(시공간 신호)·ADR-0009(Redis 선택적 캐시)·ADR-0004(BFF)·ADR-0015(CloudFront), docs/SPEC.md §7(실시간 메커니즘)·§5(DB 시공간)·§6(표현 규율)·§10 P4.
 
 ### 2026-07-10 — 시간대별 혼잡 파생(자체 popular-times) (브랜치 `feat/popular-times-p4`, ADR-0005 §④)
 - 한 일: 외부 API 없이 우리 UGC(reports)만으로 장소별 "요일×시간 혼잡 패턴"을 유도했다. `GET /places/{id}/popular-times` — reports 이력을 **KST 기준** 요일(0=일~6=토)×시간(0~23)으로 집계해 슬롯별 sampleCount(활동량)·crowdedCount·seatOkCount와 혼잡 등급(BUSY/MODERATE/QUIET/UNKNOWN)을 반환. 등급은 순수 함수 `PopularTimesSlot.level` — `crowdScore=(crowded−seatOk)/(crowded+seatOk)` ≥+1/3 BUSY, ≤−1/3 QUIET, 혼잡 신호 없으면 UNKNOWN.
@@ -620,25 +620,25 @@
 - 검증: 단위 `PopularTimesSlotTest`(4, 등급 경계 BUSY/QUIET/MODERATE/UNKNOWN) green. IT `PopularTimesIT`(3: KST 슬롯 집계·**UTC→KST hour=14 변환 정확성**·토요일 DOW=6·만료 포함·빈 목록)는 실 PostGIS라 CI 게이트. `2026-07-11`이 토요일(DOW 6)임을 `date`로 확인. `compileJava/compileTestJava` green.
 - 산출물: `domain/report/PlaceCongestionSlotView`(신규 투영)·`dto/PopularTimesSlot`(신규)·`ReportRepository.congestionByPlace`(네이티브 집계)·`ReportService.popularTimes`·`ReportController`(GET /places/{id}/popular-times) · 테스트 2파일.
 - 다음: 프론트(⑧)에서 상세 화면에 요일×시간 히트맵. 시딩 밀도가 낮은 초기엔 UNKNOWN이 많음(P5 필드테스트로 채워짐).
-- 관련: 브랜치 `feat/popular-times-p4`, ADR-0005 §④, CLAUDE.md §10 P4(시간대별 혼잡 파생)·§0-3(멱등)·§5(DB 시공간). 급증 알림 ①(ADR-0016)과 시간관이 반대(지금 vs 이력)라는 점을 대비 문서화.
+- 관련: 브랜치 `feat/popular-times-p4`, ADR-0005 §④, docs/SPEC.md §10 P4(시간대별 혼잡 파생)·§0-3(멱등)·§5(DB 시공간). 급증 알림 ①(ADR-0016)과 시간관이 반대(지금 vs 이력)라는 점을 대비 문서화.
 
 ### 2026-07-10 — GPS 방문 인증(verified) — 허위제보 억제 (브랜치 `feat/gps-visit-verify-p4`, ADR-0005 §④ 구현)
-- 한 일: ADR-0005 §④의 "간판·차별점" 항목 "GPS 방문 인증"을 구현했다. 제보 생성 시 앱이 보낸 제보자 좌표가 장소 `ST_DWithin(100m)` 이내면 `reports.verified=true`로 남긴다(Flyway **V10** 컬럼 추가, 기본 false). verified 제보는 `place_report_signals` 뷰에서 신뢰도 factor에 **×1.3 보너스(1.0 상한)** 를 받아 survival_score comfort/risk 가중이 높아진다 — "실제로 가본 사람"의 제보를 더 신뢰해 허위제보 영향을 억제(CLAUDE.md §5·§7). `ReportCreateRequest`에 선택 `lat`/`lng`(둘 다 있을 때만 인증 시도), `ReportResponse`에 `verified`(프론트 "방문 인증" 배지용).
+- 한 일: ADR-0005 §④의 "간판·차별점" 항목 "GPS 방문 인증"을 구현했다. 제보 생성 시 앱이 보낸 제보자 좌표가 장소 `ST_DWithin(100m)` 이내면 `reports.verified=true`로 남긴다(Flyway **V10** 컬럼 추가, 기본 false). verified 제보는 `place_report_signals` 뷰에서 신뢰도 factor에 **×1.3 보너스(1.0 상한)** 를 받아 survival_score comfort/risk 가중이 높아진다 — "실제로 가본 사람"의 제보를 더 신뢰해 허위제보 영향을 억제(docs/SPEC.md §5·§7). `ReportCreateRequest`에 선택 `lat`/`lng`(둘 다 있을 때만 인증 시도), `ReportResponse`에 `verified`(프론트 "방문 인증" 배지용).
 - 왜(why): ① **왜 100m·GPS인가** — 스마트폰 GPS 실측 오차(도심 수십m)를 감안해 "그 장소 근처에 실제로 있었다"를 판정하는 현실적 반경. 반경 검색과 동일한 `geography(geom)` 표기라 V3 GIST 함수 인덱스 경로를 그대로 탄다(전체스캔 없음, §0.4). ② **왜 뷰 가중을 곱셈(×1.3, 단조)으로** — 기존 신뢰도 공식(익명 0.7 / 로그인 0.7~1.0)에 verified면 1.3배(상한 1.0)를 곱하는 방식이라, **비검증 제보(기존 전체·좌표 미제공 포함)의 가중치는 완전 불변**이고 verified만 보너스를 받는다(회귀 없는 단조 개선). 익명 검증 0.91, 로그인 검증 최대 1.0. ③ **왜 EXIF는 뺐나** — 사진은 presign S3 URL이라 서버에 바이트가 없어 EXIF GPS를 못 읽는다(별도 다운로드는 비용·프라이버시 부담) → GPS 근접을 1차 신호로 하고 EXIF는 "선택" 후속으로 남김(ADR-0005 §④도 "(+선택 사진 EXIF)"로 표기).
 - 검토한 대안: ① **좌표를 서버가 요청 IP로 추정** — 모바일 IP는 위치 정확도가 없어(기지국/통신사 게이트웨이) 무의미, 앱이 보낸 GPS가 유일한 신뢰 신호. ② **verified를 trust_score(유저 신뢰도)에 반영** — 유저 단위 가중은 별 메커니즘이라 스코프 확대. 이번은 "제보 단위 가중"(뷰)으로 한정해 한 메커니즘만 — 유저 trust 연동은 후속 여지. ③ **비검증 제보를 감점** — 기존 스코어를 흔들어 회귀 위험 → 대신 검증만 가산(단조).
 - 검증: 컴파일 회귀 수정(Report.of·ReportResponse·ReportCreateRequest 시그니처 확장에 맞춰 호출부 5곳 갱신) 후 `ReportServiceTest`(4)·`ReportControllerTest`(11)·AI 테스트 green. IT `GpsVisitVerifyIT`(4: 100m 이내 verified=true·먼 곳 false·좌표없음 false·**verified 제보가 comfort 0.91 vs 비검증 0.7로 실제 가중 높음**)는 실 PostGIS라 CI 게이트. 기존 스코어 회귀 없음(비검증 불변) 확인.
 - 산출물: `db/migration/V10__reports_verified_visit.sql`(컬럼 + 뷰 CREATE OR REPLACE) · `Report`(verified 필드·팩토리) · `dto/ReportCreateRequest`(lat/lng)·`dto/ReportResponse`(verified) · `PlaceRepository.isWithinMeters`(ST_DWithin 네이티브) · `ReportService.create`(verified 산정) · 테스트 1 IT + 호출부 4파일 갱신.
 - 다음: 프론트(⑧)에서 제보 시 현재 위치 전송 + "방문 인증" 배지. 유저 trust_score 연동은 후속 여지.
-- 관련: 브랜치 `feat/gps-visit-verify-p4`, ADR-0005 §④(구현)·ADR-0007(survival 뷰 — verified 가중 추가)·ADR-0001(geography 함수 인덱스), CLAUDE.md §5(제보 trust 가중)·§7·§0.4(인덱스 경로).
+- 관련: 브랜치 `feat/gps-visit-verify-p4`, ADR-0005 §④(구현)·ADR-0007(survival 뷰 — verified 가중 추가)·ADR-0001(geography 함수 인덱스), docs/SPEC.md §5(제보 trust 가중)·§7·§0.4(인덱스 경로).
 
 ### 2026-07-10 — place_features.value 등급화 + 상세 노출 (브랜치 `feat/place-feature-grading-p4`, ADR-0005 §④)
 - 한 일: 지금까지 인제스천이 적재만 하고(도서관 study_ok/quiet 등) 유저에게 전혀 안 보이던 `place_features`를 등급화해 상세 화면에 노출했다. `GET /places/{id}` 응답에 `features` 배열 추가 — 각 시설을 `FeatureGrade`(순수 함수)로 등급화: 콘센트 many/some/few, wifi fast/ok/slow, **noise_level(신설) quiet/moderate/loud**, 불리언 시설(air_conditioned·study_ok·quiet·seating·water·restroom·no_eyes) true/false. 각 등급은 표시 라벨(예 "콘센트 많음")·방향(POSITIVE/NEGATIVE/NEUTRAL)·present를 갖고, present=false(부재)는 상세에서 칩으로 안 그린다. 스키마 변경 0(value가 이미 VARCHAR — 등급은 값 문자열 규약).
 - 왜(why): ① **왜 등급 규약을 코드에** — feature_type/value가 자유 문자열이라 "outlet=many"·"wifi=slow"·"noise_level=quiet" 같은 등급을 해석하는 단일 지점이 필요하다. 순수 함수(`FeatureGrade.of`)로 두면 DB 없이 단위테스트되고, 동의어(many/high/fast/3, few/low/slow/1)를 한 곳에서 흡수해 적재 소스가 달라도 일관 표시된다. ② **왜 상세 전용** — 시설 칩은 상세 화면 정보라 목록/마커(반경/bounds)에는 안 싣는다(aiSummary·weather와 같은 "상세가 더 많이 한다" 패턴, 목록 N+1·페이로드 방지). ③ **왜 present=false를 감추나** — "콘센트 없음"은 정보가 아니라 무표시가 자연(부재를 칩으로 나열하면 노이즈).
-- 스코프 규율(중요): 핸드오프의 "→ comfort_score 정밀화"는 **표시 레이어 등급(polarity 방향 신호)** 로 전달하고, **survival_score 수치 재배선은 하지 않았다.** 이유: comfort는 현재 place_report_signals 뷰(제보 기반)+날씨로 조립되는데, 정적 시설 comfort를 수치로 넣으려면 스코어드 네이티브 쿼리 4개에 feature 집계를 조인해야 한다(간판 마커 점수를 바꾸는 SQL 레벨 변경 + N+1/조인 비용). 이는 "살·즉효"(ADR-0005 §④ 분류)가 아니라 신중한 간판 스코어링 패스라, 곁다리 시설이 간판 점수를 흔들지 않도록(CLAUDE.md §9) 분리해 후속으로 남겼다. polarity는 그 후속의 방향 신호 + UI 색 힌트로 미리 심어뒀다.
+- 스코프 규율(중요): 핸드오프의 "→ comfort_score 정밀화"는 **표시 레이어 등급(polarity 방향 신호)** 로 전달하고, **survival_score 수치 재배선은 하지 않았다.** 이유: comfort는 현재 place_report_signals 뷰(제보 기반)+날씨로 조립되는데, 정적 시설 comfort를 수치로 넣으려면 스코어드 네이티브 쿼리 4개에 feature 집계를 조인해야 한다(간판 마커 점수를 바꾸는 SQL 레벨 변경 + N+1/조인 비용). 이는 "살·즉효"(ADR-0005 §④ 분류)가 아니라 신중한 간판 스코어링 패스라, 곁다리 시설이 간판 점수를 흔들지 않도록(docs/SPEC.md §9) 분리해 후속으로 남겼다. polarity는 그 후속의 방향 신호 + UI 색 힌트로 미리 심어뒀다.
 - 검증: 단위 `FeatureGradeTest`(7, 3단계·동의어·noise_level·불리언·미지타입 폴백·대소문자)·`PlaceSearchServiceTest`(12, 생성자에 PlaceFeatureRepository 추가 회귀) green. IT `PlaceFeatureDetailIT`(2, 상세에 등급 칩 노출·present=false 제외·빈 배열)는 실 PostGIS라 CI 게이트(place_features를 JdbcTemplate으로 심음 — 쓰기 엔티티 없음). `compileJava/compileTestJava` green.
 - 산출물: `place/PlaceFeature`(읽기 엔티티)·`PlaceFeatureRepository`·`FeatureGrade`(등급 순수함수)·`dto/PlaceFeatureResponse` · `dto/PlaceResponse`(features 필드 + 상세 팩토리)·`PlaceSearchService`(features 조회·매핑) · 테스트 2 + PlaceSearchServiceTest 회귀.
 - 다음: 프론트(⑧)에서 상세 시설 칩(등급별 아이콘/색, polarity 반영). comfort_score 수치 통합은 SQL 레벨 후속 패스.
-- 관련: 브랜치 `feat/place-feature-grading-p4`, ADR-0005 §④·ADR-0006(features 백필 소스)·ADR-0009(comfort 조립 — 후속 통합 지점), CLAUDE.md §9(간판 vs 살 — 시설은 살, 마커 점수 불변)·§0.2(과설계 금지).
+- 관련: 브랜치 `feat/place-feature-grading-p4`, ADR-0005 §④·ADR-0006(features 백필 소스)·ADR-0009(comfort 조립 — 후속 통합 지점), docs/SPEC.md §9(간판 vs 살 — 시설은 살, 마커 점수 불변)·§0.2(과설계 금지).
 
 ### 2026-07-10 — 추천 시나리오 focus/longstay 추가 (브랜치 `feat/recommend-focus-longstay-p4`, ADR-0008/ADR-0005 §④)
 - 한 일: `/recommendations`에 시나리오 2개 추가 — **focus**(집중해서 공부·작업, `Weights(0.20,0.35,0.15,0.30)`, 후보 STUDY_CAFE/CAFE/LIBRARY/CIVIC)·**longstay**(오래 버틸 곳, `Weights(0.15,0.40,0.15,0.30)`, 후보 COOLING_SHELTER/LIBRARY/CIVIC/UNDERGROUND/CAFE/STUDY_CAFE). enum 값 + 가중치/카테고리만 추가 — 조립식·2단 검색·응답은 기존 `SurvivalScore.Weights` 오버로드를 100% 재사용(코드 로직 무변경).
@@ -646,17 +646,17 @@
 - 검토한 대안: focus/longstay를 같은 가중치로 둘까 했으나, longstay가 거리에 더 관대(0.15 vs 0.20)하고 comfort를 더 크게(0.40 vs 0.35) 봐서 "집중(자리 질)"과 "장기체류(눌러앉기)"의 뉘앙스를 가중치로 구분 — 단위테스트로 "longstay는 멀어도 쾌적한 곳이 가까운 밋밋한 곳을 이긴다"를 못 박음.
 - 검증: `RecommendationScenarioTest`(8, +focus 혼잡 페널티·longstay comfort>distance·CSV STUDY_CAFE 포함·fromParam focus/longstay) green. compile green. 기존 시나리오 테스트 회귀 없음.
 - 산출물: `RecommendationScenario`(FOCUS/LONGSTAY enum + import)·`RecommendationController`(설명/파라미터 갱신) · `RecommendationScenarioTest`(+2 케이스).
-- 관련: 브랜치 `feat/recommend-focus-longstay-p4`, ADR-0008(시나리오 가중 랭킹)·ADR-0005 §④, CLAUDE.md §9.
+- 관련: 브랜치 `feat/recommend-focus-longstay-p4`, ADR-0008(시나리오 가중 랭킹)·ADR-0005 §④, docs/SPEC.md §9.
 
-### 2026-07-10 — 후기 커뮤니티: 댓글 + 리액션 (브랜치 `feat/review-community-p4`, CLAUDE.md §8 2차·살)
+### 2026-07-10 — 후기 커뮤니티: 댓글 + 리액션 (브랜치 `feat/review-community-p4`, docs/SPEC.md §8 2차·살)
 - 한 일: ERD(§8)에 설계돼 있던 `review_comments`·`reactions`를 백엔드로 구현했다(Flyway V11 + `domain.community` 신규 패키지). ① **후기 댓글**: `POST /reviews/{id}/comments`(로그인)·`GET /reviews/{id}/comments`(공개, 작성자 조인·오래된 순). ② **리액션("유용했어요")**: 다형 대상(REVIEW/REPORT/COMMENT) `POST /reactions`(멱등 추가)·`DELETE /reactions`(취소) — `uq_reaction`(target_type,target_id,user_id,type) 유니크로 중복 방지, 응답은 `{reacted, count}`. SecurityConfig에 두 write 경로 인증 요구 추가.
-- 왜(why): ① **왜 지금·왜 최소 표면인가** — 사용자가 "전부 포함하되 커뮤니티는 '살'로만, 프론트 UI는 최소화"를 명시. CLAUDE.md §0-9가 "커뮤니티가 주인공이 되면 리뷰앱화 → 차별점 소멸"을 반복 경고하므로, 백엔드 API + ERD 테이블만 열고 survival_score(간판)에는 **어떤 것도 연결하지 않았다**(리액션 수가 스코어에 안 들어감). ② **왜 reactions는 FK 없는 다형인가** — 후기·제보·댓글 어디에나 붙는 범용 신호라 단일 FK로 못 묶는다. 대신 대상 존재를 애플리케이션이 target_type별 리포지토리(existsById)로 검증해 유령 대상 리액션을 막는다. ③ **왜 멱등/유니크인가** — "유용했어요"는 유저당 1표라 중복 추가는 no-op(유니크 + 사전 exists 체크 + 동시성 대비 DataIntegrityViolation catch)이어야 카운트가 정확하다.
+- 왜(why): ① **왜 지금·왜 최소 표면인가** — 사용자가 "전부 포함하되 커뮤니티는 '살'로만, 프론트 UI는 최소화"를 명시. docs/SPEC.md §0-9가 "커뮤니티가 주인공이 되면 리뷰앱화 → 차별점 소멸"을 반복 경고하므로, 백엔드 API + ERD 테이블만 열고 survival_score(간판)에는 **어떤 것도 연결하지 않았다**(리액션 수가 스코어에 안 들어감). ② **왜 reactions는 FK 없는 다형인가** — 후기·제보·댓글 어디에나 붙는 범용 신호라 단일 FK로 못 묶는다. 대신 대상 존재를 애플리케이션이 target_type별 리포지토리(existsById)로 검증해 유령 대상 리액션을 막는다. ③ **왜 멱등/유니크인가** — "유용했어요"는 유저당 1표라 중복 추가는 no-op(유니크 + 사전 exists 체크 + 동시성 대비 DataIntegrityViolation catch)이어야 카운트가 정확하다.
 - 검토한 대안: ① **댓글에 대댓글(스레드)·수정/삭제** — 2차 살의 과확장이라 제외(§0-2, 필요 입증 후). ② **리액션 종류 다양화(👍😍 등)** — 지금은 HELPFUL 하나(EnumType.STRING이라 값 추가만으로 확장). ③ **POST 토글(한 엔드포인트로 추가·취소)** — REST 의미가 흐려져 POST(추가)/DELETE(취소)로 분리(멱등·명시적).
 - 스코프 규율: 프론트 UI는 이번에 만들지 않는다(⑧에서 최소만 — 커뮤니티가 전면에 나오지 않게). survival_score·place_report_signals·SurvivalScore는 한 줄도 안 건드림(§0-9).
 - 검증: IT `CommunityFlowIT`(4: 댓글 작성→목록·비로그인 401·리액션 멱등(2회 눌러도 count=1)·취소 count=0·없는 대상 404)는 실 PostGIS+Security라 CI 게이트. `compileJava/compileTestJava` green.
 - 산출물: `db/migration/V11__review_comments_reactions.sql` · `domain/community/`(ReviewComment·Reaction 엔티티, ReactionTarget/Type enum, 2 리포지토리, 2 서비스, CommunityController, 4 DTO, 1 뷰) · `SecurityConfig`(인증 경로 +3) · 테스트 1 IT.
 - 다음: 프론트(⑧)에서 상세의 후기에 댓글·"유용했어요" 최소 UI(간판을 가리지 않게).
-- 관련: 브랜치 `feat/review-community-p4`, CLAUDE.md §8(ERD)·§0-9(커뮤니티=살, 리뷰앱화 경고)·§0-2(과설계 금지), ADR-0007(survival 분리 — 커뮤니티 무영향).
+- 관련: 브랜치 `feat/review-community-p4`, docs/SPEC.md §8(ERD)·§0-9(커뮤니티=살, 리뷰앱화 경고)·§0-2(과설계 금지), ADR-0007(survival 분리 — 커뮤니티 무영향).
 
 ### 2026-07-10 — 모더레이션 확장: 신고 RESOLVED 시 콘텐츠 숨김 + 상태별 이력 (브랜치 `feat/moderation-expand-p4`, V12)
 - 한 일: 기존 신고 큐(#33 flags)는 상태만 마킹하고 실제 콘텐츠는 그대로 남아 "이빨이 없던" 것을 실효화했다. **신고를 RESOLVED(타당)로 처리하면 대상(제보/후기)이 hidden 처리**돼 공개에서 사라진다(Flyway **V12** `reports.hidden`/`reviews.hidden`). hidden 제보/후기는 **공개 조회·survival_score(뷰)·급증 알림·시간대별 혼잡·AI 요약·후기 목록에서 전부 제외**된다. DISMISSED(오신고)면 콘텐츠는 그대로. 추가로 ADMIN 상태별 이력 조회 `GET /admin/flags?status=PENDING|RESOLVED|DISMISSED`(처리 이력 확인).
@@ -666,7 +666,7 @@
 - 검증: IT `ModerationHideIT`(2: RESOLVED→공개 조회에서 사라짐 + status=RESOLVED 이력에 잡힘 / DISMISSED→유지)는 실 PostGIS+Security라 CI 게이트. 메서드 리네임(`findTop20...AndHiddenFalse...`) 호출부(AiSummaryService + 테스트 2) 갱신 후 단위 회귀 green. compile green.
 - 산출물: `db/migration/V12__moderation_hidden.sql`(컬럼2+뷰) · `Report`/`Review`(hidden·hide()) · `ReportRepository`(recent/congestion NOT hidden)·`ReportSurgeRepository`(3쿼리 NOT hidden)·`ReviewRepository`(list NOT hidden)·`AiSummaryService`(hidden 제외) · `FlagService`(resolve→hideTarget, byStatus)·`AdminFlagController`(GET /admin/flags?status=) · 테스트 1 IT.
 - 다음: 프론트(⑧) ADMIN 큐에 처리 이력 탭(선택). 자동 임계 숨김·복구(unhide) 경로는 후속.
-- 관련: 브랜치 `feat/moderation-expand-p4`, #33(flags 기반)·ADR-0007(뷰)·ADR-0016(급증)·ADR-0005 §④(혼잡/verified), CLAUDE.md §0-7(모더레이션 처음부터)·§9(관리자 큐)·§6(표현).
+- 관련: 브랜치 `feat/moderation-expand-p4`, #33(flags 기반)·ADR-0007(뷰)·ADR-0016(급증)·ADR-0005 §④(혼잡/verified), docs/SPEC.md §0-7(모더레이션 처음부터)·§9(관리자 큐)·§6(표현).
 
 ### 2026-07-10 — 프론트: 백엔드 신규 기능 노출(카테고리 필터·시설 등급·방문 인증·시나리오·AI요약) (브랜치 `feat/frontend-surface-p4`)
 - 한 일: 이번 세션에 백엔드가 새로 노출한 것들을 프론트에 반영했다(BFF가 순수 패스스루라 타입+렌더만 갱신). ① **CAFE/STUDY_CAFE 카테고리** — Category 타입·CATEGORY_META·FILTER_CATEGORIES에 추가(데이터 승인 전이라 결과는 비지만 필터 UI 선반영, 핸드오프 지시). ② **place_features 등급 칩(④)** — `PlaceFeature`(type/value/level/label/polarity) 타입 신설, FeaturePills를 등급 라벨("콘센트 많음")+polarity 색(POSITIVE 민트/NEGATIVE 레드/NEUTRAL 회색)으로 재작성. ③ **방문 인증 배지(③)** — Report에 `verified` 추가, 상세 최근제보에 "방문 인증" 배지, 제보 제출 시 실측 GPS(!isFallback)면 lat/lng 전송해 verified 실동작. ④ **추천 시나리오 focus/longstay(⑤)** — Scenario 타입·SCENARIO_META·ScenarioButtons ORDER에 추가(급해요 탭에 2개 버튼). ⑤ **AI 한줄 요약 라이브** — 상세의 "P3 준비중" 플레이스홀더를 실제 `place.aiSummary`로 교체(있으면 요약 카드, 없으면 안내 폴백).
@@ -675,7 +675,7 @@
 - 검증: `npm run typecheck`·`lint`·`build` 전부 green(프론트 CI와 동일 게이트). 20개 라우트 정상 빌드.
 - 산출물: `types/place.ts`(Category+2·PlaceFeature·verified·aiSummary·Scenario+2·payload lat/lng) · `lib/categories.ts`(CATEGORY/FEATURE/SCENARIO_META·FILTER +CAFE/STUDY_CAFE·focus/longstay) · `components/place/FeaturePills.tsx`(등급 렌더 재작성) · `components/place/PlaceDetailOverlay.tsx`(verified 배지·라이브 AI요약) · `components/urgent/ScenarioButtons.tsx`(ORDER) · `app/(shell)/report/page.tsx`(GPS 좌표 전송).
 - 다음: (후속) 급증 배지·EventSource 구독·popular-times 히트맵·커뮤니티 최소 UI. 카테고리 필터는 상권정보 승인 시 결과가 채워진다.
-- 관련: 브랜치 `feat/frontend-surface-p4`, ADR-0004(BFF 패스스루)·ADR-0005 §④(features/verified/시나리오)·ADR-0010(AI요약)·ADR-0016(급증, 후속), CLAUDE.md §9(간판 우선, 커뮤니티는 살).
+- 관련: 브랜치 `feat/frontend-surface-p4`, ADR-0004(BFF 패스스루)·ADR-0005 §④(features/verified/시나리오)·ADR-0010(AI요약)·ADR-0016(급증, 후속), docs/SPEC.md §9(간판 우선, 커뮤니티는 살).
 
 ### 2026-07-10 — 커버리지 ratchet(0.60→0.70) + popular-times Redis 캐시 (브랜치 `chore/coverage-cache-p4`)
 - 한 일(⑨, 품질·인프라): ① **JaCoCo LINE floor 0.60→0.70** — ①~⑧에서 서비스·순수함수·DTO 테스트가 대폭 늘어 로컬(IT skip) 실측이 65.7%→**71.0%**로 올랐다. "로컬이 하한, CI는 그 이상" 원칙대로 측정치 바로 아래인 0.70으로 잠갔다(회귀 방지). ② **시간대별 혼잡(popular-times, ②) Redis TTL 캐시** — `ReportService.popularTimes`에 `@Cacheable("popularTimes", key=#placeId)`, TTL 1시간. `RedisCacheConfig`에 `POPULAR_TIMES_CACHE` + `List<PopularTimesSlot>`를 TypeFactory로 원소 타입까지 바인드한 직렬화기를 등록.
@@ -683,7 +683,7 @@
 - 검토한 대안: ① **급증(①)/survival 캐시** — 실시간성이 생명이라 캐시하면 목적이 깨져 제외. ② **wrapper record로 캐시** — 단일 concrete 타입이라 안전하지만 API/테스트 셰이프가 바뀌어, TypeFactory 직렬화기(왕복 테스트로 검증됨)로 List를 그대로 캐시하는 편이 덜 침습적. ③ **floor를 0.71로** — 측정치와 너무 붙어 사소한 변동에 깨지므로 0.70으로 여유.
 - 검증: `RedisCacheConfigTest`(2, weather + **List<PopularTimesSlot> 왕복**)·`PopularTimesCacheProxyTest`(1, 2회 호출 시 집계 쿼리 1회=캐시 히트) green. `jacocoTestCoverageVerification` floor 0.70 로컬 통과(실측 71.0%). compile green.
 - 산출물: `build.gradle`(floor 0.70+주석) · `RedisCacheConfig`(POPULAR_TIMES_CACHE·타입 바인드 직렬화기·등록) · `ReportService.popularTimes`(@Cacheable) · 테스트 `RedisCacheConfigTest`(+1)·`PopularTimesCacheProxyTest`(신규).
-- 관련: 브랜치 `chore/coverage-cache-p4`, TS-011/012(캐시 직렬화 함정)·ADR-0009(캐시=선택 계층, CacheErrorHandler)·ADR-0005 §④(popular-times)·CLAUDE.md §7(캐시 전략)·§0-2(무엇을 캐시 안 할지 = 과설계 방지).
+- 관련: 브랜치 `chore/coverage-cache-p4`, TS-011/012(캐시 직렬화 함정)·ADR-0009(캐시=선택 계층, CacheErrorHandler)·ADR-0005 §④(popular-times)·docs/SPEC.md §7(캐시 전략)·§0-2(무엇을 캐시 안 할지 = 과설계 방지).
 
 ### 2026-07-10 — 상권정보(카페/스터디카페) 계약 검증 + 코드기반 분류 + 격자 적재 (브랜치 `feat/store-ingest-cafe-studycafe`)
 - 배경: 사용자가 "data.go.kr 활용신청 모두 승인됨"을 알려, 그간 외부 승인 대기로 막혀 있던 **상권정보 오픈API(B553077 상가업소정보)** 를 실호출로 재확인했더니 `resultCode=00 NORMAL SERVICE`(2026-07-09까지 403 미승인 → 승인 확인). ADR-0006에 "승인 후 계약 재검증 필요"로 남겨둔 미검증 스캐폴드(`domain.ingest.storeapi`)를 **실측으로 검증·정정하고 실적재 경로까지 완성**했다.
@@ -694,7 +694,7 @@
 - **프로덕션 실적재(2026-07-10, 배포 rev49):** `prod-ingest-stores.sh`로 ECS one-off task 2회. ① **동작구 스모크**(bbox 126.90,37.48,126.99,37.52, 15셀): upserted 5,359(CAFE 4,602·STUDY_CAFE 757), geocoded 0. ② **서울 전역**(bbox 126.76,37.42,127.19,37.71, 340셀, ~18분): 누적 upsert 57,703(격자 겹침 포함). **bounds 타일 스윕으로 distinct 실측: CAFE 26,726 · STUDY_CAFE 3,160 = 29,886곳**(0 캡). geocoded 0(전량 WGS84 내장). 실측: `/places?category=CAFE|STUDY_CAFE` 서울 전역 200(강남 빽다방·종로 스터디독서실·노량진 플랜에이스터디카페), STUDY_CAFE 상세 `features=[quiet,study_ok]` 백필 확인, survival=UNKNOWN(제보 없는 신규 장소 — 간판 스코어/마커 불흔들, §0-9 정합). `⚠️ 교훈`: `aws ecs wait tasks-stopped`는 100회×6s=10분 캡이라 대형 격자(18분)는 조기 타임아웃 → 스크립트 exit는 태스크 완료가 아니라 **CloudWatch `[store-api] ingestArea 완료` 로그 + 태스크 exitCode로 판정**.
 - 산출물: `storeapi/StoreApiResponse`·`StoreRecord`·`StoreApiClient`·`SmallBusinessStoreApiClient`·`StoreCategoryMapper`·`StoreIngestionService`(전면 정정) · `IngestionRunner`(stores/bbox 모드) · `infra/scripts/prod-ingest-stores.sh`(신규) · 테스트 3파일 재작성 · ADR-0006(구현 정정 갱신) · TROUBLESHOOTING TS-026.
 - 남은 외부 블로커(변화): 상권정보 = **해소(승인 확인)**. 무더위쉼터 전국 = **여전히 블로킹** — data.go.kr엔 서비스 없음(표준데이터가 재난안전데이터공유플랫폼 safetydata.go.kr로 이관, DSSP-IF-10942), safetydata는 **별도 포털·별도 서비스키**라 datago 키로 `resultCode 30`(미등록). 사용자가 safetydata.go.kr 가입+활용신청+전용키 확보해야 진행 가능(HANDOFF ⏳).
-- 관련: 브랜치 `feat/store-ingest-cafe-studycafe`, ADR-0006(공부공간 커버리지)·ADR-0002(멱등)·ADR-0003(지오코딩 폴백), TS-026, CLAUDE.md §3(전국 적재·커버리지)·§0-3(멱등 인제스천)·§0-4(GiST 반경)·§9(간판 vs 살).
+- 관련: 브랜치 `feat/store-ingest-cafe-studycafe`, ADR-0006(공부공간 커버리지)·ADR-0002(멱등)·ADR-0003(지오코딩 폴백), TS-026, docs/SPEC.md §3(전국 적재·커버리지)·§0-3(멱등 인제스천)·§0-4(GiST 반경)·§9(간판 vs 살).
 
 ### 2026-07-10 — 무더위쉼터 전국 적재(safetydata.go.kr) — 마지막 외부 블로커 해소 (브랜치 `feat/shelter-safetydata-ingest`)
 - 배경: 사용자가 이미 신청해둔 **safetydata.go.kr 전용 서비스키**(무더위쉼터 `DSSP-IF-10942`, 만료 2027-07-10, 일일 1000호출)를 공유. safetydata는 data.go.kr과 **완전히 별개 포털·별개 키**라 datago 키로는 `resultCode 30`(미등록)이던 마지막 블로커였다. 키 확보로 해소.
@@ -705,7 +705,7 @@
 - **프로덕션 실적재(2026-07-10, 배포 rev50) + IP 제한 발견·우회(TS-027 §후속):** 배포 후 ECS one-off로 `--ingest.source=shelter`를 돌리자 **`resultCode=32 UNREGISTERED IP ERROR`** — safetydata 키가 **발급 시점의 등록 IP(사용자 로컬)에 잠겨** 있어 AWS Fargate egress IP에서 거부됐다(내 로컬 curl은 등록 IP라 동작). `complete` 게이트가 fetched=0을 감지해 **deactivate-stale을 건너뛰어 기존 샘플 보존**(데이터 손실 0 — 방어 설계 적중). RDS가 프라이빗이라 적재는 반드시 VPC 내(ECS)인데 Fargate IP는 유동·NAT는 비용상 배제 → 직접 API 경로가 이 키로는 ECS에서 불가. **우회(원래 의도된 CSV 스냅샷 경로)**: 등록 IP(로컬 세션)에서 전량 60,297건 다운로드 → 헤더가 `SourceSpec.COOLING_SHELTER` 별칭과 일치하는 CSV(RSTR_FCLTY_NO/RSTR_NM/RN_DTL_ADRES/LA/LO, per-row 주소 폴백 해석) 생성 → GitHub Release `data-v1/shelters.csv`(6.9MB) 업로드 → ECS가 **기존 CSV 파이프라인**(`--ingest.source=cooling_shelter --ingest.url= --ingest.deactivate-stale=true`)으로 적재. 결과: `source=cooling_shelter_std total=60,297 upserted=60,297 skipped=0 geocoded=0 deactivated=0`(기존 100 샘플이 60k의 부분집합이라 삭제 없이 갱신 — 중복 0). 실측: 서울 178·부산 196·대전 181·광주 203·제주 107(반경3km), 실제 쉼터명(휴서울이동노동자쉼터 등). **주의: CSV 파이프라인은 air_conditioned 조건부 백필을 안 한다**(그건 API 서비스 전용) — 후속. API 서비스(`ShelterIngestionService`)는 **등록 IP/로컬·향후 IP 해제 시의 경로**로 유지(계약 검증·테스트 완료).
 - 산출물: `domain/ingest/safetydata/`(6클래스) · `IngestionRunner`(shelter 소스) · `application.yml`(safetydata.service-key) · `infra/scripts/prod-ingest-shelter.sh` · 테스트 2파일 · TS-027. 비밀은 `.local/safetydata.env`(gitignore)에만.
 - 결과: **남은 외부 승인 블로커 = 0건.** 로드맵 P1~P5 데이터 커버리지(쉼터·화장실·도서관·카페·스터디카페) 전부 실데이터로 라이브.
-- 관련: 브랜치 `feat/shelter-safetydata-ingest`, TS-027, ADR-0002(멱등)·ADR-0003(지오코딩 폴백), CLAUDE.md §3(전국 표준데이터 적재)·§4(무더위쉼터=기본 레이어)·§6(공포 조장 금지 표현)·§9(간판 vs 살).
+- 관련: 브랜치 `feat/shelter-safetydata-ingest`, TS-027, ADR-0002(멱등)·ADR-0003(지오코딩 폴백), docs/SPEC.md §3(전국 표준데이터 적재)·§4(무더위쉼터=기본 레이어)·§6(공포 조장 금지 표현)·§9(간판 vs 살).
 
 ## 2026-07-10 — A1. 시설(place_features) → survival_score comfort 통합 (브랜치 `feat/a1-comfort-feature-sql`, ADR-0017)
 - 배경(docs/BACKLOG.md A1): `place_features`(에어컨·콘센트·wifi·좌석·study_ok 등)는 상세 등급 칩(FeatureGrade, ADR-0005 §④)으로 **표시만** 되고 survival_score에는 안 들어가, 냉방 쉼터·콘센트 카페가 **무제보이면 comfort=0**으로 취급됐다. 정적 시설을 스코어에 반영해 간판(종합점수·추천 랭킹)을 정밀화하되, 저신뢰 PUBLIC feature가 UGC를 덮거나 마커를 흔들지 않게(§9) 한다.
@@ -714,7 +714,7 @@
 - 스코프 규율: 폴백 회귀 0 — featureComfort=null(시설 없는 장소)이면 `effectiveComfort`가 정확히 기존 경로라 WeatherComfortIT·기존 단위테스트 전부 불변. 뷰가 FeatureGrade(표시)와 truthy/polarity를 의도적 이중 표현(관심사 분리), 실 PostGIS IT로 확증.
 - 검증: 단위 green — `SurvivalScoreTest`에 시설 조립 5건 추가(폴백 회귀·단조 상승 0.75·무회귀·무제보 UNKNOWN 유지·OKAY→GOOD 승격) + `PlaceSearchServiceTest`·`RecommendationServiceTest` 스텁에 getter 추가. IT — `SurvivalScoreIT`에 "시설이 comfort로 흘러 무제보 comfort>0·등급 UNKNOWN" 1건(JdbcTemplate로 place_features 직접 심음). 로컬 IT는 colima skip(TS-009) → **CI Backend(Gradle) pass 확인 후 머지**(TS-025).
 - 산출물: `V13__place_feature_signals_view.sql`(신규) · `ScoredPlaceView`·`PlaceRepository`·`SurvivalScore`·`PlaceResponse`·`RecommendationService` · 테스트 3파일 · ADR-0017.
-- 관련: ADR-0017, ADR-0007(SQL 집계+Java 조립)·ADR-0009(날씨 additive)·ADR-0005 §④(FeatureGrade), CLAUDE.md §5·§9, docs/BACKLOG.md A1. A3(쉼터 냉방 백필)이 붙으면 냉방쉼터 comfort↑ 실동작.
+- 관련: ADR-0017, ADR-0007(SQL 집계+Java 조립)·ADR-0009(날씨 additive)·ADR-0005 §④(FeatureGrade), docs/SPEC.md §5·§9, docs/BACKLOG.md A1. A3(쉼터 냉방 백필)이 붙으면 냉방쉼터 comfort↑ 실동작.
 
 ## 2026-07-10 — A3. 쉼터 air_conditioned 조건부 백필 (코드 enablement) (브랜치 `feat/a3-shelter-aircon`)
 - 배경(docs/BACKLOG.md A3): 무더위쉼터는 IP 제한 우회로 **CSV 스냅샷 경로**로 적재돼(WORKLOG 2026-07-10 쉼터 항목), 냉방기 보유수(COLR_HOLD_ARCNDTN) 기반 air_conditioned 백필이 안 됐다(그 로직은 IP 잠긴 API 서비스 `ShelterIngestionService` 전용). A1(시설 comfort SQL 통합)이 붙었으니, 냉방쉼터에 air_conditioned가 있어야 comfort↑가 실동작한다. **CSV 파이프라인에도 조건부 백필을 지원**하도록 코드를 확장한다.
@@ -724,7 +724,7 @@
 - 검증: 단위 green — `StandardCsvParserTest` 2건(냉방기>0만 수집·컬럼 없으면 빈 셋 하위호환). IT — `IngestionIdempotencyIT`에 냉방기>0 쉼터에만 air_conditioned 백필되는 end-to-end 1건(실 PostGIS, JdbcTemplate 검증). 로컬 IT colima skip(TS-009) → CI Backend(Gradle) pass 확인 후 머지(TS-025).
 - 남은 데이터 작업(사용자 입력 지점): 냉방 컬럼 포함 shelters.csv 재생성(등록 IP 로컬 + safetydata 키) → Release 업로드 → `prod-ingest.sh cooling_shelter <url> UTF-8`. 세션 마지막에 배치로 제안·수행.
 - 산출물: `SourceSpec`·`StandardCsvParser`·`IngestionService`(각 소폭) · 테스트 2파일. 마이그레이션 없음(place_features는 V2, 백필은 기존 경로).
-- 관련: docs/BACKLOG.md A3, ADR-0006(백필 규약)·ADR-0017(A1 comfort 통합 — 냉방쉼터 comfort↑ 실동작 연계), CLAUDE.md §4(무더위쉼터=기본 레이어)·§0-3(멱등).
+- 관련: docs/BACKLOG.md A3, ADR-0006(백필 규약)·ADR-0017(A1 comfort 통합 — 냉방쉼터 comfort↑ 실동작 연계), docs/SPEC.md §4(무더위쉼터=기본 레이어)·§0-3(멱등).
 
 ## 2026-07-10 — A2. verified 방문인증 → 유저 trust_score 연동 (브랜치 `feat/a2-verified-trust`)
 - 배경(docs/BACKLOG.md A2): `reports.verified`(V10, GPS 100m 방문인증)는 지금까지 **제보 단위**로만 place_report_signals 뷰에서 ×1.3 가중됐다. 방문인증 제보를 꾸준히 한 유저의 `trust_score`(V6 TrustScore 계보)를 **유저 단위**로도 올려, 그 유저의 이후 제보가 뷰 가중에서 더 실리는 선순환을 만든다(허위제보 억제 §0-7).
@@ -733,7 +733,7 @@
 - 스코프 규율: 하위호환 100% — 3-arg 오버로드가 verifiedCount=0으로 위임해 기존 호출부·테스트 전부 불변(Mockito 미스텁 long은 0L이라 기존 서비스 테스트도 그대로 pass). 뷰(V10 ×1.3 제보단위 가중)는 안 건드림 — A2는 유저단위 신호만 추가.
 - 검증: 단위 green — `TrustScoreTest` 4건(3-arg 동치·verified 상승·캡 포화·age 게이트) + `TrustScoreServiceTest` 1건(verified 있으면 더 높음). IT — `GpsVisitVerifyIT`에 `countByUserIdAndVerifiedTrue` 실 DB 집계 1건(인증 2 + 비인증 1 → verified 2). 로컬 IT colima skip(TS-009) → **CI Backend(Gradle) pass 확인 후 머지**(TS-025).
 - 산출물: `TrustScore`·`TrustScoreService`·`ReportRepository`(각 소폭) · 테스트 3파일. 마이그레이션 없음(파생 쿼리는 기존 idx_reports_user 경로).
-- 관련: ADR-0005 §④(GPS 방문인증)·V6 trust 계보·V10 verified, CLAUDE.md §5·§0-7, docs/BACKLOG.md A2.
+- 관련: ADR-0005 §④(GPS 방문인증)·V6 trust 계보·V10 verified, docs/SPEC.md §5·§0-7, docs/BACKLOG.md A2.
 ## 2026-07-10 — A4. 제보 급증 실시간 구독 + 지도 배지 (프론트) (브랜치 `feat/a4-surge-sse-frontend`)
 - 배경(docs/BACKLOG.md A4): 백엔드 `GET /alerts/stream`(SSE)·`GET /alerts/surge?bounds=`(스냅샷)이 라이브(#44, ADR-0016)인데 프론트가 구독을 안 해 실시간 UGC 시공간(간판)의 체감이 비어 있었다. EventSource로 급증을 실시간 반영한다.
 - 한 일: ① **SSE 스트리밍 BFF 프록시** `lib/backend.ts:proxyStream` — 기존 `proxy()`는 `res.text()`로 전량 버퍼링해 SSE 불가라, upstream body를 `new Response(body, {text/event-stream, no-cache/no-transform})`로 **패스스루**(ADR-0004). ② BFF 라우트 `app/api/alerts/{surge,stream}/route.ts`(stream은 `force-dynamic`). ③ `lib/surge.ts:useSurgeAlerts(bounds, onNew)` — 스냅샷 폴링(react-query 45s)을 신뢰 baseline으로, EventSource `surge` 이벤트를 실시간으로 병합(placeId dedupe, 라이브가 최신). ④ `components/map/SurgeBanner.tsx` — 상단 얇은 배너(중립 앰버·§6). ⑤ 홈 지도에 배너 + 뷰포트 안 새 급증 시 중립 토스트.
@@ -741,7 +741,7 @@
 - 규율/함정 대응: ref 갱신을 render가 아니라 effect에서(react-hooks/refs), 배너 접힘은 effect setState 없이 signature 파생으로(react-hooks/set-state-in-effect) — 둘 다 React 19 린트 규칙 준수. pointer-events 레이어링으로 배너/검색/필터 클릭 통과.
 - 검증: `npm run lint`·`typecheck`·`build` 전부 green. `/api/alerts/{surge,stream}` 라우트 빌드 확인(ƒ dynamic). (프론트 CI=frontend-ci.yml, Vercel 프리뷰 배포.)
 - 산출물: `types/alert.ts`(신규) · `lib/backend.ts`(proxyStream) · `lib/api.ts`(fetchSurge) · `lib/surge.ts`(신규 훅) · `components/map/SurgeBanner.tsx`(신규) · `app/api/alerts/{surge,stream}/route.ts`(신규) · `app/(shell)/page.tsx`.
-- 관련: docs/BACKLOG.md A4, ADR-0016(급증 LISTEN/NOTIFY→SSE)·ADR-0004(BFF 프록시), CLAUDE.md §6(공포 조장 금지)·§0-9(간판 우선).
+- 관련: docs/BACKLOG.md A4, ADR-0016(급증 LISTEN/NOTIFY→SSE)·ADR-0004(BFF 프록시), docs/SPEC.md §6(공포 조장 금지)·§0-9(간판 우선).
 
 ## 2026-07-10 — A5. 시간대별 혼잡 popular-times 히트맵 UI (프론트) (브랜치 `feat/a5-popular-times-heatmap`)
 - 배경(docs/BACKLOG.md A5): 백엔드 `GET /places/{id}/popular-times`(요일×시간 혼잡 파생, Redis 1h 캐시, #45·#53)가 라이브인데 프론트 노출이 없었다. 상세 화면에 시간대별 혼잡을 보여준다.
@@ -749,7 +749,7 @@
 - 왜(why): ① **왜 7×24 히트맵이 아니라 하루치 스트립인가(dataviz 폼 선택)** — UGC 제보가 희소해 168칸 히트맵은 대부분 공백(노이즈). 모바일 상세 폭에도 안 맞는다. dataviz "데이터 job에 맞는 폼 + 희소 데이터 정직성" 원칙대로 **요일 선택 + 24시간 스트립**으로 압축(간판 안 가림 §0-9). 강도 인코딩(셀 색)은 유지. ② **왜 발산형(diverging) 색인가** — 그늘 사용자의 관심은 "자리 있나"라, 한산(자리 있음=좋음, teal) ↔ 붐빔(amber)의 **극성**이 "얼마나 바쁜가"(순차)보다 의미 있다. dataviz 발산 규약(두 극 + 중립 회색 중점) 준수. **`validate_palette.js`로 검증**: 두 극 CVD ΔE 19.8(>12 안전). ③ **왜 §6 amber(적색 아님)인가** — 붐빔도 "위험"이 아니라 주의 정도. ④ **왜 색만으로 구분 안 하나(접근성)** — 범례 + 셀 `aria-label`/`title`(시각·등급·제보수)로 relief 요건 충족(dataviz 대비 WARN 완화). ⑤ **왜 무데이터면 조용히 접나** — 로딩/에러/무데이터는 null 반환(살 섹션으로 상세를 채우지 않음, 간판 우선).
 - 검증: `npm run lint`·`typecheck`·`build` green. `/api/places/[id]/popular-times` 라우트 빌드 확인. dataviz 스킬 규격 준수(폼 선택·발산 팔레트 검증·접근성 relief).
 - 산출물: `types/popular.ts`·`lib/api.ts`·`lib/queries.ts`·`components/place/PopularTimes.tsx`·`app/api/places/[id]/popular-times/route.ts`·`PlaceDetailOverlay.tsx`.
-- 관련: docs/BACKLOG.md A5, ADR-0005 §④(자체 popular-times), dataviz 스킬, CLAUDE.md §6·§0-9.
+- 관련: docs/BACKLOG.md A5, ADR-0005 §④(자체 popular-times), dataviz 스킬, docs/SPEC.md §6·§0-9.
 
 ## 2026-07-10 — A6. 후기 커뮤니티 최소 UI (댓글·유용해요) (프론트) (브랜치 `feat/a6-community-ui`)
 - 배경(docs/BACKLOG.md A6): 백엔드 `POST/GET /reviews/{id}/comments`·`POST/DELETE /reactions`(#49, V11)가 라이브인데 프론트 노출이 없었다. 상세 후기에 최소 댓글 + "유용해요" 토글을 연다. **규율: 커뮤니티는 살, 간판 아님(§0-9) — 최소 표면만.**
@@ -758,7 +758,7 @@
 - 스코프 규율(§0-9): 후기 footer의 작은 칩 2개(👍/💬)만 노출, survival_score(간판)와 무연결. 커뮤니티 카운트를 전면에 세우지 않는다.
 - 검증: `npm run lint`·`typecheck`·`build` green. `/api/reactions`·`/api/reviews/[id]/comments` 라우트 빌드 확인.
 - 산출물: `types/community.ts`·`lib/api.ts`·`lib/backend.ts`(proxyAuthed)·`lib/queries.ts`·`components/place/ReviewsSection.tsx`·`app/api/reactions/route.ts`·`app/api/reviews/[id]/comments/route.ts`.
-- 관련: docs/BACKLOG.md A6, #49(커뮤니티 백엔드 V11), CLAUDE.md §8(커뮤니티=2차·살)·§0-9(간판 우선·리뷰앱화 금지).
+- 관련: docs/BACKLOG.md A6, #49(커뮤니티 백엔드 V11), docs/SPEC.md §8(커뮤니티=2차·살)·§0-9(간판 우선·리뷰앱화 금지).
 
 ## 2026-07-10 — A7. 관심 장소(bookmarks) 테이블·API·UI (V14) (브랜치 `feat/a7-bookmarks`)
 - 배경(docs/BACKLOG.md A7): ERD `bookmarks(user_id, place_id, memo, created_at)`가 미구현이었다. 저장/해제 + 마이페이지 목록. **B1 알림의 "관심 장소 상태 변화"의 선행 테이블**이라 A에서 먼저.
@@ -767,7 +767,7 @@
 - 왜(why): ① **왜 upsert(멱등)인가** — 저장 토글은 중복 저장이 무의미. uq_bookmarks + findByUserIdAndPlaceId로 memo 갱신(Review 장소당 1건 정책과 동형, 저빈도 UGC라 레이스 허용). ② **왜 BookmarkView 네이티브 조인인가** — 목록에 장소명·좌표·카테고리가 필요한데 bookmarks만으론 부족 → places 조인, 좌표 ST_Y/ST_X 평탄화, created_at Instant→UTC(TS-016). soft-delete 장소 제외(폐업 회전, ADR-0006). ③ **왜 리액션과 달리 초기 상태를 아는가** — bookmarks는 `GET /me/bookmarks` 목록이 있어 useMyBookmarks 멤버십으로 별 채움을 정확히 표시(리액션은 GET이 없어 상호작용 기반이었던 것과 대비). ④ **왜 존재 안 하는 장소는 404인가** — FK 위반 500 대신 명확한 신호(existsById 선검사). ⑤ **왜 살(개인화)이고 간판 아님인가** — survival_score와 무연결(§0-9). B1 알림이 이 테이블을 재사용할 선행.
 - 검증: 단위 green — `BookmarkServiceTest` 4건(신규 save·재저장 upsert·404·해제 멱등). IT — `BookmarkFlowIT` 5건(저장→목록 조인·재저장 멱등·해제 후 사라짐·비로그인 401·없는 장소 404, 실 PostGIS + Security 필터체인·JWT). 프론트 lint/typecheck/build green(3 라우트 확인). 로컬 IT colima skip(TS-009) → **CI Backend(Gradle) pass 확인 후 머지**(TS-025). **V14 프로덕션 적용은 머지 후 자동 배포(Flyway).**
 - 산출물: `V14__bookmarks.sql` · `domain/bookmark/*`(8파일) · `SecurityConfig`(3매처) · 백엔드 테스트 2파일 · 프론트 `types/bookmark.ts`·`lib/api.ts`·`lib/queries.ts`·`components/place/BookmarkButton.tsx`·`PlaceDetailOverlay.tsx`·`mypage/page.tsx`·BFF 라우트 3개.
-- 관련: docs/BACKLOG.md A7, ERD §8, ADR-0006(soft-delete)·TS-016(Instant), CLAUDE.md §0-9(살). **B1 알림 "관심 장소 상태 변화"의 선행 완료.**
+- 관련: docs/BACKLOG.md A7, ERD §8, ADR-0006(soft-delete)·TS-016(Instant), docs/SPEC.md §0-9(살). **B1 알림 "관심 장소 상태 변화"의 선행 완료.**
 
 ## 2026-07-10 — B1. 알림(Notifications) — 인앱 센터 + 급증 이벤트 재사용 (V15) (브랜치 `feat/b1-notifications`, ADR-0018)
 - 배경(docs/BACKLOG.md B1): 심화 알림 — ① 주변 급증, ② 관심 장소 변화(A7), ③ 폭염 피난. ERD notifications 미구현. **ADR 선행**(전달 방식 웹 트렌드 확인).
@@ -777,7 +777,7 @@
 - 왜(why): ① **왜 구조화 컬럼(condition_json 아님)** — 규칙 매칭이 공간쿼리(ST_DWithin)라 JSONB 추출은 취약·비효율. center_lat/lng/radius_m 구조화가 타입안전·인덱스·테스트 유리(ERD 초안에서 의도적 이탈, ADR-0018 문서화). ② **왜 매칭을 네이티브 INSERT…SELECT로** — 규칙 필터(공간·북마크 조인)+발송+dedup을 한 문 원자 처리(앱 루프 없이 DB에서, 간판 정신모델). ③ **왜 폴링 센터(SSE 아님)** — 센터는 "없을 때 쌓인 것" 이력 조회라 영속 폴링이 맞다(A4 SSE는 실시간 순간). ④ **왜 §6** — 발송 문구=급증 SurgeInfo.message(이미 순화) 재사용("위험!" 금지).
 - 검증: 단위 green `NotificationServiceTest` 4건(SURGE_NEARBY 좌표검증 400·BOOKMARK 좌표불요·onSurge 양쪽 매칭 호출·토글 404). IT `NotificationFlowIT` 5건(규칙→급증→인앱 1건 중복없이→읽음·반경밖 무발송·BOOKMARK 조인·401·400, 실 PostGIS+Security+JWT). 전체 `./gradlew test` green(ITs colima skip, CI 게이트 TS-025). 프론트 lint/typecheck/build green(5 라우트). **V15는 머지 후 Flyway 자동 적용.**
 - 산출물: `V15__notifications.sql` · `domain/notification/*`(10파일) · `ReportNotificationListener`(onSurge 배선)·`SecurityConfig` · 백엔드 테스트 2 · 프론트 `types/notification.ts`·api·queries·`NotificationsSection.tsx`·`mypage`·BFF 5 · ADR-0018.
-- 관련: ADR-0018, ADR-0016(급증 LISTEN/NOTIFY 재사용)·A7 bookmarks(BOOKMARK_SURGE)·ADR-0013(멀티 인스턴스), CLAUDE.md §3·§6·§9. **follow-up: HEAT_ESCAPE 평가(날씨 트리거)·Web Push(VAPID) stretch.**
+- 관련: ADR-0018, ADR-0016(급증 LISTEN/NOTIFY 재사용)·A7 bookmarks(BOOKMARK_SURGE)·ADR-0013(멀티 인스턴스), docs/SPEC.md §3·§6·§9. **follow-up: HEAT_ESCAPE 평가(날씨 트리거)·Web Push(VAPID) stretch.**
 
 ## 2026-07-10 — B2. 루트 — 화장실 포함 경로 MVP (브랜치 `feat/b2-routes-toilet`, ADR-0019)
 - 배경(docs/BACKLOG.md B2): 심화 루트 — 화장실 포함/그늘/비 경로. 자체 라우팅(pgRouting)은 과설계(§0-2) → 외부 경로 API + 우리 POI 오버레이. **ADR 선행**(외부 API 결정).
@@ -787,7 +787,7 @@
 - 검증: 단위 `RouteServiceTest` 2건(경유 3점·총거리=출발+도착 / 무경유 2점·직선거리). IT `RouteToiletIT` 3건(사이 화장실 경유·polyline 3점·mode straight / corridor 밖만 있으면 무경유 2점 / 해외좌표 400, 실 PostGIS). 전체 `./gradlew test` green. 프론트 lint/typecheck/build green(라우트 확인). 마이그레이션 없음(경로는 온디맨드 계산).
 - 사용자 입력 지점(BACKLOG 명시): **카카오모빌리티 활용신청·키**(도로 폴리라인 `mode=road` 승격 시). 키 확보 시 `DirectionsProvider` Kakao 구현 + TS-026 실호출 계약검증 + `.local`/SSM 키.
 - 산출물: `domain/route/*`(7파일) · `PlaceRepository`(waypoint 쿼리)·`GeoUtils`(haversine) · 백엔드 테스트 2 · 프론트 `types/route.ts`·`lib/api.ts`·`app/api/routes/toilet`·`PlaceDetailOverlay` · ADR-0019.
-- 관련: ADR-0019, ADR-0001(공간 인덱스)·ADR-0004(BFF), TS-026(외부 계약검증), CLAUDE.md §0-2·§6. **follow-up: Kakao 도로 폴리라인·지도 오버레이 UI·그늘/비 경로.**
+- 관련: ADR-0019, ADR-0001(공간 인덱스)·ADR-0004(BFF), TS-026(외부 계약검증), docs/SPEC.md §0-2·§6. **follow-up: Kakao 도로 폴리라인·지도 오버레이 UI·그늘/비 경로.**
 
 ## 2026-07-10 — 데이터 op 실행: A3 쉼터 냉방 재적재 · A8 상권 6대 광역시 확장 · B1 Web Push VAPID (사용자 승인 후)
 사용자 승인("할 수 있는거 전부 다 해")으로 코드 완료 후 남은 대량 데이터 op·키 항목을 실행. (코드 PR은 A3 #63·A8 스크립트 기존·B1 #68에서 이미 머지됨 — 여기는 **실행 기록**.)
@@ -813,7 +813,7 @@
 - 왜(why): ① **왜 온디맨드(pull)인가 — 새 스케줄러 안 씀(§0-2)**: Web Push(F2) 미배선이라 발송 이력은 앱을 열어야만 보인다 → 서버 주기생성해도 유저가 보는 결과가 온디맨드와 동일한데 인프라(EventBridge→RunTask·전유저 스캔)만 늘어난다. 읽기 진입점 멱등 upsert(dedup UNIQUE)라 반복 열람·멀티 인스턴스에 안전. 푸시 배선 시 트리거만 주기평가로 승격(로직 재사용). ② **왜 체감 33℃인가**: 기상청 폭염주의보 발효선. `HeatComfort`가 이미 33/35/38에 앵커된 체감온도 공식을 가지므로 임계값을 추측 않고 재사용(§0-B). ③ **왜 kNN 재사용인가**: 근처 쉼터 = 간판 공간검색(<->), 새 쿼리 안 만듦. ④ **왜 3시간 cooldown인가**: 날씨 실황은 시간당 갱신이라 매시 알림은 나깅 → 규칙당 3시간 1회. ⑤ **§6 표현**: "위험!" 금지, "지금 체감 34℃, 가까운 무더위쉼터 '○○'(120m)에서 잠깐 쉬어가세요" 권유형. graceful: 날씨 결측·쉼터 없음·한 규칙 예외는 조용히 skip(다른 규칙·목록 안 막음).
 - 검증: 단위 `NotificationServiceTest` — HEAT_ESCAPE 검증(lat/lng 필수 400)·폭염+쉼터→insert·폭염 아님 skip·쉼터 없음 skip·규칙 없음 no-op. 프론트 tsc green. CI 게이트(NotificationFlowIT 실 PostGIS). 마이그레이션 없음(기존 notification_deliveries·notification_rules 재사용).
 - 산출물: `HeatComfort`·`NotificationService`·`NotificationController`·`NotificationDeliveryRepository`·`NotificationRuleRepository` · 프론트 `NotificationsSection` · ADR-0020 · 테스트.
-- 관련: ADR-0020, ADR-0018(알림 본체)·ADR-0009(체감 comfort)·ADR-0001(kNN), CLAUDE.md §0-2·§6. **BACKLOG F5 완료. follow-up 없음(F2 푸시 배선 시 트리거 승격 지점만 기록됨).**
+- 관련: ADR-0020, ADR-0018(알림 본체)·ADR-0009(체감 comfort)·ADR-0001(kNN), docs/SPEC.md §0-2·§6. **BACKLOG F5 완료. follow-up 없음(F2 푸시 배선 시 트리거 승격 지점만 기록됨).**
 
 ## 2026-07-10 — F1: 상권 카페/스터디카페 9개 도시 확장 실행 (데이터 op)
 사용자 승인("전부 다 모두 다 해")으로 F1(A8 나머지 지역) 실행. `prod-ingest-stores.sh <bbox> 1500` 순차(IngestBatchLock 존중). data.go.kr B553077, 좌표 내장(geocoded 0).
@@ -826,7 +826,7 @@
 - 왜(why): ① **왜 기존 키 재사용인가(핵심 발견)** — 카카오내비 길찾기는 카카오 디벨로퍼스 콘솔에 "활용신청"이 안 보인다(별도 카카오모빌리티 사이트 제공). 그런데 **지오코딩/로그인에 쓰는 기존 카카오 REST 키가 navi 엔드포인트에 그대로 인가**됨을 실호출로 확인(TS-026, 2026-07-11: `/v1/directions`·`/v1/waypoints/directions` 둘 다 HTTP200 `result_code:0`). → **사용자 액션·새 비밀 0**으로 F3 해소(키는 이미 SSM 배선·프로덕션 라이브). ② **왜 @Primary+키게이트인가** — `kakao.rest-api-key`가 yml에 항상 정의(기본 "")돼 `@ConditionalOnProperty`가 빈 문자열에도 애매하게 매칭. `@Primary`+런타임 키게이트가 결정적(빈 키=항상 직선 폴백) → 기존 `RouteToiletIT`(mode=straight 기대)·RouteService 무변경 통과. ③ **왜 다중경유지 엔드포인트인가** — 우리 "출발→화장실→도착"과 1:1. 비용(2026 건당 과금 도입)이 문제면 단일경로 2-leg 무료 조합으로 대체 가능(확장점 문서화). ④ **왜 vertexes 뒤집나** — 카카오는 [경도,위도] 순, 우리 LatLng은 (위도,경도) → 안 뒤집으면 지도에서 좌표 엉킴(테스트로 고정).
 - 검증: 실호출 계약검증(TS-026, 2회 엔드포인트 200). 단위 `KakaoDirectionsProviderTest` 5건(MockRestServiceServer 실 파싱 경로) green. 프론트 tsc·eslint green. CI가 실 게이트(RouteToiletIT는 CI 무키→straight 유지). 마이그레이션 없음.
 - 산출물: `KakaoDirectionsProvider` + 테스트 · 프론트 `RouteMiniMapLive`·`RouteMiniMap`·`PlaceDetailOverlay` · application.yml 주석 · ADR-0021.
-- 관련: ADR-0021, ADR-0019(경로 MVP·전략), TS-026(계약검증), CLAUDE.md §7·§0-4. **BACKLOG F3 완료. 다음: F4 그늘 경로(경로 주변 쉼터 오버레이).**
+- 관련: ADR-0021, ADR-0019(경로 MVP·전략), TS-026(계약검증), docs/SPEC.md §7·§0-4. **BACKLOG F3 완료. 다음: F4 그늘 경로(경로 주변 쉼터 오버레이).**
 
 ## 2026-07-11 — F2: Web Push 전송 배선 (zerodep·VAPID·플래그 게이팅, ADR-0022)
 - 한 일(백엔드): `domain.push` 신규 — `V16 push_subscriptions`(endpoint UNIQUE upsert)·엔티티·리포지토리·`WebPushConfig`(VAPIDKeyPair 빈, `push.enabled=true`일 때만)·`PushService`(구독 저장 + VAPID 암호화 전송, 비활성 시 no-op)·`PushController`(`/push/subscribe`·`/push/test`·`/push/public-key`). `NotificationService.evaluateHeatEscape`에 push additive 배선(insertHeatEscape>0 시 sendToUser, 실패 격리). SecurityConfig `/push/subscribe|test` 인증. 단위테스트 6건. 한 일(프론트): Serwist `app/sw.ts`에 `push`·`notificationclick` 핸들러, `lib/push.ts`(권한·구독·테스트), BFF `/api/push/*` 3개, `NotificationsSection` "기기 푸시 알림" 켜기+테스트(서버 비활성이면 숨김).
@@ -846,9 +846,9 @@
 실사용 피드백으로 버그/기능이 쌓여, **다음 세션 즉시 실행용으로 정리**(코드는 안 만들고 계획만). `docs/BACKLOG.md`를 N1~N9로 재구성, `/geuneul-finish` 명령어 신설.
 
 ### 결정(무엇/왜)
-- **F1 잔여 중소도시 = 미실시**. 왜: 9개 도시로 커버리지 충분. 더 적재하면 "데이터 부풀리기"로 보여 포트폴리오 메리트 하락(사용자 판단). 간판은 "대용량 지리검색"이지 "도시 수"가 아님.
-- **대규모 대비 = 선제 우선순위 승격(구 F6)**. 왜: "트래픽 붙을 때"를 기다리면 포트폴리오에 못 보여줌. **k6 재부하로 미리 만들어** 부하 근거 튜닝(오토스케일링·task_cpu 512·EXPLAIN 재튜닝) 스토리를 확보하는 게 P4 심화로 훨씬 강함(N9).
-- **작성자 팔로우 = "커먼스 세이프" 버전만**(N7). 왜: 풀 팔로우 그래프(팔로워 목록·피드·맞팔)는 CLAUDE.md 비목표(§0-9 "그늘은 공개 커먼스, 친구망 아님")라 간판을 흐림. 사용자 확정 설계 = **팔로워 "수"만 공개(목록·피드 없음) + 팔로잉은 나만 + 작성자 공개 프로필(후기+trust_score)**. "좋은 작성자 후기 다시 찾기" 욕구를 신뢰도 축으로 충족하되 허영지표·소셜피드는 배제. 검토 대안: 프로필만(팔로우 없음)/비공개 관심작성자 → 사용자가 "팔로워 수 공개+팔로잉 사적" 절충 선택.
+- **F1 잔여 중소도시 = 미실시**. 왜: 9개 도시로 커버리지 충분. 더 적재해도 "데이터 부풀리기"일 뿐 가치가 없음(사용자 판단). 간판은 "대용량 지리검색"이지 "도시 수"가 아님.
+- **대규모 대비 = 선제 우선순위 승격(구 F6)**. 왜: "트래픽 붙을 때"를 기다릴 이유가 없음. **k6 재부하로 미리 측정해** 부하 근거 튜닝(오토스케일링·task_cpu 512·EXPLAIN 재튜닝)을 선제 확보(N9).
+- **작성자 팔로우 = "커먼스 세이프" 버전만**(N7). 왜: 풀 팔로우 그래프(팔로워 목록·피드·맞팔)는 docs/SPEC.md 비목표(§0-9 "그늘은 공개 커먼스, 친구망 아님")라 간판을 흐림. 사용자 확정 설계 = **팔로워 "수"만 공개(목록·피드 없음) + 팔로잉은 나만 + 작성자 공개 프로필(후기+trust_score)**. "좋은 작성자 후기 다시 찾기" 욕구를 신뢰도 축으로 충족하되 허영지표·소셜피드는 배제. 검토 대안: 프로필만(팔로우 없음)/비공개 관심작성자 → 사용자가 "팔로워 수 공개+팔로잉 사적" 절충 선택.
 
 ### 버그 진단(멀티에이전트 워크플로우 — 근본원인·수정 확정, 검증 통과)
 - **N1 리뷰·제보 사진 안 보임**: **두 결함**. ① 프론트 `ReviewsSection`이 `r.photos`를 그리는 `<img>` 없음(데이터는 정상 왕복). ② 저장 URL이 raw 비공개 S3(`s3.tf` 퍼블릭 차단·CloudFront는 ALB만) → `<img>` 떠도 **403**. **제보 사진은 이미 `<img>`로 그려서 지금도 403으로 깨지는 중** → ②가 리뷰·제보 **공유 수정**. 해법: (A) 리뷰 `<img>` 렌더 + (B) **읽기 시 presigned GET**(PhotoService.presignGet → Review/Report 읽기 경로). 버킷 퍼블릭 전환 금지(의도적 차단).
@@ -867,13 +867,13 @@
 - **N2 댓글 UX(버그·경미, 백엔드 무변경)**: `ReviewComments` — ① 댓글 작성 성공 시 `setOpen(true)`로 섹션을 펼친 채 유지(방금 쓴 댓글 즉시 노출). ② 토글 라벨을 상태 명시형으로 — 접힘+카운트 있으면 `"댓글 N개 보기"`(탭하면 열린다는 affordance), 펼침이면 `"댓글 N · 접기"`. "개수만 늘고 내용 안 보임" 착시 제거. 읽기 경로·`useCreateReviewComment` 무효화는 원래 정상(진단대로 stale 배포도 이 PR 머지로 Vercel 최신화).
 - **N3 제보 capture 제거(버그·1줄)**: `report/page.tsx` 사진 input의 `capture="environment"` 제거 → 리뷰 입력과 동일하게 네이티브 선택지(보관함/카메라/파일) 노출.
 - **검증**: 백엔드 `PhotoServiceTest`(presignGet 4케이스 추가: 자기버킷 서명·외부/null/빈 통과·버킷미설정 통과·List 매핑)·`ReviewServiceTest`·`ReportServiceTest`·`PopularTimesCacheProxyTest`(생성자 +PhotoService) 로컬 green. 프론트 tsc·eslint·build green. 마이그레이션 없음. IT는 CI 게이트(TS-009).
-- **관련**: CLAUDE.md §1/§5(제보/후기 분리)·§7(S3 presign)·§0-9(커뮤니티 최소 표면)·§D. BACKLOG N1·N2·N3. 버킷 퍼블릭 전환 금지 원칙 유지.
+- **관련**: docs/SPEC.md §1/§5(제보/후기 분리)·§7(S3 presign)·§0-9(커뮤니티 최소 표면)·§D. BACKLOG N1·N2·N3. 버킷 퍼블릭 전환 금지 원칙 유지.
 
 ## 2026-07-11 — N4: 지도 하단 시트 3단 스냅 + 드래그 (PR #82, 프론트 전용)
 - **무엇**: `BottomSheet.tsx` — 기존 half(46%)↔full(82%) 2단 토글에 **peek(96px 고정)** 단을 추가해 3단 스냅으로. 핸들에 pointer 드래그 제스처를 붙여 아래로 밀면 peek로 접혀 지도가 크게 보이고, 위로 밀거나 탭하면 다시 펼쳐진다. `page.tsx` snap 상태 타입을 `SheetSnap`("peek"|"half"|"full")로 확장, `onToggleSnap`→`onSnapChange(next)`.
 - **왜(why, 대안 검토)**: ① **왜 라이브러리 없이 pointer 이벤트인가** — react-spring/framer-motion/@use-gesture 도입은 이 한 컴포넌트에 번들·의존성 과투자(§0-2). Pointer Events는 2026 표준(마우스·터치·펜 통합, setPointerCapture로 요소 밖 이동도 추적)이라 순정으로 충분·가장 가볍다. ② **왜 peek를 px 고정인가** — 12%를 그대로 쓰면 작은 화면에서 두 줄 헤더("주변 N곳"+반경)가 잘린다 → 96px로 고정해 헤더 가시성 보장(half/full은 컨테이너 대비 %로 반응형 유지). ③ **왜 탭/드래그 분리인가** — 이동량 6px 임계로 드래그면 최근접 스냅, 탭이면 native click(펼침/접힘 토글)에 위임 → 키보드 접근성(Enter=click) 유지하면서 제스처 공존. `dragged` 플래그로 드래그 직후 click 억제. ④ **왜 상태를 부모(page)에 두나** — `CurrentLocationFab`가 full일 때 숨는 등 형제 컴포넌트가 snap을 참조 → 단일 소스.
 - **검증**: 프론트 tsc·eslint·build green. 백엔드 무변경(deploy 트리거 없음). 실기기 제스처는 배포 후 확인(수용 기준: 아래 스와이프→peek로 지도 크게, 위 스와이프/탭→복원).
-- **관련**: BACKLOG N4 · CLAUDE.md §0-2(범위·의존성 절제). Pointer Events(setPointerCapture, touch-action:none).
+- **관련**: BACKLOG N4 · docs/SPEC.md §0-2(범위·의존성 절제). Pointer Events(setPointerCapture, touch-action:none).
 
 ## 2026-07-11 — N5: 지정 장소 검색(카카오 키워드, BFF 프록시) (PR #83)
 - **무엇**: 상단 검색바가 "준비 중" 토스트만 띄우던 스텁을 **실제 카카오 로컬 키워드 검색**으로 구현. 검색 → 결과 목록 → 선택 시 지도가 그 좌표로 이동(+검색 핀) → onIdle bounds 조회가 그 주변 우리 마커를 채운다.
@@ -881,7 +881,7 @@
   - 프론트: `SearchBar` 실검색(300ms 디바운스·요청 id 레이스가드·바깥탭 닫기)·`lib/api.searchPlaces`·BFF `/api/places/search`·`KakaoMapLive` searchPin(팬+라벨 핀)·`page.tsx` 배선.
 - **왜(why, 검토 대안)**: ① **왜 기존 카카오 REST 키 재사용인가** — keyword.json은 지오코딩(주소검색)과 **같은 도메인(dapi.kakao.com)·같은 REST 키**. 실호출 계약검증(TS-026, 2026-07-11): `강남역` 검색 HTTP200, `documents[].x=경도·y=위도` 문자열, `place_name/address_name/road_address_name/category_group_name` 확인 → **새 키·사용자 액션 0**(키는 이미 SSM). ② **왜 BFF 프록시인가** — 카카오 REST 키를 클라에 노출하면 도용된다. 지오코딩 클라이언트와 동일하게 서버가 대신 호출(§7·§D). ③ **왜 위치 바이어스(sort=distance)인가** — "성균관대"처럼 동명·분점 다수일 때 내 주변을 우선. 좌표 있을 때만 `x/y/sort=distance`(카카오가 sort=distance엔 x/y 필수). geo 폴백이면 좌표 미전송(가짜 위치 바이어스 방지). ④ **왜 `/places/search` 경로인가** — Spring PathPattern은 리터럴(`search`)을 캡처(`{id}`)보다 우선 라우팅 → `/places/{id}`와 충돌 없음(라이브 스모크로 재확인). ⑤ **왜 실패를 빈 리스트로 흘리나** — 검색은 부가기능이라 카카오 4xx/네트워크 실패로 화면을 500으로 깨지 않고 "결과 없음". ⑥ **레이트리밋은 후속(의도적 보류)** — 카카오 키워드는 무료 티어 + graceful degradation + 프론트 디바운스 + BFF 경유라 즉시 위험은 낮다. 전용 리밋은 report/photo 리미터의 rule-of-three 공통추출(`global.web`)을 동반해야 해 이 기능 PR의 blast radius를 키운다 → 남용 관측 시 공통 리미터로 승격(follow-up).
 - **검증**: 실호출 계약검증(TS-026). 백엔드 `KakaoKeywordClientTest`(실 파싱·x/y 축·위치바이어스·size클램프·서버오류 graceful·무키 무호출) + `KeywordSearchControllerTest`(공백400·정상위임·바이어스전달) green. 프론트 tsc·eslint·build green. `set-state-in-effect` 규칙은 검색 선택(discrete 외부 이벤트)→제어형 center 동기화라 스코프 disable(파생상태 아님, 기존 recenter 이펙트와 동일 성격). 마이그레이션 없음. 라우팅 precedence는 배포 후 라이브 curl로 확인.
-- **관련**: BACKLOG N5 · TS-026(계약검증)·TS-004/028(record 역직렬화) · CLAUDE.md §7·§9·§D·§0-2. `domain.search` 신규.
+- **관련**: BACKLOG N5 · TS-026(계약검증)·TS-004/028(record 역직렬화) · docs/SPEC.md §7·§9·§D·§0-2. `domain.search` 신규.
 - **라이브 검증(2026-07-11, 배포 후)**: `GET /places/search?query=강남역` → JSON 리스트 200(`강남역 2호선` lat 37.498·lng 127.028·지하철역). **라우팅 precedence 실측 확인**(`/places/search`가 `/places/{id}`로 안 샘). N5 완료·라이브.
 
 ## 2026-07-11 — N6: 내 글 관리 (/me/reviews·comments·reactions) (PR #84)
@@ -890,7 +890,7 @@
   - 프론트: `MyActivitySection`(탭 3종·항목 탭 시 `selected.open(placeId)`)·`types/activity`·`lib/api`·`lib/queries`(useMyReviews/Comments/Reactions)·BFF `/api/me/{reviews,comments,reactions}`(proxyAuthed).
 - **왜(why)**: ① **왜 장소명 조인인가** — 수용기준이 "각 항목에서 원문 장소로 이동"이라 placeId+placeName이 필요. 댓글·유용해요는 `× reviews × places` 3-way 조인(댓글이 달린/유용해요 누른 후기의 장소). ② **왜 프로젝션 Instant인가** — 네이티브 쿼리 TIMESTAMPTZ는 JDBC가 Instant로 주고 인터페이스 프로젝션이 OffsetDateTime 자동변환을 못 해 CI에서만 500(TS-016) → 프로젝션은 Instant, DTO.of에서 UTC 부착. ③ **왜 N7과 공유인가** — `findByUserIdWithPlace`(작성자별 후기)는 N7 "작성자 공개 프로필"의 후기목록과 동일 로직 → N7이 재사용(BACKLOG 지시). ④ **왜 hidden 제외인가** — 모더레이션으로 숨긴 내 후기는 공개·마이 활동 모두 안 보이게 일관(공개 조회와 동일). ⑤ **왜 살 최소표면인가** — "내 활동"은 개인 관리 뷰지 공개 피드가 아니다(§0-9, survival_score 무연결). ⑥ **삭제는 후속** — 수용기준은 조회·이동. UGC 삭제는 모더레이션 함의가 있어 별도(§0-2).
 - **검증**: 백엔드 `MyActivityServiceTest`(view→DTO·Instant→UTC·빈목록) 로컬 green + `MyActivityFlowIT`(실 Postgres 3-way 조인 왕복·401·빈배열, CI 게이트). 프론트 tsc·eslint·build green. **마이그레이션 없음(기존 테이블 재사용).**
-- **관련**: BACKLOG N6 · TS-016(Instant 프로젝션) · CLAUDE.md §0-9(커뮤니티=살) · N7과 쿼리 공유. `domain.activity` 신규.
+- **관련**: BACKLOG N6 · TS-016(Instant 프로젝션) · docs/SPEC.md §0-9(커뮤니티=살) · N7과 쿼리 공유. `domain.activity` 신규.
 - **사고(TS-030)**: N6 IT 추가 후 무관한 `ActuatorPrometheusOptInIT`가 CI에서 `PSQLException`으로 실패(재현). 원인 = 각 IT 고유 프로퍼티→별도 컨텍스트→컨텍스트마다 HikariCP 풀(기본10) 상주→단일 Testcontainers Postgres `max_connections`(100) 소진. 해결 = `AbstractIntegrationTest`에 `hikari.maximum-pool-size=4` 캡(상속). 상세 TROUBLESHOOTING TS-030.
 
 ## 2026-07-11 — N7: 커먼스 세이프 팔로우 — 작성자 공개 프로필 + "수만 공개" 팔로우 (PR #85, ADR-0023)
@@ -900,7 +900,7 @@
 - **왜(why, 대안)**: ADR-0023 상세. 핵심 = **팔로우를 소셜 그래프가 아니라 사적 북마크 + 신뢰/인기 신호로**(§0-9 그늘은 공개 커먼스, 친구망 아님). ① **팔로워 "수"만 공개**(목록·피드·맞팔은 의도적 비목표 — 팔로워 조회 쿼리 자체를 안 만듦, SNS화 방어). ② **팔로잉은 나만** 봄(소셜 압박 없는 관심 작성자 모으기). ③ **왜 authorId 노출 안전** — 후기는 익명이 아니라 항상 로그인 작성자가 있어 공개 프로필과 정합. ④ **왜 proxyOptionalAuth** — `/users/{id}`는 공개지만 로그인 뷰어면 following 상태가 필요 → 쿠키 있으면 Bearer 전달, 없어도 401 안 냄(proxy와 proxyAuthed의 중간). ⑤ **왜 N6 쿼리 재사용** — 작성자별 후기 조회는 N6 "내 후기"와 동일 로직(BACKLOG 지시). ⑥ **멱등·동시성** — UNIQUE(follower,followee) backstop + existsBy 선검사, 레이스는 DataIntegrityViolation catch로 멱등.
 - **검증**: 백엔드 `FollowServiceTest`(멱등·자기팔로우400·없는유저404·프로필 조립·비로그인 following=false) 로컬 green + `FollowFlowIT`(실 Postgres: 공개프로필·팔로우·내 팔로잉·언팔·자기팔로우400·404·401). `ReviewControllerTest` authorId 반영. 프론트 tsc·eslint·build green. **마이그레이션 V17**.
 - **적대적 리뷰 → 동시성 하드닝(TS-031)**: 리뷰가 `follow()`의 "catch 후 같은 tx에서 count()"가 진짜 동시 이중팔로우 시 PG 25P02(aborted tx)로 500 날 수 있음을 지적(기존 `ReactionService.add`도 동일 패턴). **둘 다** `@Transactional(propagation=NOT_SUPPORTED)`로 각 리포 호출을 자기 tx에 분리해 수정(멱등성은 UNIQUE가 보장). 상세 TS-031.
-- **관련**: BACKLOG N7 · ADR-0023 · CLAUDE.md §0-9·§1·§0-2 · N6 쿼리 공유 · TS-016. `domain.follow` 신규.
+- **관련**: BACKLOG N7 · ADR-0023 · docs/SPEC.md §0-9·§1·§0-2 · N6 쿼리 공유 · TS-016. `domain.follow` 신규.
 
 ## 2026-07-11 — 브랜딩: 로고·앱아이콘·로딩 스플래시 (PR #86, 프론트 전용)
 - **무엇**: 사용자가 만든 로고 시트(`Logo.png`)·로딩화면(`Loading.png`)을 프로젝트에 반영.
@@ -909,7 +909,7 @@
   - **로딩 스플래시**: `SplashScreen`(루트 마운트, 최초 로드 시 노출→페이드아웃). 캐릭터의 손/무릎(~68%)에 **회전하는 부채/바람개비 SVG**(흰 원반 + 민트 부채살 12 + 티일 허브, `animate-spin` 2.4s)를 얹어 "가운데 회전 모션"(사용자 요청) 구현 + "그늘" 워드마크 + "활성화된 그늘 지역을 찾고 있습니다…".
 - **왜(why)**: ① **왜 캐릭터 합성 아이콘인가** — 시트 안 작은 디자인 아이콘(~296px)은 512 업스케일 시 흐림 → 고해상도 중앙 캐릭터(~730px)를 크림 정사각에 합성해 crisp + maskable safe-zone 확보(캐릭터 68~76%, 크림이 마스크 bleed 채움). ② **왜 회전 요소를 별도 SVG인가** — 참고 이미지의 바람개비는 래스터에 baked → 캐릭터는 바람개비 없는 버전을 쓰고 그 위에 CSS 회전 SVG를 얹어야 실제로 돈다(위치는 손 위치 68%로 preview 검증). ③ **왜 크림 배경 통일** — 캐릭터 에셋 bg = 스플래시 bg = manifest background = #FFFBEB → 설치형 PWA 런치·스플래시 이음새 제거. ④ **왜 원본 다운스케일 저장** — 5MB×2 원본 커밋은 git 비대 → 1400px 참고본으로 절충(사용자 "저장" 요청 충족).
 - **검증**: 프론트 tsc·eslint·build green. 스플래시 pinwheel 위치 ImageMagick 합성 preview로 손 위치 확인. 백엔드 무변경. 실제 렌더는 Vercel 배포 후 확인.
-- **관련**: 사용자 제공 로고/로딩 · PWA(manifest·apple-touch·maskable) · CLAUDE.md §7(PWA).
+- **관련**: 사용자 제공 로고/로딩 · PWA(manifest·apple-touch·maskable) · docs/SPEC.md §7(PWA).
 
 ## 2026-07-11 — N8: F4 그늘/비 경로 — 경로 corridor 주변 피난처 오버레이 (PR #87, ADR-0024)
 - **무엇**: 화장실 경로(F3)에 이어, **경로 폴리라인 주변 그늘/실내 피난처**(쉼터·도서관·지하상가)를 지도에 오버레이("더울 때·비 올 때 피할 곳"). 자체 라우팅이 아니라 기존 경로에 얹는다.
@@ -917,7 +917,7 @@
   - 프론트: `types/route.ShadeSpot` + `RouteMiniMapLive` 카테고리 마커 오버레이 + `PlaceDetailOverlay` 배너/토스트 "피할 곳 N".
 - **왜(why)**: ADR-0024 상세. ① **왜 corridor 오버레이(자체 라우팅 대신)** — §0-2 과설계 지양, 간판(PostGIS)만 재사용. ② **왜 쉼터·도서관·지하상가** — 셋 다 실내/지붕이라 **그늘(폭염)+비(장마) 동시 해결**("그늘/비"). 야외(음수대·공원)는 비 못 피해 제외. ③ **왜 폴리라인 LINESTRING corridor(중점 원 대신)** — F4는 경로 전 구간 주변을 봐야 하므로 라인 거리(ST_DWithin line)가 정확. WKT는 doubles로만 만들고 파라미터 바인딩(인젝션 안전)·Locale.ROOT(소수점 '.' 고정). ④ **400m·15개** — 도보 5분 우회 + 미니맵 혼잡 방지.
 - **검증**: 백엔드 `RouteServiceTest`(shadeSpots 조립 + 기존 waypoint/폴백) 로컬 green + `RouteToiletIT`(실 Postgres, corridor 쿼리 실행, CI). 프론트 tsc·eslint·build green. **마이그레이션 없음**(places·V3 인덱스 재사용).
-- **관련**: BACKLOG N8 · ADR-0024 · ADR-0021(F3)·0019(경로) · CLAUDE.md §0-2·§3.
+- **관련**: BACKLOG N8 · ADR-0024 · ADR-0021(F3)·0019(경로) · docs/SPEC.md §0-2·§3.
 
 ## 2026-07-11 — N9: 대규모 대비 — 부하 기반 튜닝 (PR #88, ADR-0025)
 - **무엇**: k6 재부하로 병목을 실측하고 데이터 근거로 튜닝. 프로덕션 반영·재측정까지.
@@ -940,7 +940,7 @@
 - **왜**: ①은 "백엔드 성공인데 프론트만 실패"라 응답 파이프라인(프록시 204 재구성)을 의심해 찾음(TS-032 학습). ②는 사용자가
   "지도만 크게"를 원했는데 peek 96px가 과함 → 얇은 바로 지도 최대 노출, 재열기 affordance는 유지.
 - **검증**: `node -e 'new Response("",{status:204})'`로 TypeError 재현·null은 통과 확인. 프론트 tsc·eslint·build green. 백엔드 무변경.
-- **관련**: TS-032·TS-029(같은 증상 다른 원인) · BACKLOG N4 · CLAUDE.md §7(PWA 푸시).
+- **관련**: TS-032·TS-029(같은 증상 다른 원인) · BACKLOG N4 · docs/SPEC.md §7(PWA 푸시).
 
 ## 2026-07-11 — 데스크톱 반응형 — 풀 지도 + 좌측 사이드바 + 좌측 레일 (프론트 전용)
 사용자 피드백: "모바일은 완벽한데 컴퓨터로 들어가면 어플처럼(430px 폰 컬럼이 베이지 여백에 떠 있음)만 뜬다." → 데스크톱(≥lg=1024px)에서만 **지도앱 표준 3분할**로 분기. 모바일(<lg)은 100% 무변경.
@@ -954,7 +954,7 @@
   - 콘텐츠 페이지(urgent·mypage·report): `lg:mx-auto lg:max-w-[720px]`로 데스크톱 가독 폭 중앙 정렬.
 - **왜(why)**: ① **왜 3분할(풀지도+사이드바+레일)** — 지도 제품 데스크톱 표준(카카오/네이버/구글맵 전부 지도 풀스크린 + 좌측 목록 패널). 국내 타깃이라 카카오/네이버맵 UX와 정렬이 가장 방어적. 사용자에게 3안(3분할/단일컬럼 넓히기/폰프레임+배경) 제시→**3분할 선택**. ② **왜 lg(1024) 분기** — 노트북/데스크톱 표준 임계. 태블릿(768~1023)은 폰 컬럼 유지(저위험). ③ **왜 모바일 무변경 보장** — 신규 요소는 전부 `hidden lg:flex`/`lg:hidden`/`lg:` 오버라이드, 기존 base 클래스는 FAB 인라인→클래스 이동(값 동일)과 목록 추출(마크업 동일)뿐. ④ **왜 목록/라벨 공유 추출** — 시트와 사이드바가 같은 목록을 그려 중복·드리프트 제거.
 - **검증**: 프론트 tsc·eslint·build(next --webpack) 전부 green. `next start` SSR HTML에 레일(`그늘 홈`)·데스크톱 클래스(`hidden lg:flex`·`lg:flex-1`·`lg:w-[400px]`·`lg:hidden`) 렌더 확인. **헤드리스 Chrome 1440×900 스크린샷으로 3분할 실물 확인**(레일+사이드바 실데이터 목록+지도영역+우하단 FAB). 로컬은 `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` 부재라 지도 영역이 placeholder("지도를 불러오지 못했어요")로 뜨지만 **라이브(Vercel)는 키 등록돼 있어 지도가 그 영역을 채움**. 빌드 CSS에서 FAB `calc(46% + 12px)`(Tailwind v4가 공백 정규화·유효) 확인 → 모바일 위치 무회귀. 백엔드 무변경·마이그레이션 없음.
-- **관련**: 사용자 실사용 피드백 · CLAUDE.md §6(MVP 화면 홈 지도)·§7(프론트 Next/PWA) · PR #92.
+- **관련**: 사용자 실사용 피드백 · docs/SPEC.md §6(MVP 화면 홈 지도)·§7(프론트 Next/PWA) · PR #92.
 
 ## 2026-07-11 — 남은 일 전수 감사(5렌즈 병렬) → 데스크톱 마무리·문서 정합성 (PR #92)
 사용자 "남아있는 모든 할 일을 찾아서 진행" 요청. BACKLOG는 N1~N9 소진(빈 상태)이라, **5개 렌즈 병렬 감사 워크플로**(데스크톱 완성도·미완성 스텁·빌드헬스·a11y폴리시·백엔드/문서)로 진짜 남은 끝단을 도출 → 21건(high1·med9·low11, inScope 20·new-feature 1) 트리아지 후 실행.
@@ -964,9 +964,9 @@
 - **데스크톱 인터랙션 폴리시(마우스/키보드 앱이 됐으므로)**: 전역 `button{cursor:pointer}`·`:focus-visible` 링(globals.css 한 곳), 클릭 요소 `lg:hover:` 피드백(리스트행·필터칩·레일탭·FAB·검색결과·헤더버튼·넓히기), 오버레이 **Esc 닫기**, 검색 **Enter/Esc**, NavRail·TabBar·aside **aria-label**.
 - **카피 마무리**: 목록 헤더 '지도를 움직여 탐색'→'내 위치 기준'(목록은 지도 팬과 무관한 현재위치 반경 고정이라 오해 소지) · 제보 익명토글 내부 로드맵 라벨 '· P2' 유출 제거 · 제보 장소선택 시트 데스크톱 중앙 카드화.
 - **문서 정합성**: README·HANDOFF의 '다음 세션 = F1~F6'이 실제 라이브(전부 완료)와 모순 → 완료로 갱신 · HANDOFF 최종갱신일 2026-07-10→11 · **ADR 색인(docs/adr/README.md)이 0019에서 멈춰 0020~0025 6건 누락 → 추가**(파일은 이미 존재) · README/HANDOFF의 ADR 범위 표기(0001–0016/0001~0014)→0025.
-- **왜(why)**: BACKLOG 소진 상태에서 "남은 일"은 곧 **방금 배포한 데스크톱 작업의 완성도 + 코드/문서 정합성**이다. 감사를 워크플로로 병렬 fan-out해 사각을 줄이고, CLAUDE.md 규칙2에 따라 **inScope(마무리)만 실행하고 new-feature(신고 프론트 진입점=계획된 2차)는 제안만** 남겼다. 모바일은 카피 2건 외 무변경(폴리시는 전부 `lg:`/`:focus-visible`/전역 커서라 모바일 레이아웃·동작 불변).
+- **왜(why)**: BACKLOG 소진 상태에서 "남은 일"은 곧 **방금 배포한 데스크톱 작업의 완성도 + 코드/문서 정합성**이다. 감사를 워크플로로 병렬 fan-out해 사각을 줄이고, docs/SPEC.md 규칙2에 따라 **inScope(마무리)만 실행하고 new-feature(신고 프론트 진입점=계획된 2차)는 제안만** 남겼다. 모바일은 카피 2건 외 무변경(폴리시는 전부 `lg:`/`:focus-visible`/전역 커서라 모바일 레이아웃·동작 불변).
 - **검증**: 프론트 tsc·eslint·build green. 빌드 CSS에 `cursor:pointer`·`:focus-visible{outline teal}`·`lg:hover:*`(@media 64rem)·`lg:opacity-100` 컴파일 확인. 데스크톱 4탭 스크린샷(지도 3분할·급해요·내정보·제보) 확인. 백엔드 무변경(백엔드 하이진은 별도 PR).
-- **관련**: 감사 워크플로 wf_0780adbe · CLAUDE.md 규칙2(스코프)·E(모델 역할) · PR #92 · [[geuneul-current-state]].
+- **관련**: 감사 워크플로 wf_0780adbe · docs/SPEC.md 규칙2(스코프)·E(모델 역할) · PR #92 · [[geuneul-current-state]].
 
 ## 2026-07-11 — 데스크톱 a11y 마무리 — 오버레이 포커스 관리 (PR 후속)
 감사가 "여력 되면" 권한 항목으로 남긴 오버레이 포커스 관리를 마무리(BACKLOG 소진 후 남은 정당한 완성분).
@@ -974,7 +974,7 @@
 - **왜(why)**: 데스크톱 오버레이(Esc 닫기는 #92에서 완료)의 키보드 접근성 완성. **완전한 포커스 트랩(Tab 순환 가두기)은 의도적으로 안 함** — 감사가 "더 큰 후속"으로 분리했고, 지도 탭에선 오버레이가 400px 좌측 패널이라 뒤 지도가 inert가 아니어서 `aria-modal`도 안 붙임(거짓 모달 주장 회피). role=dialog + 포커스 인/복귀까지가 정확·저위험 지점.
 - **왜 SearchBar 콤보박스는 안 했나**: 감사가 Enter/Esc(#92 완료)까지만 권하고 **화살표 activedescendant 콤보박스는 "스코프 확장"으로 명시 연기**함(규칙2). 그래서 손대지 않음.
 - **검증**: 프론트 tsc·eslint·build green. 프로그램적 focus()는 :focus-visible 미발동이라 마우스 사용자에겐 무영향, 키보드 사용자만 이득.
-- **관련**: [[geuneul-current-state]] · CLAUDE.md 규칙2 · 감사 a11y 렌즈 후속.
+- **관련**: [[geuneul-current-state]] · docs/SPEC.md 규칙2 · 감사 a11y 렌즈 후속.
 
 ## 2026-07-11 — 문서 정리·마무리 + 다음 사이클 백로그(C1~C4) 정의 + 커맨드 갱신
 사용자 요청: "다음 세션에서 전부 다 한번에 할 거니까, 모든 문서 정리·마무리하고 바로 다음 세션 작업 가능하게 만들고 명령어도 만들어줘." 계획 스코프가 전량 완료·라이브라, 의도적으로 미뤄둔 2차/심화를 **다음 세션이 재조사 없이 바로 구현**할 수 있게 실행가능 백로그로 박고 커맨드를 재타겟팅.
@@ -985,7 +985,7 @@
   - **HANDOFF·README·메모리** — ▶세션 인계와 "다음 할 일"을 C1~C4 + `/geuneul-finish`로. #93/#94 반영.
 - **왜(why)**: ① **왜 지금 백로그를 박나** — 사용자가 다음 세션 일괄 실행 의사를 밝힘. N1~N9 백로그가 "진단·수정위치까지 박아 재조사 불필요"였던 성공 패턴을 재현(HANDOFF 근거). ② **왜 워크플로로 스펙** — 4항목 조사가 독립·병렬이고, 파일/엔드포인트 정확성이 다음 세션 속도를 좌우 → fan-out으로 실코드 대조. ③ **왜 규칙1/2 준수** — 이건 "버그"가 아니라 의도적 2차/심화라 임의로 당기지 않고, 사용자 결정(다음 세션 일괄)에 맞춰 **백로그+커맨드로 준비만** 함. C4는 §0-2로 경유지1곳에 고정(라우팅 재랭크 creep 배제), C3는 §9로 기존 규칙 병합(기능 증식 배제).
 - **검증**: 커맨드 description이 C1~C4로 갱신됨(스킬 목록 반영 확인). 문서 간 정합(BACKLOG↔HANDOFF↔커맨드 동일 C1~C4·동일 결정). 다음 세션은 `/geuneul-finish`로 바로 착수 가능.
-- **관련**: 스펙 워크플로 wf_7ace2caa · [[geuneul-current-state]] · CLAUDE.md 규칙1(MVP 우선)·2(스코프)·§9·§0-2 · docs/BACKLOG.md C1~C4.
+- **관련**: 스펙 워크플로 wf_7ace2caa · [[geuneul-current-state]] · docs/SPEC.md 규칙1(MVP 우선)·2(스코프)·§9·§0-2 · docs/BACKLOG.md C1~C4.
 
 ## 2026-07-11 — C2 a11y 심화: 오버레이 Tab 포커스 트랩 + 검색 콤보박스 화살표 nav (BACKLOG C2)
 `/geuneul-finish` 사이클 첫 항목(완성도·프론트 전용·저위험부터). #94가 오버레이 role=dialog+포커스 인/복귀+Esc까지, #92가 검색 Enter/Esc까지 해뒀고, 감사가 "스코프 확장"으로 미룬 두 조각(Tab 순환 가두기·화살표 콤보박스)을 마감.
@@ -995,7 +995,7 @@
   - **`SearchBar`** — `useId`로 인스턴스별 listbox id, `active` 하이라이트 상태, ArrowUp/Down(순환)·Enter(하이라이트 우선, 없으면 첫 결과)·Esc, input `role=combobox`+`aria-expanded/controls/activedescendant/autocomplete`, ul `role=listbox`+id, 각 option `role=option`+id+`aria-selected`+`tabIndex=-1`+하이라이트 배경, onPointerMove로 마우스와 동기화, 하이라이트 scrollIntoView. onChange·디바운스 성공/실패·clear·닫힘(바깥클릭/pick)에서 `setActive(-1)`.
 - **왜(why)**: ① **왜 트랩 범위 `!(onMap && isLg)`** — 데스크톱 지도 탭('/')에선 오버레이가 400px 좌측 패널이고 옆 지도·NavRail이 살아 있어(뒤가 inert 아님) 하드 트랩하면 키보드 사용자를 보이는 UI에서 격리 → 해로움. 모바일 전 탭·데스크톱 비지도 탭은 전체를 덮으므로 트랩이 옳다. 그래서 `onMap`(usePathname==='/')·`isLg`(matchMedia)를 함께 봐 지도탭+데스크톱만 비트랩. ② **왜 useSyncExternalStore** — matchMedia 반응 구독의 2026 표준 이디엄(set-state-in-effect 린트·SSR 미스매치 회피, React 19). ③ **왜 콤보박스는 button에 role=option+tabIndex=-1** — aria-activedescendant 패턴(옵션이 탭 스톱이면 화살표 nav와 충돌). 이 프로젝트 eslint는 no-interactive-element-to-noninteractive-role 미활성이라 `<button role=option>` 안전, 단 role-has-required-aria-props가 combobox의 aria-expanded를 요구해 반드시 포함(BACKLOG C2 린트 근거).
 - **검증**: 프론트 tsc·eslint·build(next --webpack) 전부 green. 마이그레이션·외부 API 없음(TS-016·TS-026 비해당). 모바일 무변경(트랩 판단만 추가, 레이아웃·마우스·터치·디바운스 동작 불변). 프론트 테스트 인프라 없음 → 키보드 워크스루로 확인(비지도/모바일 오버레이 Tab 첫↔마지막 순환·Esc 복귀, 데스크톱 지도탭 의도적 비트랩, 검색 화살표 하이라이트·Enter 선택).
-- **관련**: CLAUDE.md §6(MVP 화면)·규칙2(스코프) · #92·#94 후속 · BACKLOG C2 · [[geuneul-current-state]].
+- **관련**: docs/SPEC.md §6(MVP 화면)·규칙2(스코프) · #92·#94 후속 · BACKLOG C2 · [[geuneul-current-state]].
 
 ## 2026-07-11 — C1 신고/모더레이션 프론트 진입점 (BACKLOG C1)
 백엔드(V7·FlagController·AdminFlagController·SecurityConfig)는 이미 완비, 프론트 진입점만 0건이던 것을 마감. 신규 마이그레이션·외부 API 0. §9대로 최소·비노출(하단 탭 신설 금지).
@@ -1009,7 +1009,7 @@
   - **(LOW) 관리자 큐 페이지네이션 없음** — page=0·size=20 고정에 hasNext 미사용이라 이력 탭(createdAt ASC) 20건 초과분에 도달 불가. → `useAdminFlags(status,page)`+queryKey에 page+keepPreviousData, 화면에 이전/다음 페이저(§9 최소, 탭 전환 시 page=0 리셋).
   - **(FALSE_POSITIVE) 자기신고** — 백엔드 가드 부재는 사실이나 클라 숨김은 실효 방어 아님(§ "실제 방어는 백엔드")·409로 1건 캡·큐에서 우아히 반려 가능 → 검증 결과 수정 불필요(스킵).
 - **검증**: 프론트 tsc·eslint·build green(수정 후 재확인). 라우트 등록 확인(`/admin/flags`·`/api/flags`·`/api/admin/flags[/[id]/resolve]`). z-index: FlagSheet(fixed z-60)는 부모 오버레이(absolute z-40 스택 컨텍스트)에 갇혀 루트 토스트(z-50)보다 아래 → 에러 토스트가 시트 위에 정상 노출(확인). 모바일 무변경(추가 요소·모달만, 기존 레이아웃 불변). 마이그레이션·외부 API 없음(TS-016·TS-026 비해당).
-- **관련**: CLAUDE.md §0-7(모더레이션)·§9(커뮤니티=살)·§6(중립) · 적대적 리뷰 워크플로 wf_99b17604 · BACKLOG C1 · [[geuneul-current-state]].
+- **관련**: docs/SPEC.md §0-7(모더레이션)·§9(커뮤니티=살)·§6(중립) · 적대적 리뷰 워크플로 wf_99b17604 · BACKLOG C1 · [[geuneul-current-state]].
 
 ## 2026-07-11 — C3 관심 장소 상태 변화 알림: 북마크 장소 단건 침수·미끄럼 (BACKLOG C3, ADR-0026)
 ADR-0018 §2가 범위 밖으로 남긴 "관심 장소 단건 상태 변화"를 마감. 급증(≥3건) 게이트에 막혀 침수 1건은 알림이 안 가던 것을, 기존 V9 LISTEN/NOTIFY 이벤트·BOOKMARK_SURGE 규칙을 재사용해 실시간 인앱+F2 푸시로 채웠다. **마이그레이션·외부 API 0**(기존 스키마 재사용).
@@ -1020,7 +1020,7 @@ ADR-0018 §2가 범위 밖으로 남긴 "관심 장소 단건 상태 변화"를 
   - **(안전 알림 유실) LIMIT 1 최신 타입만**: V9 NOTIFY는 place_id만 실어 "최근 유의미"를 재조회하는데, LIMIT 1이면 FLOOD·SLIPPERY가 ms 차로 들어올 때 더 최근 타입이 오래된 타입 알림을 가려 하나를 잃었다. → `DISTINCT ON (report_type)`로 타입별 최신 각각 반환·루프.
   - **(푸시 누락·중복) 사전 SELECT+inserted>0 가드는 틀림**: 사전 수신자 SELECT와 INSERT가 별도 스냅샷이고 dedup_key가 per-user라 "all-or-nothing"이 아님 — 두 문 사이 새 북마커면 in-app은 생기나 푸시 누락, 멀티 인스턴스 row-split이면 stale 목록 재발송으로 중복. → `INSERT ... RETURNING user_id`(EntityManager 커스텀 조각 `NotificationDeliveryRepositoryImpl` — Spring Data @Query가 INSERT를 @Modifying 전용으로 볼 CI 리스크(TS-009) 회피)로 **실제 삽입한 유저만** 푸시 → 삽입=푸시 집합 일치, 정확히 1회.
 - **검증**: 백엔드 compileJava/compileTestJava green, `NotificationServiceTest` **13건 green**(C3 4건: 침수 발송·비유의미 skip·RETURNING 빈목록 무푸시·타입별 각각). IT(`NotificationFlowIT` 3건: 침수 1건+dedup·COOL 0건·미북마크 0건)는 로컬 colima skip → **CI가 게이트**(RETURNING 커스텀 조각·DISTINCT ON 프로젝션 실 검증). TS-016(createdAt Instant 프로젝션)·TS-029(push 비동기) 준수.
-- **관련**: ADR-0026(신규, 0018 확장) · 적대적 리뷰 wf_b221ac0a · CLAUDE.md §2·§6·§9·§0-2 · [[geuneul-current-state]].
+- **관련**: ADR-0026(신규, 0018 확장) · 적대적 리뷰 wf_b221ac0a · docs/SPEC.md §2·§6·§9·§0-2 · [[geuneul-current-state]].
 
 ## 2026-07-11 — C4 그늘 경유 경로: 쿨링쉼터/실내 경유지 1곳 (BACKLOG C4, ADR-0027)
 §3/§10 루트 3종(비/그늘/화장실) 중 '그늘 경로'가 '경로'로는 비어 있던 것(N8은 peripheral 오버레이일 뿐)을, F3 화장실 경로 인프라를 100% 재사용해 대칭으로 채웠다. **마이그레이션·외부 API 0**(V18·V3 GIST·Kakao directions 재사용).
@@ -1028,24 +1028,22 @@ ADR-0018 §2가 범위 밖으로 남긴 "관심 장소 단건 상태 변화"를 
 - **무엇(프론트)**: `fetchToiletRoute`→`fetchRoute(params, via)` 일반화 · `types/route.ts` `ToiletRoute`→`RouteResult` 리네임(시나리오 공용)·waypoint `category` · `/api/routes/shade` 미러 프록시 · `PlaceDetailOverlay` "그늘 경유" 버튼(`runRoute` 공통, setRoute 재사용)·배지 카테고리별("화장실 경유"/"그늘 경유") · `RouteMiniMapLive` 경유지 마커 하드코딩 'toilet'→`waypoint.category` 아이콘.
 - **왜(why)**: ① **경유지 1곳(F3 대칭)·자체 라우팅 금지(§0-2)** — 우리 간판은 지리검색이지 라우팅 엔진 아님. "우회 최소 경유지"를 PostGIS corridor(간판)로 고르고 폴리라인은 기존 DirectionsProvider가 그린다. 프롬프트의 "그늘 많은 경로 재랭크 토글"안(대안경로 다중 추출+Kakao 대안경로 카운팅, 라우팅 creep·TS-026 재검증)은 **범위 제외**. ② **SHADE_CATEGORIES(쉼터·도서관·지하상가)** — 셋 다 실내/지붕이라 폭염·비 동시 해결(N8과 동일 집합). ③ **N8 오버레이 유지 + 경로 추가** — "길 근처 피할 곳"(N8)과 "실제로 통과하는 길"(C4)은 다른 정보 → 경유지 경로 + 주변 피난처를 함께("그늘 경유 +피할 곳 N"). ④ **waypoint category DTO** — 안 하면 경유 쉼터가 미니맵에서 화장실 아이콘으로 뜸.
 - **검증**: 백엔드 compile green, `RouteServiceTest` **4건 green**(화장실 경유·경유지 없음 폴백·**그늘 쉼터 경유+카테고리**·shadeSpots). `RouteToiletIT`에 shade 3건(쉼터 경유·카테고리 COOLING_SHELTER·화장실은 안 고름 / 쉼터 없으면 폴백 / 해외 400) 추가 → CI 게이트. 프론트 tsc·eslint·build green(`/api/routes/shade` 등록). 모바일 무변경(버튼 1개 추가·기존 미니맵 아이콘만 category 반영). 자체 가중 라우팅 없음(§0-2).
-- **관련**: ADR-0027(신규) · ADR-0019·0021(F3)·0024(N8) 대칭 · CLAUDE.md §0-2·§3·§10 · [[geuneul-current-state]].
+- **관련**: ADR-0027(신규) · ADR-0019·0021(F3)·0024(N8) 대칭 · docs/SPEC.md §0-2·§3·§10 · [[geuneul-current-state]].
 
-## 2026-07-11 — D5 타깃 직무 JD 정렬 + 헤드라인 확정 (BACKLOG D5, 자산화 사이클)
-기능 동결 후 "채용 자산화" 사이클의 첫 항목. PORTFOLIO-CONTEXT §5의 "타깃 직무 미확정"을 2026 JD 웹검증으로 해소하고, 그늘 헤드라인/강조점을 그 JD 교집합에 정렬했다. **스펙(CLAUDE.md)은 여전히 특정 회사 비종속 — 강조만 조정**(§0-2 범위 불변, 코드·마이그레이션 0).
-- **무엇**: 1차 타깃 = **위치기반 플랫폼 백엔드(하이퍼로컬/커머스)**, 2차 = **모빌리티 백엔드**로 확정. `.local/PORTFOLIO-CONTEXT.md` §5 갱신(gitignore, 커밋 안 함). README 헤드라인 정렬은 D1(README 쇼케이스화)에서 반영.
-- **왜(why) + 2026 JD 웹검증 근거(규칙B)**: 당근·배민·토스 등 실제 JD 교집합 **필수** = Java/Kotlin + Spring Boot + RDBMS(MySQL/PostgreSQL) + REST API + JWT/OAuth2 + Docker, **우대** = 대용량 트래픽/동시성 · Redis 캐시 · 부하테스트/성능튜닝 · MSA · **공간데이터(PostGIS)**. 당근 서버 JD가 "RDBMS(MySQL/PostgreSQL)·백오피스 자체제작·대규모 트래픽 동시성"을 명시 → 그늘 코어(PostGIS 반경/kNN·survival_score·모더레이션 admin 큐·k6 p95·동시성 RETURNING·Redis TTL 캐시)와 **1:1**. PostGIS 공간데이터는 위치회사엔 **우대사항 직결**, 타 회사엔 중립~플러스라 범용성 유지.
-- **검토한 대안**: (a) 특정 회사 1곳 과종속 헤드라인 → §0-2 "스펙 비종속" 위배·지원 폭 좁힘으로 기각, "계열(위치/커머스/모빌리티)"로 확정. (b) 지리공간을 "프론트 지도 UX"로 프레이밍 → JD가 원하는 건 DB 엔지니어링이라 **"GiST 인덱스·kNN·EXPLAIN 튜닝·대용량 공간검색"**으로 프레이밍(D1 반영).
-- **근거(출처)**: 당근 careers/원티드 백엔드 JD("RDBMS MySQL/PostgreSQL·대규모 트래픽 동시성") · 인프런 2026 신입 백엔드 로드맵(우대: Redis·대용량·PostGIS 공간데이터) · 사람인 Redis 직무. (웹검색 2026-07-11.)
-- **관련**: `.local/PORTFOLIO-CONTEXT.md` §5 · BACKLOG D5 · D1(README 헤드라인 연동) · [[geuneul-current-state]] · [[portfolio-landscape]].
+## 2026-07-11 — D5 프로젝트 헤드라인 확정 (BACKLOG D5)
+기능 동결 후 마무리 사이클의 첫 항목. README 헤드라인/강조점을 프로젝트의 실제 코어에 맞춰 확정했다. **스펙(docs/SPEC.md)은 불변 — 강조만 조정**(§0-2 범위 불변, 코드·마이그레이션 0).
+- **무엇**: 헤드라인 = "PostGIS 대용량 지리검색 + 실시간 UGC 시공간 스코어링". README 반영은 D1에서.
+- **왜(why)**: 지리공간을 "프론트 지도 UX"가 아니라 **DB 엔지니어링(GiST 인덱스·kNN·EXPLAIN 튜닝·대용량 공간검색)**으로 프레이밍 — 이 프로젝트가 실제로 깊게 판 축이 그것이기 때문. 특정 도메인 종속 표현은 배제(범용 유지).
+- **관련**: BACKLOG D5 · D1(README 연동) · [[geuneul-current-state]].
 
-## 2026-07-11 — D3 데모 자산: 아키텍처 다이어그램 + 라이브 스크린샷 (BACKLOG D3, 자산화 사이클)
+## 2026-07-11 — D3 데모 자산: 아키텍처 다이어그램 + 라이브 스크린샷 (BACKLOG D3)
 README·install에 박을 시각 자산 확보. **코드·마이그레이션 0**(문서·이미지 전용).
 - **무엇**: ① `docs/architecture.md` — mermaid 3장(런타임 요청흐름 브라우저→BFF→CloudFront→ALB→ECS→RDS PostGIS/Redis/S3 + LISTEN/NOTIFY→SSE·Web Push·외부API / 데이터·ETL 멱등 ingestion→지오코딩→PostGIS + UGC 2단 / 배포 CI·OIDC·ECR·ECS·Terraform). ② `docs/media/` 라이브 실측 스크린샷 4장 — 데스크톱 3분할(지도+공간 리스트+거리), 그늘 경유 경로(C4 폴리라인→무더위쉼터+AI요약+2단 UGC), 모바일 지도(바텀시트 3단), 시나리오 추천 5종.
-- **왜(why)**: ① **다이어그램은 mermaid**(GitHub 네이티브 렌더·PNG 대비 diff 가능·유지보수). ADR 링크를 노드에 달아 "그림→근거" 한 클릭. ② **스크린샷은 헤드리스 Chrome 라이브 캡처**(`puppeteer-core` + 설치된 Chrome.app, geolocation override로 필드테스트 거점 동작구 상도 고정) — 목업 아님, 실동작 증명(웹검증: 채용담당자 84%가 동작앱 원함). ③ **그늘 경유 경로 샷을 히어로로** — 미니맵 폴리라인이 쿨링쉼터를 통과 + AI 한줄요약 + 제보(실시간)/후기(영구) 2단이 한 프레임에 = 간판 전부.
+- **왜(why)**: ① **다이어그램은 mermaid**(GitHub 네이티브 렌더·PNG 대비 diff 가능·유지보수). ADR 링크를 노드에 달아 "그림→근거" 한 클릭. ② **스크린샷은 헤드리스 Chrome 라이브 캡처**(`puppeteer-core` + 설치된 Chrome.app, geolocation override로 필드테스트 거점 동작구 상도 고정) — 목업 아님, 실동작 증명(목업이 아니라 실동작 증명). ③ **그늘 경유 경로 샷을 히어로로** — 미니맵 폴리라인이 쿨링쉼터를 통과 + AI 한줄요약 + 제보(실시간)/후기(영구) 2단이 한 프레임에 = 간판 전부.
 - **검증**: mermaid 3블록 전부 `mmdc`(mermaid-cli)로 렌더 에러 0 확인(엣지라벨 괄호 제거로 GitHub 렌더 안전화). 스크린샷은 라이브 200 상태에서 캡처, `sips`로 리사이즈(데스크톱 1600w·모바일 508w)·개인정보/키 노출 없음(§D). 마커 "정보 부족"(회색)은 촬영시점 유효 제보 부재 실상태(과장 없이 그대로, 실측만).
 - **관련**: BACKLOG D3 · D1(README 임베드 연동) · ADR 색인 · [[geuneul-current-state]].
 
-## 2026-07-11 — D2 무료 자체 배포: /install 페이지 (WebAPK 원탭 + iOS 홈화면 안내) (BACKLOG D2, 자산화 사이클)
+## 2026-07-11 — D2 무료 자체 배포: /install 페이지 (WebAPK 원탭 + iOS 홈화면 안내) (BACKLOG D2)
 스토어 없이 $0로 두 플랫폼 설치 진입점. **백엔드 무변경·마이그레이션 0**(프론트 신규 1페이지 + 캡처 훅).
 - **무엇**: `app/install/page.tsx`(서버, metadata) + `components/install/InstallView.tsx`(클라, 플랫폼 분기) — **(shell) 밖 독립 라우트**라 지도 셸/하단 탭 없음(모바일 셸 무변경). `lib/pwa-install.ts`(beforeinstallprompt 캡처 싱글턴 + appinstalled + display-mode 감지 + 플랫폼 감지) · `lib/hooks.ts` `useInstallState`(useSyncExternalStore) · `app/providers.tsx`에 `initPwaInstall()` 조기 등록(UI 무변경).
   - **Android**: 캡처된 프롬프트 있으면 "홈 화면에 앱 설치" 원탭(WebAPK) → outcome 인라인 피드백. 미도착이면 Chrome ⋮ '앱 설치' 안내(도착 시 버튼 승격).
@@ -1053,22 +1051,15 @@ README·install에 박을 시각 자산 확보. **코드·마이그레이션 0**
   - **Desktop**: 휴대폰 유도 + 데스크톱 Chrome 설치 아이콘 안내.
   - 공통: 이미 설치됨(standalone) 감지 시 "이미 설치되어 있어요", 왜 설치? 4칸(전체화면·빠른실행·오프라인·공유).
 - **왜(why) + 2026 웹검증(규칙B)**: ① **WebAPK 1순위** — PWA `beforeinstallprompt`→Chrome이 진짜 WebAPK 자동생성(런처 아이콘·standalone·설정앱 등록), **사이드로딩·경고·$25·개발자검증 전부 불필요**(브라우저 주도라 2026 개발자검증 규제서 자유). ② **iOS는 홈화면추가가 유일 무료 공개배포**(App Store·공개 TestFlight 모두 $99/년, .ipa 자체호스팅 불가) → 안내 배너로 대체. ③ **캡처는 전역 조기 등록** — beforeinstallprompt는 1회 발화라 홈/직접진입/SPA 이동 어디서든 놓치지 않게 Providers에서 init. ④ **effect setState 회피** — 플랫폼 감지는 useSyncExternalStore(서버 스냅샷 null)로 하이드레이션 안전(eslint react-hooks/set-state-in-effect 준수).
-- **범위 결정**: **TWA 서명 APK(보조 아티팩트)는 이번 스코프 보류.** 근거 — WebAPK 원탭이 이미 D2 수용기준("/install→원탭 설치→런처 아이콘·전체화면")을 충족(경고 0·규제 자유·1순위). TWA는 keystore 생성·Bubblewrap·서명비밀(.local) 호스팅·assetlinks SHA-256 정합이 필요한 "여력되면" 항목이라, 자산화 사이클(D1 README·D4 STAR) 우선. 후속 additive로 남김(BACKLOG 갱신).
+- **범위 결정**: **TWA 서명 APK(보조 아티팩트)는 이번 스코프 보류.** 근거 — WebAPK 원탭이 이미 D2 수용기준("/install→원탭 설치→런처 아이콘·전체화면")을 충족(경고 0·규제 자유·1순위). TWA는 keystore 생성·Bubblewrap·서명비밀(.local) 호스팅·assetlinks SHA-256 정합이 필요한 "여력되면" 항목이라, 마무리 사이클(D1 README 등) 우선. 후속 additive로 남김(BACKLOG 갱신).
 - **검증**: 프론트 `tsc --noEmit` 0 · `eslint`(신규 5파일) 0 · `pnpm build` green(`/install` static prerender 확인). manifest 설치요건 충족(name·standalone·192/512+maskable 아이콘·SW·HTTPS). ToastHost는 (shell) 전용이라 install 피드백은 인라인 status로(셸 의존 0). 모바일 무변경(신규 라우트만, 기존 셸/레이아웃 불변).
 - **관련**: BACKLOG D2 · manifest.ts · [[frontend-live-deployment]] · [[geuneul-current-state]].
-## 2026-07-11 — D1 README 쇼케이스화: 채용담당자 30초 케이스 스터디 (BACKLOG D1, 자산화 사이클)
-status·구조 위주 README를 30초에 판독되는 미니 케이스 스터디로 재설계. **코드·마이그레이션 0**(문서·배지·이미지).
+## 2026-07-11 — D1 README 재설계: 30초에 읽히는 요약 (BACKLOG D1)
+status·구조 위주 README를 처음 보는 사람이 30초에 판독하도록 재설계. **코드·마이그레이션 0**(문서·배지·이미지).
 - **무엇**: 첫 화면에 ① 정체성 1문장(D5 헤드라인: "PostGIS 대용량 지리검색 + 실시간 UGC 시공간 스코어링") ② **라이브/설치 배지 행 맨 위**(App·API·Swagger·/install) + **정량 지표 배지 행**(공공데이터 150k+ · 반경 p95 ~1.4s · JaCoCo 71% · ADR 27 · TS 32) ③ **히어로 데모 이미지**(그늘 경유 경로, D3) ④ **증명한 것 3불릿**(공간 엔지니어링/멱등 ETL+지오코딩/실시간 UGC 스코어링) ⑤ 인라인 mermaid 요약 다이어그램(전체는 docs/architecture.md). ERD·구현 이력은 `<details>`로 접음.
-- **왜(why) + 웹검증(규칙B)**: ① **라이브 데모 결정적**(채용담당자 84%가 동작앱 원함) → 링크·설치·스크린샷을 최상단. ② **지리공간을 DB 엔지니어링으로 프레이밍**(GiST 인덱스·kNN `<->`·EXPLAIN·k6 p95 튜닝) — JD가 원하는 건 "지도 그림"이 아니라 대용량 공간검색(D5). ③ **정량 지표는 실측만** — JaCoCo 71%는 build.gradle 실측(LINE 71.0%·게이트 0.70), 반경 p95 ~1.4s는 perf/README.md(k6 실측), ADR 27·TS 32는 파일 카운트. 과장 0.
-- **검증**: README 인라인 mermaid `mmdc` 렌더 에러 0. **내부 링크 전수 확인** — ADR 파일 22개 링크 실경로 매칭(0021~0025 파일명 오타 5건 교정), 히어로 이미지 경로(docs/media, D3 머지분) 존재, 앵커(#데이터--etl·#기술-스택) 정합. 라이브 배지 대상(App·API·shade 경로) 200 확인. INTERVIEW.md 링크는 D4에서 추가(선참조 데드링크 방지).
+- **왜(why)**: ① **라이브 데모가 가장 강한 증거** → 링크·설치·스크린샷을 최상단. ② **지리공간을 DB 엔지니어링으로 프레이밍**(GiST 인덱스·kNN `<->`·EXPLAIN·k6 p95 튜닝) — 이 레포의 실제 깊이가 대용량 공간검색이기 때문(D5). ③ **정량 지표는 실측만** — JaCoCo 71%는 build.gradle 실측(LINE 71.0%·게이트 0.70), 반경 p95 ~1.4s는 perf/README.md(k6 실측), ADR 27·TS 32는 파일 카운트. 과장 0.
+- **검증**: README 인라인 mermaid `mmdc` 렌더 에러 0. **내부 링크 전수 확인** — ADR 파일 22개 링크 실경로 매칭(0021~0025 파일명 오타 5건 교정), 히어로 이미지 경로(docs/media, D3 머지분) 존재, 앵커(#데이터--etl·#기술-스택) 정합. 라이브 배지 대상(App·API·shade 경로) 200 확인.
 - **관련**: BACKLOG D1 · D3(데모 이미지·architecture.md)·D5(헤드라인) 연동 · [[geuneul-current-state]].
-
-## 2026-07-11 — D4 면접 STAR 스토리: ADR/TS를 채용 자산으로 (BACKLOG D4, 자산화 사이클)
-27 ADR·32 TS 중 면접에서 30초에 꺼낼 9개를 STAR(Situation·Task·Action·Result)로 구조화. **코드·마이그레이션 0**(문서 신규 1).
-- **무엇**: `docs/INTERVIEW.md`(공개 가능 — 기술 스토리라 §D 무관) 신규. 9개 STAR + 적대적 리뷰 방법론 섹션. 선정: TS-004(Boot4 Jackson3 지오코딩 전량실패+모킹 사각지대) · TS-016(네이티브 프로젝션 timestamptz→Instant, CI만 잡음) · C3 RETURNING 동시성(정확히 1회 push) · k6 "병목은 GiST 아니라 CPU"(p95 2.68s→1.4s) · TS-008(적대적 리뷰: XFF append 신뢰경계·eviction OOM) · TS-009(colima IT skip→실 psql 확증·CI 게이트) · TS-030(컨텍스트×풀 커넥션 총량 소진) · TS-031(제약위반 catch 후 25P02 tx 오염) · TS-019(HikariCP close≠세션종료 advisory lock 사전예방). `README.md` 문서 섹션에 INTERVIEW.md 링크 추가(D1이 데드링크 방지로 뺀 것을 실파일과 함께 복원).
-- **왜(why)**: ① **그늘 고유 축(지리·ETL·실시간·동시성·검증 회복력) 위주** — mp가 이미 증명한 분산/AI/K8s와 중복 최소화(BACKLOG D4 주의). ② **각 STAR에 "한 줄" 훅 + 정량 결과** — 면접에서 30초에 꺼내게. ③ **방법론 섹션(적대적 다중 에이전트 리뷰)** — 3·5·8번이 순차 테스트로 안 드러나는 동시성·신뢰경계 결함을 커밋 전에 잡은 공통 방법을 별도로.
-- **검증**: INTERVIEW.md 내부 링크(../TROUBLESHOOTING.md·./adr) 정합. 각 STAR의 정량 수치는 원 TS/ADR 실측 인용(p95 2.68s→1.4s=perf, TS-008 14건중 확정5 등). README INTERVIEW.md 링크 실파일 존재(이 PR에 동봉).
-- **관련**: BACKLOG D4 · TROUBLESHOOTING TS-004/008/009/016/019/030/031 · ADR-0012/0026 · [[geuneul-current-state]].
 
 ## 2026-07-11 — D2 후속: 다운로드 TWA 서명 APK + assetlinks (사용자 요청, 안드로이드 실설치 파일)
 D2에서 보류했던 "다운로드받아 설치하는 .apk"를 사용자 요청으로 완성. WebAPK(원탭)에 더해 **파일로 받아 사이드로딩하는 서명 APK**와 도메인 검증(assetlinks)까지. **백엔드·마이그레이션 0**(프론트 public 아티팩트 + install 링크).
@@ -1079,24 +1070,36 @@ D2에서 보류했던 "다운로드받아 설치하는 .apk"를 사용자 요청
 - **검증**: `apksigner verify` 서명 cert SHA-256=keystore fingerprint 일치 ✔. `aapt dump badging`: package `app.vercel.geuneul.twa`·label '그늘' ✔. 프론트 tsc·eslint·build green. keystore·비번 커밋 안 됨(check-ignore 확인). **keystore 분실 시 APK 업데이트 불가 → `.local` 백업 필수.**
 - **관련**: BACKLOG D2(보류→완료) · [[frontend-live-deployment]] · ADR-0022(Web Push, TWA도 웹푸시 동작) · [[geuneul-current-state]].
 
-## 2026-07-11 — 문서 정합 마감: TS-033 기록 + 전 문서 수치·참조 동기화 (자산화 사이클 완결)
+## 2026-07-11 — 문서 정합 마감: TS-033 기록 + 전 문서 수치·참조 동기화 (마무리 사이클 완결)
 D2 후속(다운로드 TWA APK, #107)까지 반영해 모든 문서를 정합화. **코드·마이그레이션 0**(문서 전용).
-- **무엇**: ① `TROUBLESHOOTING.md` **TS-033 신규**(Bubblewrap TWA 빌드 3함정: node24 위저드 ERR_USE_AFTER_CLOSE→config 사전시드 / 신 cmdline-tools 레이아웃 미인식→심링크 / `splashScreenFadeOutDuration` 누락→build.gradle 빈 Groovy값 파싱에러). ② **TS 카운트 32→33 동기화**: README 배지·`INTERVIEW.md`(intro·footer TS-001~033). ③ **APK/assetlinks 참조 추가**: README(P5·자산화 사이클 라인), `architecture.md`(배포 §), HANDOFF(#107 완료·라이브 실측). ④ HANDOFF `/routes/shade`=API 경로 주석(프론트 직접 404 정상). ⑤ BACKLOG 상태 배너 #107·#108 반영.
-- **왜(why)**: ① **TS-033은 CLAUDE.md 규칙 C 필수 산출물** — TWA 빌드에서 실제 겪은 문제→원인→해결→학습이라 기록해야 완결. ② **수치는 실측·정합** — TS 파일 카운트 실제 33(과장 0), 링크 전수 확인으로 데드링크 0. ③ **`/routes/shade` 404 오해 문서화** — API 경로와 프론트 페이지 구분을 HANDOFF에 남겨 재질문 방지.
+- **무엇**: ① `TROUBLESHOOTING.md` **TS-033 신규**(Bubblewrap TWA 빌드 3함정: node24 위저드 ERR_USE_AFTER_CLOSE→config 사전시드 / 신 cmdline-tools 레이아웃 미인식→심링크 / `splashScreenFadeOutDuration` 누락→build.gradle 빈 Groovy값 파싱에러). ② **TS 카운트 32→33 동기화**: README 배지 등. ③ **APK/assetlinks 참조 추가**: README(P5 라인), `architecture.md`(배포 §), HANDOFF(#107 완료·라이브 실측). ④ HANDOFF `/routes/shade`=API 경로 주석(프론트 직접 404 정상). ⑤ BACKLOG 상태 배너 #107·#108 반영.
+- **왜(why)**: ① **TS-033은 docs/SPEC.md 규칙 C 필수 산출물** — TWA 빌드에서 실제 겪은 문제→원인→해결→학습이라 기록해야 완결. ② **수치는 실측·정합** — TS 파일 카운트 실제 33(과장 0), 링크 전수 확인으로 데드링크 0. ③ **`/routes/shade` 404 오해 문서화** — API 경로와 프론트 페이지 구분을 HANDOFF에 남겨 재질문 방지.
 - **검증**: README 내부 파일링크 전수 resolve(BROKEN 0), TS 33·ADR 27 카운트 일치, 잔여 'TS 32' 없음(HANDOFF의 '문서 32건 개선'은 별개 과거 감사 사실이라 유지). mermaid 미변경.
-- **관련**: TS-033 · BACKLOG D2 후속 · [[geuneul-current-state]]. **자산화 사이클(D1~D5 + TWA APK + 문서 정합) 완결 — 남은 백로그 0.**
+- **관련**: TS-033 · BACKLOG D2 후속 · [[geuneul-current-state]]. **마무리 사이클(D1~D5 + TWA APK + 문서 정합) 완결 — 남은 백로그 0.**
 
 ## 2026-07-11 — 실사용 피드백(친구 필드테스트): 제보 가로 스크롤 + 현재위치 FAB 버그 수정
 Play 등록 전 친구(안드로이드 실기기)가 설치·테스트한 피드백 중 **명확한 버그 2건**만 수정(기능 동결 유지 — UX/데이터 튜닝 요청은 제외).
 - **버그1 — 제보하기 가로 스크롤**: `report/page.tsx` 한줄 코멘트 `<input>`이 `flex-1`인데 **`min-w-0`이 없어** 좁은 폰에서 input 고유폭(size 기본 ~20자) 아래로 안 줄어들어 가로 오버플로 → 페이지가 살짝 옆으로 스크롤. **수정**: input에 `min-w-0` + 루트 스크롤 컨테이너에 `overflow-x-hidden`(세로 전용 페이지라 안전). 근본 원인은 flex 자식 input의 min-width:auto.
 - **버그2 — 현재위치 FAB가 '이동 안 됨'**: `page.tsx` `recenter()`가 **무조건 `recenterKey`를 올려** 위치 권한이 없을 때(폴백) 지도를 실제 위치가 아니라 **폴백 센터(동작구/서울)로 튕겼다** → 부산 등에서 열어 FAB를 누르면 서울로 점프 = "이동 안돼"로 체감. **수정**: `geo.isFallback`이면 `recenterKey`를 올리지 않고 위치만 재요청(지도 유지) + "권한을 허용해 주세요" 안내. 권한이 잡히면 기존 `grantedRef` 이펙트가 recenterKey를 올려 실제 위치로 이동. 실제 위치 보유 시에만 즉시 재중심.
-- **수정 안 함(사유 명시)**: ① "급해요 시나리오가 화장실 빼고 비슷비슷" = **데이터 희소성**(유효 제보 없으면 시나리오가 약한 comfort 신호만으로 갈려 거리 지배 → 유사 정렬). 시나리오 카테고리 바이어스 강화는 **스코어링 튜닝=기능 동결 대상**이라 사용자 판단 후로 보류. ② "쉼터·화장실만 뜸" = 전국 적재분의 **지역별 밀도 차**(버그 아님). ③ "지하철역 화장실 아이콘" = 사용자가 포트폴리오용이라 스킵 결정.
+- **수정 안 함(사유 명시)**: ① "급해요 시나리오가 화장실 빼고 비슷비슷" = **데이터 희소성**(유효 제보 없으면 시나리오가 약한 comfort 신호만으로 갈려 거리 지배 → 유사 정렬). 시나리오 카테고리 바이어스 강화는 **스코어링 튜닝=기능 동결 대상**이라 사용자 판단 후로 보류. ② "쉼터·화장실만 뜸" = 전국 적재분의 **지역별 밀도 차**(버그 아님). ③ "지하철역 화장실 아이콘" = 범위 밖으로 스킵 결정(사용자).
 - **검증**: 프론트 tsc·eslint·build green. 프로덕션 배포 후 `/report` 가로 스크롤 0(scrollWidth≤clientWidth)·FAB 폴백시 미점프 실측 예정. 백엔드·마이그레이션 0.
 - **관련**: `report/page.tsx`·`page.tsx`·`lib/context/geo.tsx` · 실사용 피드백 계열(#90 TS-032) · [[geuneul-current-state]].
 
 ## 2026-07-11 — Play 출시 준비 + 다음 세션(등록·GitHub 정리) 인계 문서화
-자산화·배포·버그픽스가 끝난 상태에서, **다음 세션의 Play 개발자 등록·앱 출시**가 매끄럽도록 문서·산출물을 정리했다. **백엔드·마이그레이션 0**(프론트 정적 페이지 1 + 문서).
+문서·배포·버그픽스가 끝난 상태에서, **다음 세션의 Play 개발자 등록·앱 출시**가 매끄럽도록 문서·산출물을 정리했다. **백엔드·마이그레이션 0**(프론트 정적 페이지 1 + 문서).
 - **무엇**: ① `frontend/app/privacy/page.tsx` — **개인정보처리방침 페이지**(라이브 `/privacy`, Play 필수). 실제 데이터 취급(위치·소셜계정·UGC·사진·푸시구독·제3자 Kakao/구글/기상청/AI/AWS)을 사실대로 기술 + install 페이지에 링크. ② `docs/PLAY-STORE.md` — **등록 인계 체크리스트**(계정 설문 답·폐쇄 테스트 12명×14일·AAB 업로드·콘텐츠 등급·Data safety·재빌드 커맨드). ③ **빌드 산출물 영구 보존**: scratchpad는 세션 종료 시 소멸하므로 `app-release-bundle.aab`·서명 APK·`twa-manifest.json`·서명 지문을 **`.local/twa-build/`**(gitignore·persist)로 복사. keystore·비번은 기존 `.local/`.
 - **왜(why)**: ① **개인정보처리방침은 Play 등록 하드 요건** — 앱이 위치·이메일·사진·UGC를 실제로 다루므로 정확히 공개해야 Data safety 양식과 일치. ② **AAB는 Play 업로드용**(APK 아님)이라 다음 세션이 바로 올릴 수 있게 durable 위치에. ③ **인계 문서에 "위치와 절차"만, 비밀은 `.local` 참조**(§D) — keystore 분실=업데이트 영구 불가라 백업 경고 명시.
 - **검증**: 프론트 tsc·eslint·build green(`/privacy` static prerender). `.local/twa-build/*` gitignore 확인(check-ignore). HANDOFF 최상단을 "다음 세션=Play 등록+GitHub 정리"로 재작성 + PLAY-STORE.md 링크. README 문서 섹션·BACKLOG 배너 동기화.
 - **관련**: `docs/PLAY-STORE.md` · `/privacy` · TS-033(빌드) · `.local/twa-build/` · [[frontend-live-deployment]] · [[geuneul-current-state]]. **개발 백로그 0 — 남은 건 Play 등록·GitHub 정리(운영).**
+
+## 2026-07-12 — 레포 전수 감사 + 포트폴리오 마감 (문서 재구성·하드닝·아키텍처 다이어그램)
+
+프로젝트 완성 선언 후, 레포를 "더 이상 손대지 않아도 되는 상태"로 마감했다. ① 전 코드(백엔드·프론트·인프라) 전수 감사 → 확정 결함·비효율 수정, ② 면접 대비용 문서 제거·중립 톤 재구성, ③ 아이콘 기반 아키텍처 다이어그램(SVG) 신설.
+
+- **문서 재구성**: `docs/INTERVIEW.md`(면접 STAR)·`HANDOFF.md`·`docs/BACKLOG.md`·`docs/PLAY-STORE.md`(세션 운영/인계 문서)를 레포에서 제거하고 `.local/archive-portfolio-docs/`로 이전 — 공개 레포는 제품·엔지니어링 문서만 남긴다. 스펙(목표·범위·ERD·API·score 알고리즘)은 **`docs/SPEC.md`** 로 공개 분리(코드·ADR의 "§n" 참조 유지, 전 소스 101파일의 참조 경로 일괄 교체). README를 중립 톤으로 재작성(면접 프레이밍·링크 제거, SPEC/다이어그램 연결), DEPLOY.md·ADR 10건·WORKLOG 과거 엔트리의 채용 지향 표현을 기술 근거 중심으로 정리.
+- **아키텍처 다이어그램**: `docs/media/architecture.svg` — AWS 아이콘 스타일(VPC·Public/Private 서브넷 박스, GitHub Actions→ECR→ECS OIDC 파이프라인, CloudFront→ALB→Spring Boot→RDS/Redis/S3, EventBridge RunTask, 외부 API 점선). 헤드리스 Chrome 렌더로 겹침·경로 검수 후 커밋. README·architecture.md 최상단 임베드.
+- **백엔드 하드닝(전수 감사 확정분 19건)**: Web Push endpoint SSRF 방어(`PushEndpointValidator` — https·IP 리터럴/localhost 거부) · ADMIN 토큰 DB role 재확인(강등 즉시 반영) · 좌표/반경/bounds `isFinite`+WGS84+스팬 검증 공통화 · 숨김 리뷰 댓글/리액션·soft-delete 장소 UGC 쓰기 차단 · 리뷰 사진 https 검증 · **V19**(reviews (user_id,place_id) UNIQUE + dedupe, push_subscriptions FK CASCADE, notification_rules partial index) + 동시 upsert 레이스 처리(TS-031 패턴) · 외부 API RestClient 공통 타임아웃(connect 3s/read 10s) · 공개 프록시 레이트리밋(`/routes/*` 20/min·`/places/search` 60/min, ProxyClientResolver 키) · SSE 연결 상한(1000) · 관리자 신고 목록 N+1 제거 · 무제한 목록 LIMIT 100 · Dockerfile non-root. 단위 테스트 동반, 로컬 `test`+JaCoCo 게이트 green(IT는 CI).
+- **프론트 수정(18건)**: SW가 `/api/*`를 캐시하지 않게 NetworkOnly 선행 + `/geuneul.apk`(2.5MB)·미사용 brand 에셋 precache 제외(빌드 산출 실측 86엔트리·중복 0) · 제보 POST 로그인 시 인증 전달(비로그인 익명 유지·익명 해제 토글 게이트) · 장소 전환 시 경로 미니맵 초기화 · 바텀시트 드래그 후 click 이중 스냅 억제 · bounds 준비 전 급증 오탐 차단 · 탭 이동 시 유저 오버레이 닫기 · 사진 업로드 레이스/objectURL 누수 수정 · 검색 stale 결과 초기화 · 보안 헤더(Referrer-Policy·nosniff·Permissions-Policy) · a11y(별점 radio·PlacePicker 포커스 트랩) 등. lint·tsc·build green.
+  - **후속 결함 예방(메인 검증에서 발견)**: 새 GET 레이트리밋이 BFF 경유 시 Vercel egress IP 버킷으로 뭉치는 문제 — GET `proxy()`에 원 클라이언트 신원(x-client-ip·x-proxy-auth) 전달을 추가해 유저별 버킷 보장(검색·경로 3개 라우트).
+- **인프라 하드닝(적용·라이브 검증)**: GitHub OIDC trust를 `ref:refs/heads/main`으로 한정 + `iam:PassRole`에 `PassedToService=ecs-tasks` 조건 + `ecs:UpdateService`를 서비스 ARN으로 스코핑(taskdef API는 AWS 제약상 `*`) · **ECR IMMUTABLE**(SHA 태그 전용이라 안전) — 타겟 apply로 라이브 반영(무관한 태스크데프 드리프트는 회피). deploy.yml `concurrency`(배포 직렬화) · gitleaks allowlist를 파일 전체 제외→placeholder 패턴만으로 축소(전 히스토리 재스캔 leaks 0) · docker-compose 전 포트 127.0.0.1 바인딩 · `.env.example`/`terraform.tfvars.example`을 실제 설정명·필수 변수와 1:1로 정정 · perf 문서 ADR 참조 오류·프로덕션 URL 하드코딩 제거.
+- **감사 방법**: codex 3계열(백엔드/프론트/인프라) 병렬 전수 감사 → 메인 모델이 확정/기각 판정(기각 예: ProxyClientResolver XFF 건 — 프로덕션 시크릿 활성·TS-008 문서화된 하위호환 / RDS 백업·암호화 — rds.tf에 트레이드오프 기록 존재). 수정도 codex 위임 후 diff 전건 메인 검증·테스트 재실행.

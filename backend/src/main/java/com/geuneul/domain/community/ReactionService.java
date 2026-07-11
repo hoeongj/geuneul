@@ -67,9 +67,9 @@ public class ReactionService {
 
     private void requireTarget(ReactionTarget target, long targetId) {
         boolean exists = switch (target) {
-            case REVIEW -> reviewRepository.existsById(targetId);
-            case REPORT -> reportRepository.existsById(targetId);
-            case COMMENT -> commentRepository.existsById(targetId);
+            case REVIEW -> reviewRepository.existsByIdAndHiddenFalse(targetId);
+            case REPORT -> reportRepository.existsByIdAndHiddenFalse(targetId);
+            case COMMENT -> commentRepository.existsVisibleById(targetId);
         };
         if (!exists) {
             throw new ResponseStatusException(NOT_FOUND, "reaction target not found: " + target + "#" + targetId);

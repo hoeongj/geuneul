@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * 제보 급증 감지(ADR-0016 §1) — 시공간 SQL. survival_score의 place_report_signals 뷰(ADR-0007)와 달리
  * <b>가중 없는 순수 건수 속도</b>("얼마나 몰리나")를 본다. 앱 전체스캔이 아니라 인덱스
- * (idx_reports_place_created·GiST) 경로를 탄다(CLAUDE.md §0.4).
+ * (idx_reports_place_created·GiST) 경로를 탄다(docs/SPEC.md §0.4).
  *
  * <p>Report 엔티티에 붙지만 조회 전용 — 쓰기는 ReportRepository가 담당한다(관심사 분리).
  */

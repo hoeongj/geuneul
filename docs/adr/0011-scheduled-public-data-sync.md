@@ -3,7 +3,7 @@
 - 상태: 승인(구현 반영, 2026-07-10) — **Terraform은 스캐폴드만, `terraform apply`·스케줄 활성화는 미실행**(사람 검토 후 `var.ingest_schedule_enabled=true`로 재적용 필요).
 - 관련: `IngestBatchLock`(신규), `IngestionRunner`(dispatch 분리 + 락 배선), `infra/terraform/scheduler.tf`(신규),
   `infra/terraform/ssm.tf`(`datago_service_key`), `infra/terraform/ecs.tf`(`DATA_GO_KR_SERVICE_KEY` secret),
-  ADR-0002(멱등 upsert)·ADR-0006(soft-delete diff, `IngestionService.deactivateStale`), CLAUDE.md 로드맵 P3
+  ADR-0002(멱등 upsert)·ADR-0006(soft-delete diff, `IngestionService.deactivateStale`), SPEC.md 로드맵 P3
 
 ## 문제(Context)
 
@@ -61,7 +61,7 @@ CSV 소스(쉼터/화장실)는 스냅샷이 GitHub Release 고정 자산(`--ing
 ### 4) 동시 실행 방지 = 새 인프라 대신 Postgres 세션 수준 advisory lock(`IngestBatchLock`)
 
 SQS 락 서비스·DynamoDB 조건부쓰기 등 전용 분산락 인프라를 검토했으나, **월 1회 저빈도** 스케줄에 새 인프라를
-얹는 건 CLAUDE.md §0.2(과설계 금지)와 충돌한다. 이미 있는 RDS 하나로 `pg_try_advisory_lock`(세션 수준,
+얹는 건 SPEC.md §0.2(과설계 금지)와 충돌한다. 이미 있는 RDS 하나로 `pg_try_advisory_lock`(세션 수준,
 논블로킹)을 쓰면 추가 비용·인프라 없이 상호배제를 얻는다. `IngestionRunner.run()`이 모든 `--ingest.source=`
 실행(스케줄·수동 둘 다)에서 이 락을 거치도록 배선했다 — 락을 못 얻으면 **실패가 아니라 "건너뜀"**으로
 취급해 `exitCode=0`으로 정상 종료한다(다음 스케줄이 사실상 재시도이므로 알림 노이즈를 만들 이유가 없다).
@@ -77,7 +77,7 @@ lock을 자동 해제 — 영구 데드락은 없다(둘 다 클래스 주석에
 ### 5) 안전장치 — `terraform apply`·스케줄 활성화는 이번 스코프에서 실행하지 않는다
 
 `var.ingest_schedule_enabled`(기본 `false`)로 `aws_scheduler_schedule.state`를 `DISABLED`로 고정했다.
-누군가 이 브랜치를 검토 없이 `apply`해도 스케줄은 생성만 되고 돌지 않는다 — CLAUDE.md의 "범위를 스스로
+누군가 이 브랜치를 검토 없이 `apply`해도 스케줄은 생성만 되고 돌지 않는다 — SPEC.md의 "범위를 스스로
 늘리지 않는다"·오케스트레이터 지시("terraform apply·스케줄 활성화·태스크데프 등록 금지")를 코드 레벨에서
 강제한 것.
 
@@ -114,4 +114,4 @@ lock을 자동 해제 — 영구 데드락은 없다(둘 다 클래스 주석에
   `prod-ingest.sh`가 이미 같은 셰이프로 `aws ecs run-task --overrides`를 쓰고 있어 교차 검증됨.
 - Postgres `pg_try_advisory_lock`/`pg_advisory_unlock` 세션 수준 동작 및 커넥션 풀 재사용 함정 — PostgreSQL
   공식 문서 §9.27(Advisory Lock Functions, "세션 수준 락은 unlock 또는 세션 종료까지 유지").
-- CLAUDE.md §0.2(과설계 금지)·§10 로드맵 P3, ADR-0002(멱등)·ADR-0006(soft-delete diff, 오픈API 다운로드 경로).
+- SPEC.md §0.2(과설계 금지)·§10 로드맵 P3, ADR-0002(멱등)·ADR-0006(soft-delete diff, 오픈API 다운로드 경로).

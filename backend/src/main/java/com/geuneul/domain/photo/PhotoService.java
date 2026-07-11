@@ -24,7 +24,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 /**
- * 제보/후기 사진 업로드 — S3 presigned PUT URL 발급(CLAUDE.md §7·§9 POST /photos/presign).
+ * 제보/후기 사진 업로드 — S3 presigned PUT URL 발급(docs/SPEC.md §7·§9 POST /photos/presign).
  * 백엔드는 파일 바이트를 절대 거치지 않는다: 브라우저가 이 서비스가 서명한 URL로 S3에 직접 PUT한다.
  *
  * <p>제약(둘 다 presign 시점에 강제 — 업로드 후가 아니라 업로드 전에 걸러진다):

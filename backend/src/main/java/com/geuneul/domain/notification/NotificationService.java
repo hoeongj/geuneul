@@ -12,6 +12,7 @@ import com.geuneul.domain.report.ReportRepository;
 import com.geuneul.domain.weather.HeatComfort;
 import com.geuneul.domain.weather.Weather;
 import com.geuneul.domain.weather.WeatherService;
+import com.geuneul.global.web.ApiRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,8 @@ public class NotificationService {
 
     /** HEAT_ESCAPE cooldown(ms) — 날씨는 시간당 갱신이라 규칙당 3시간 1회로 나깅 방지(ADR-0020). */
     static final long HEAT_COOLDOWN_MS = 10_800_000; // 3시간
+
+    static final int MAX_RULE_RADIUS_M = 10_000;
 
     /**
      * 관심 장소 단건 상태 알림(C3, ADR-0026)의 유의미 제보 타입 — §6 우회/주의 권장 대상(침수·미끄럼)만.
@@ -77,10 +80,13 @@ public class NotificationService {
             if (req.lat() == null || req.lng() == null || req.radiusM() == null || req.radiusM() <= 0) {
                 throw new ResponseStatusException(BAD_REQUEST, "SURGE_NEARBY는 lat·lng·radiusM(>0)이 필요합니다");
             }
+            ApiRequests.requireValidLatLng(req.lat(), req.lng());
+            ApiRequests.requireRadiusWithin(req.radiusM(), MAX_RULE_RADIUS_M);
         } else if (req.type() == NotificationRuleType.HEAT_ESCAPE) {
             if (req.lat() == null || req.lng() == null) {
                 throw new ResponseStatusException(BAD_REQUEST, "HEAT_ESCAPE는 lat·lng(폭염 판정 중심)이 필요합니다");
             }
+            ApiRequests.requireValidLatLng(req.lat(), req.lng());
         }
         NotificationRule rule = ruleRepository.save(
                 NotificationRule.of(userId, req.type(), req.lat(), req.lng(), req.radiusM()));
@@ -89,7 +95,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationRuleResponse> listRules(long userId) {
-        return ruleRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        return ruleRepository.findTop100ByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(NotificationRuleResponse::of)
                 .toList();
     }

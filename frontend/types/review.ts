@@ -1,5 +1,5 @@
 // 영구 후기 — 백엔드 /reviews · /places/{id}/reviews 계약(ReviewResponse/ReviewListResponse).
-// survival_score(휘발성 제보)와 분리된 장소 평판(CLAUDE.md §1/§5). 조회는 공개, 작성은 로그인 필요.
+// survival_score(휘발성 제보)와 분리된 장소 평판(docs/SPEC.md §1/§5). 조회는 공개, 작성은 로그인 필요.
 export interface Review {
   id: number;
   placeId: number;

@@ -1,7 +1,7 @@
 package com.geuneul.domain.auth;
 
 /**
- * users.trust_score(0~100) 산출 — CLAUDE.md §5 "제보는 trust_score로 가중"의 원천 계산.
+ * users.trust_score(0~100) 산출 — docs/SPEC.md §5 "제보는 trust_score로 가중"의 원천 계산.
  *
  * <p>DB 없이 단위테스트되는 순수 함수(SurvivalScore와 동일한 설계 방향, ADR-0007 참고) — 유저의
  * <b>검증 가능한 활동 신호</b>(제보/후기 작성 수, 계정 연령)만 쓰고, 자기신고/평판 같은 조작 가능한

@@ -26,6 +26,7 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
             JOIN places p ON p.id = b.place_id
             WHERE b.user_id = :userId AND p.deleted_at IS NULL
             ORDER BY b.created_at DESC
+            LIMIT 100
             """, nativeQuery = true)
     List<BookmarkView> findBookmarksWithPlace(@Param("userId") long userId);
 }

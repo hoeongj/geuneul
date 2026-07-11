@@ -30,7 +30,7 @@ import java.util.Set;
  *
  * <p><b>반경 단위 → 격자 커버리지</b>: {@link #ingestRegion}은 한 중심좌표+반경을 멱등 수집하고,
  * {@link #ingestArea}는 bbox를 반경 원들로 격자 순회해(원이 격자칸을 내접 커버, dedup은 멱등 upsert가
- * 담당) 한 번의 실행으로 넓은 지역(예: 서울)을 덮는다 — CLAUDE.md §3 "전국 표준데이터 적재"·PostGIS
+ * 담당) 한 번의 실행으로 넓은 지역(예: 서울)을 덮는다 — docs/SPEC.md §3 "전국 표준데이터 적재"·PostGIS
  * 반경검색과 동일한 정신모델.
  *
  * <p><b>soft-delete 미지원(의도적)</b> — 반경/격자 호출은 전국 스냅샷의 부분집합이라, 여기서

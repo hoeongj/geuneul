@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.reflect.Field;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -142,7 +144,8 @@ class FlagServiceTest {
     @DisplayName("대기 큐 조회는 PENDING만, 대상 요약(REPORT)을 함께 조립한다")
     void pendingListIncludesReportSummary() {
         Report report = Report.anonymous(5L, ReportType.COOL, "에어컨 빵빵", true, null);
-        when(reportRepository.findById(1L)).thenReturn(Optional.of(report));
+        setId(report, 1L);
+        when(reportRepository.findAllById(any())).thenReturn(List.of(report));
         Flag flag = Flag.create(FlagTargetType.REPORT, 1L, 10L, FlagReason.FALSE_INFO, "가짜같아요");
         Page<Flag> page = new PageImpl<>(List.of(flag), PageRequest.of(0, 20), 1);
         when(flagRepository.findByStatusOrderByCreatedAtAsc(eq(FlagStatus.PENDING), any())).thenReturn(page);
@@ -152,12 +155,13 @@ class FlagServiceTest {
         assertThat(result.flags()).hasSize(1);
         assertThat(result.flags().get(0).targetExists()).isTrue();
         assertThat(result.flags().get(0).targetSummary()).contains("placeId=5").contains("시원해요");
+        verify(reportRepository, never()).findById(1L);
     }
 
     @Test
     @DisplayName("대상이 이미 삭제됐으면 targetExists=false·targetSummary=null")
     void pendingListHandlesMissingTarget() {
-        when(reviewRepository.findById(2L)).thenReturn(Optional.empty());
+        when(reviewRepository.findAllById(any())).thenReturn(List.of());
         Flag flag = Flag.create(FlagTargetType.REVIEW, 2L, 10L, FlagReason.OFFENSIVE, null);
         Page<Flag> page = new PageImpl<>(List.of(flag), PageRequest.of(0, 20), 1);
         when(flagRepository.findByStatusOrderByCreatedAtAsc(eq(FlagStatus.PENDING), any())).thenReturn(page);
@@ -166,6 +170,31 @@ class FlagServiceTest {
 
         assertThat(result.flags().get(0).targetExists()).isFalse();
         assertThat(result.flags().get(0).targetSummary()).isNull();
+    }
+
+    @Test
+    @DisplayName("대기 큐 대상 요약은 타입별 findAllById로 배치 조회한다(N+1 방지)")
+    void pendingListBatchLoadsTargets() {
+        Report report = Report.anonymous(5L, ReportType.COOL, null, true, null);
+        setId(report, 1L);
+        Review review = Review.of(10L, 5L, (short) 4, "좋아요", null);
+        setId(review, 2L);
+        when(reportRepository.findAllById(any())).thenReturn(List.of(report));
+        when(reviewRepository.findAllById(any())).thenReturn(List.of(review));
+        Flag reportFlag = Flag.create(FlagTargetType.REPORT, 1L, 10L, FlagReason.FALSE_INFO, null);
+        Flag reviewFlag = Flag.create(FlagTargetType.REVIEW, 2L, 11L, FlagReason.OFFENSIVE, null);
+        Page<Flag> page = new PageImpl<>(List.of(reportFlag, reviewFlag), PageRequest.of(0, 20), 2);
+        when(flagRepository.findByStatusOrderByCreatedAtAsc(eq(FlagStatus.PENDING), any())).thenReturn(page);
+
+        FlagPendingListResponse result = flagService.pending(0, 20);
+
+        assertThat(result.flags()).hasSize(2);
+        assertThat(result.flags().get(0).targetSummary()).contains("[제보]");
+        assertThat(result.flags().get(1).targetSummary()).contains("[후기]");
+        verify(reportRepository, times(1)).findAllById(any());
+        verify(reviewRepository, times(1)).findAllById(any());
+        verify(reportRepository, never()).findById(1L);
+        verify(reviewRepository, never()).findById(2L);
     }
 
     @Test
@@ -213,5 +242,15 @@ class FlagServiceTest {
         assertThatThrownBy(() -> flagService.resolve(999L, new FlagResolveRequest(FlagStatus.RESOLVED)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
+    }
+
+    private static void setId(Object target, long id) {
+        try {
+            Field f = target.getClass().getDeclaredField("id");
+            f.setAccessible(true);
+            f.set(target, id);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

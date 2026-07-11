@@ -58,6 +58,14 @@ class PlaceControllerTest {
     }
 
     @Test
+    @DisplayName("radius가 Infinity면 400")
+    void infiniteRadiusIs400() throws Exception {
+        mvc.perform(get("/places")
+                        .param("lat", "37.4963").param("lng", "126.9575").param("radius", "Infinity"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("좌표 범위 밖(lat>90)이면 400")
     void invalidLatIs400() throws Exception {
         mvc.perform(get("/places").param("lat", "95").param("lng", "126.9575"))
@@ -75,6 +83,13 @@ class PlaceControllerTest {
     @DisplayName("bounds가 뒤집혀 있으면(west>east) 400")
     void invertedBoundsIs400() throws Exception {
         mvc.perform(get("/places").param("bounds", "127.0,37.4,126.9,37.5"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("bounds 스팬이 위도/경도 5도를 넘으면 400")
+    void tooWideBoundsIs400() throws Exception {
+        mvc.perform(get("/places").param("bounds", "126.0,37.0,132.0,38.0"))
                 .andExpect(status().isBadRequest());
     }
 

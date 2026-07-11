@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 인증 API (CLAUDE.md §9). 소셜 로그인은 프론트 BFF가 받은 인가 코드를 서버에서 교환한다.
+ * 인증 API (docs/SPEC.md §9). 소셜 로그인은 프론트 BFF가 받은 인가 코드를 서버에서 교환한다.
  * /me는 JWT 필요(SecurityConfig에서 인증 요구), 나머지 /auth/**는 공개.
  */
 @Tag(name = "Auth", description = "소셜 로그인(카카오/구글) + JWT 세션")

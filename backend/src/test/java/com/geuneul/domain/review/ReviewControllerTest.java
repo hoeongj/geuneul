@@ -145,6 +145,17 @@ class ReviewControllerTest {
     }
 
     @Test
+    @DisplayName("사진 URL이 https://로 시작하지 않으면 400")
+    void nonHttpsPhotoIs400() throws Exception {
+        stubValidToken();
+        mvc.perform(post("/reviews")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placeId\":1,\"rating\":5,\"photos\":[\"http://img/1.jpg\"]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("장소별 후기 목록 GET은 로그인 없이 200")
     void listIsPublicAndOk() throws Exception {
         given(reviewService.listByPlace(eq(1L), anyInt(), anyInt()))

@@ -20,7 +20,7 @@ import java.nio.file.StandardCopyOption;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 인제스천 멱등성 + 지오코딩 경로 IT (CLAUDE.md 원칙 3, ADR-0002/0003).
+ * 인제스천 멱등성 + 지오코딩 경로 IT (docs/SPEC.md 원칙 3, ADR-0002/0003).
  * 실 PostGIS + 페이크 지오코더로: 재적재 중복 0 / DO UPDATE 갱신 / 지오코딩 좌표 저장·재사용을 검증.
  */
 class IngestionIdempotencyIT extends AbstractIntegrationTest {

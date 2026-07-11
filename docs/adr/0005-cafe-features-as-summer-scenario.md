@@ -1,14 +1,14 @@
 # ADR-0005. 카공/카페 기능은 "여름 실내 시나리오"로 흡수한다 (리뷰앱·카페앱화 금지)
 
 - 상태: **부분 채택** — 1탄(실시간 자리 여유/혼잡 제보 `SEAT_OK`/`CROWDED`) 라이브(PR #22). 나머지 흡수 범위는 방향 확인 대기 (2026-07-04)
-- 관련: `reports.report_type`, `place_features`, `survival_score`(P3), `GET /recommendations`, CLAUDE.md §5·§9 원칙
+- 관련: `reports.report_type`, `place_features`, `survival_score`(P3), `GET /recommendations`, SPEC.md §5·§9 원칙
 - 근거 조사: 다중 에이전트 리서치(카공맵·유사앱 리뷰·GitHub `awesome-cafe`/`Buzzzzing-Server`·Workfrom·누클) — wf_d23510d2
 
 ## 문제(Context)
 
 "카공맵(공부하기 좋은 카페 지도)의 기능을 전부 넣고 싶다"는 요구. 조사 결과 **카공(연중 카페 공부)의 실사용 조건 = 시원한 실내 + 앉을 곳 + 콘센트 + 눈치 안 봄 + 자리 여유** 인데, 이는 그늘 여름생존의 **"무더위쉼터·도서관·지하상가에서 오래 버티기"(air_conditioned + seating + outlet + no_eyes)** 와 정확히 포개진다. 즉 카공은 별개 경쟁 도메인이 아니라 그늘의 **부분집합**이다.
 
-그러나 무분별 흡수는 두 리스크가 있다: (a) **정체성 희석** — "여름 생존 지도"가 "연중 카페앱"으로 번짐(계절성 상실), (b) **간판 상실** — 지리공간+실시간 UGC 스코어링 대신 별점·리뷰가 주인공이 되어 "그냥 리뷰앱"이 됨(CLAUDE.md §9 명시 경계).
+그러나 무분별 흡수는 두 리스크가 있다: (a) **정체성 희석** — "여름 생존 지도"가 "연중 카페앱"으로 번짐(계절성 상실), (b) **간판 상실** — 지리공간+실시간 UGC 스코어링 대신 별점·리뷰가 주인공이 되어 "그냥 리뷰앱"이 됨(SPEC.md §9 명시 경계).
 
 ## 결정(Decision)
 
@@ -52,4 +52,4 @@
 
 - 리서치 소스: cagongmap.com(SPA), threads 소개, [`awesome-cafe`](https://github.com/utilForever/awesome-cafe) 카공 메타 스키마, Buzzzzing-Server(Spring 혼잡도), Workfrom(capacity score), 누클(좌석 공유), 경향신문(카공 사절 갈등)
 - 사용자 신호(top): 자리 여유("도착 전 좌석 확인" 재사용의향 80%)·콘센트 등급·눈치 안 봄·데이터 최신성·방문 인증 리뷰
-- CLAUDE.md §5(survival_score)·§9(간판 vs 살)·비목표(유료화·소셜그래프 제외)
+- SPEC.md §5(survival_score)·§9(간판 vs 살)·비목표(유료화·소셜그래프 제외)

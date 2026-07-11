@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 장소 상세(GET /places/{id})의 "최근 제보 기준" 한국어 한 문장 AI 요약 — P3, **곁다리**(CLAUDE.md §0-8·§0-9).
+ * 장소 상세(GET /places/{id})의 "최근 제보 기준" 한국어 한 문장 AI 요약 — P3, **곁다리**(docs/SPEC.md §0-8·§0-9).
  *
  * <p>간판(지리공간 검색·survival_score)을 가리지 않도록 설계 제약을 지킨다:
  * <ul>
@@ -35,7 +35,7 @@ import java.util.Optional;
 @Service
 public class AiSummaryService {
 
-    /** 침수 등 위험 정보를 공포 조장 없이 순화하라는 CLAUDE.md §0-6 규칙을 프롬프트 레벨에서 강제한다. */
+    /** 침수 등 위험 정보를 공포 조장 없이 순화하라는 docs/SPEC.md §0-6 규칙을 프롬프트 레벨에서 강제한다. */
     private static final String SYSTEM_PROMPT = """
             너는 '그늘' 앱의 장소 요약 도우미다. 사용자가 준 최근 제보 목록만 근거로 한국어 한 문장 요약을 작성해라.
             규칙:

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 후기 커뮤니티 API(2차·살, CLAUDE.md §8) — 후기 댓글 + 리액션("유용했어요").
+ * 후기 커뮤니티 API(2차·살, docs/SPEC.md §8) — 후기 댓글 + 리액션("유용했어요").
  * 작성/리액션은 로그인 필요(SecurityConfig가 인증 요구), 댓글 조회는 공개.
  * survival_score(간판)와 완전히 분리 — 커뮤니티가 주인공이 되지 않게 최소 표면만 연다(§0-9).
  */

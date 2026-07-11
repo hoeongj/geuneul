@@ -1,7 +1,7 @@
 # N9 대규모 대비 — k6 부하 + task_cpu 512 before/after (2026-07-11, ADR-0025)
 
 프로덕션(CloudFront→ALB→ECS Fargate + RDS PostGIS)에 **gentle** 부하(`PEAK_VUS=4`, 20s 램프 + 40s 피크 + 10s 하강,
-read-only GET만 — CLAUDE.md "프로덕션 고부하 금지" 준수). `perf/k6/spatial_load.js`. 반경/kNN/bounds/추천 시나리오.
+read-only GET만 — docs/SPEC.md "프로덕션 고부하 금지" 준수). `perf/k6/spatial_load.js`. 반경/kNN/bounds/추천 시나리오.
 
 ## before → after (task_cpu 256 → 512, memory 1024 유지)
 
@@ -26,7 +26,7 @@ read-only GET만 — CLAUDE.md "프로덕션 고부하 금지" 준수). `perf/k6
 
 ## 실행 재현
 ```
-BASE_URL=https://d2pedv974beobb.cloudfront.net PEAK_VUS=4 k6 run perf/k6/spatial_load.js
+BASE_URL=<배포 URL> PEAK_VUS=4 k6 run perf/k6/spatial_load.js   # 운영 환경 부하는 반드시 저부하(PEAK_VUS 소수)로만
 ```
 task_cpu 라이브 변경: `describe-task-definition geuneul:<rev>` → `.cpu="512"` → `register-task-definition` →
 `update-service --force-new-deployment`(deploy.yml은 describe 기반이라 이후 이미지 배포에도 cpu=512 보존).

@@ -2,13 +2,13 @@
 
 - 상태: 승인(구현 반영, 2026-07-11)
 - 관련: F3(화장실 경로, ADR-0021)·B2(경로 MVP, ADR-0019), `RouteService`·`PlaceRepository.findShadeAlongCorridor`,
-  `RouteResponse.shadeSpots`, 프론트 `RouteMiniMapLive`, CLAUDE.md §0-2(자체 라우팅 지양)·§3(루트=심화)
+  `RouteResponse.shadeSpots`, 프론트 `RouteMiniMapLive`, SPEC.md §0-2(자체 라우팅 지양)·§3(루트=심화)
 - 후속: BACKLOG N8
 
 ## 문제(Context)
 
 F3에서 "화장실 들러 가기" 경로(출발→경유 화장실→도착 폴리라인)를 만들었다. F4의 요구는 "더울 때(그늘)·비 올 때
-피할 곳"을 경로 위에서 보여주는 것. 그런데 **자체 가중 라우팅**(그늘을 우선하도록 경로를 재계산)은 CLAUDE.md §0-2가
+피할 곳"을 경로 위에서 보여주는 것. 그런데 **자체 가중 라우팅**(그늘을 우선하도록 경로를 재계산)은 SPEC.md §0-2가
 지양하는 과설계다 — 우리 간판은 지리검색이지 라우팅 엔진이 아니다.
 
 ## 결정(Decision)

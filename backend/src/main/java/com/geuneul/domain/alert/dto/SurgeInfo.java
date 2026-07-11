@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * 제보 급증 알림 1건(ADR-0016). "최근 N분 안에 유효 제보가 임계 이상 몰린 장소"를 나타낸다.
  * bounds 폴백 조회(GET /alerts/surge)와 SSE 실시간 푸시(GET /alerts/stream)가 같은 셰이프로 쓴다.
  *
- * <p>표현 규율(CLAUDE.md §6): 백엔드는 사실(placeId·count·대표 타입)만 싣고, message는 공포 조장이 아닌
+ * <p>표현 규율(docs/SPEC.md §6): 백엔드는 사실(placeId·count·대표 타입)만 싣고, message는 공포 조장이 아닌
  * 중립 문구로 만든다("위험!" 금지 → "제보가 몰리고 있어요"). 최종 톤·아이콘은 프론트가 렌더한다.
  */
 @Schema(description = "제보 급증 알림")

@@ -57,7 +57,7 @@ class PopularTimesCacheProxyTest {
         when(slot.getSampleCount()).thenReturn(4L);
         when(slot.getCrowdedCount()).thenReturn(3L);
         when(slot.getSeatOkCount()).thenReturn(1L);
-        when(placeRepository.existsById(1L)).thenReturn(true);
+        when(placeRepository.existsByIdAndDeletedAtIsNull(1L)).thenReturn(true);
         when(reportRepository.congestionByPlace(1L)).thenReturn(List.of(slot));
 
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
@@ -75,7 +75,7 @@ class PopularTimesCacheProxyTest {
             assertThat(first.get(0).level()).isEqualTo("BUSY");
             assertThat(second).isEqualTo(first);
             verify(reportRepository, times(1)).congestionByPlace(eq(1L));
-            verify(placeRepository, times(1)).existsById(anyLong());   // 메서드 전체가 캐시되므로 검증도 1회
+            verify(placeRepository, times(1)).existsByIdAndDeletedAtIsNull(anyLong());   // 메서드 전체가 캐시되므로 검증도 1회
         }
     }
 }

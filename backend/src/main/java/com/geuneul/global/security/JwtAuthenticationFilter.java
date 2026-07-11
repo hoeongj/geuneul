@@ -1,6 +1,8 @@
 package com.geuneul.global.security;
 
+import com.geuneul.domain.auth.Role;
 import com.geuneul.domain.auth.JwtService;
+import com.geuneul.domain.auth.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,9 +25,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER = "Bearer ";
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -37,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 JwtService.AuthPrincipal principal = jwtService.parse(header.substring(BEARER.length()));
+                principal = reconcileAdminRole(principal);
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + principal.role().name()));
                 var authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -46,5 +51,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private JwtService.AuthPrincipal reconcileAdminRole(JwtService.AuthPrincipal principal) {
+        if (principal.role() != Role.ADMIN) {
+            return principal;
+        }
+        Role currentRole = userRepository == null
+                ? Role.USER
+                : userRepository.findById(principal.userId()).map(u -> u.getRole()).orElse(Role.USER);
+        return currentRole == Role.ADMIN ? principal : new JwtService.AuthPrincipal(principal.userId(), Role.USER);
     }
 }

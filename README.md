@@ -1,6 +1,6 @@
 # 그늘 (Geuneul) — 여름 생존 지도
 
-> **PostGIS 대용량 지리검색 + 실시간 UGC 시공간 스코어링.** 전국 공공데이터 **15만+ POI**를 GiST 인덱스로 반경·kNN 검색하고, 휘발성 제보를 *최근성 × 신뢰도*로 SQL에서 집계해 **"지금 갈만함" 점수**로 마커를 3색으로 칠하는 생활 생존 지도.
+> 폭염·장마철에 "지금 쉬어갈 곳"을 찾아주는 생활 지도 서비스. 전국 공공데이터 **15만+ POI**(무더위쉼터·공중화장실·도서관·카페 등)를 PostGIS GiST 인덱스로 반경·kNN 검색하고, 사용자 실시간 제보를 *최근성 × 신뢰도*로 집계해 **"지금 갈만함" 점수(survival_score)** 로 마커를 칠한다.
 
 [![App](https://img.shields.io/badge/App-geuneul.vercel.app-2f9e44?logo=vercel&logoColor=white)](https://geuneul.vercel.app)
 [![API](https://img.shields.io/badge/API-live_health-17957e)](https://d2pedv974beobb.cloudfront.net/actuator/health)
@@ -24,32 +24,23 @@
 
 ---
 
-## 무엇을 증명했나
+## 핵심 설계
 
-- **공간 엔지니어링(간판)** — 반경 `ST_DWithin` · 최근접 kNN `<->` · bounds를 **PostGIS GiST 인덱스**로. `EXPLAIN`으로 인덱스 사용을 실증하고, **k6 부하테스트로 반경 검색 p95를 2.68s→~1.4s로 튜닝**(병목이 GiST가 아니라 CPU임을 측정으로 확정, [ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)).
-- **멱등 ETL + 지오코딩** — `source + source_external_id` 자연키로 **재실행해도 중복 없는** 배치 upsert. 무더위쉼터 60,297 · 공중화장실 52,334 · 도서관 3,551 · 상권 카페/스터디카페 등 **전국 표준데이터를 그대로 적재**하고, WGS84 결측 좌표는 **카카오 지오코딩으로 보완**(결과 저장·rate limit 회피).
-- **실시간 UGC 시공간 스코어링** — 제보(휘발성 상태)/후기(영구 평판) **2단 UGC**를 신뢰도 가중으로 `survival_score`에 집계. 제보 급증은 **Postgres `LISTEN/NOTIFY` → 멀티 인스턴스 팬아웃 → SSE**로, 관심 장소 알림은 **`INSERT … RETURNING`으로 정확히 1회** 푸시([ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)·0026).
+- **공간 검색은 DB 레이어에서** — 반경 `ST_DWithin` · 최근접 kNN `<->` · bounds 조회를 **PostGIS GiST 인덱스**로 처리한다. `EXPLAIN`으로 인덱스 사용을 실증하고, **k6 부하테스트로 반경 검색 p95를 2.68s→~1.4s로 튜닝**했다(병목이 GiST가 아니라 CPU임을 측정으로 확정, [ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)).
+- **멱등 ETL + 지오코딩** — `source + source_external_id` 자연키로 **재실행해도 중복 없는** 배치 upsert. 무더위쉼터 60,297 · 공중화장실 52,334 · 도서관 3,551 · 상권 카페/스터디카페 등 **전국 표준데이터를 그대로 적재**하고, WGS84 결측 좌표는 **카카오 지오코딩으로 보완**한다(결과 저장·rate limit 회피).
+- **실시간 UGC 시공간 스코어링** — 제보(휘발성 상태)/후기(영구 평판) **2단 UGC**를 신뢰도 가중으로 `survival_score`에 집계. 제보 급증은 **Postgres `LISTEN/NOTIFY` → 멀티 인스턴스 팬아웃 → SSE**로, 관심 장소 알림은 **`INSERT … RETURNING`으로 정확히 1회** 푸시한다([ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)·[0026](./docs/adr/0026-bookmark-status-change-notification.md)).
 
-> 스택: **Spring Boot 4 · Java 21 · PostgreSQL+PostGIS · Redis · AWS ECS Fargate · Terraform · Next.js(PWA)**. 지리공간은 "지도 그림"이 아니라 **대용량 공간검색을 GiST 인덱스·kNN·EXPLAIN으로 다루는 DB 엔지니어링**이 핵심이다.
+> 스택: **Spring Boot 4 · Java 21 · PostgreSQL+PostGIS · Redis · AWS ECS Fargate · Terraform · Next.js(PWA)**
 
 ## 아키텍처
 
-브라우저는 항상 **동일 오리진 `/api/*` 서버 프록시(BFF)** 만 호출한다 → ALB(http)·CORS 제약을 동시에 회피(백엔드 CORS 불필요, [ADR-0004](./docs/adr/0004-frontend-same-origin-proxy.md)). 간판인 공간검색·시공간 집계는 **DB 레이어(GiST 인덱스 + SQL 뷰)** 에서 돈다.
+![아키텍처 다이어그램](./docs/media/architecture.svg)
 
-```mermaid
-flowchart LR
-  UI["브라우저 · PWA<br/>Next.js · Kakao Maps"] -->|동일 오리진 /api/*| BFF["BFF<br/>Next Route Handlers"]
-  BFF -->|HTTPS| CF["CloudFront"] --> ALB["ALB"] --> API["Spring Boot 4 · Java 21<br/>ST_DWithin · kNN &lt;-&gt; (GiST)<br/>survival_score (SQL 뷰 + 순수 함수)"]
-  API -->|Hibernate Spatial + JTS| PG[("PostgreSQL + PostGIS<br/>geometry(Point,4326) · RDS")]
-  API --> REDIS[("Redis<br/>날씨 TTL · 캐시")]
-  API --> S3[("S3<br/>사진 presign")]
-  API -.지오코딩·경로·날씨·요약.-> EXT["Kakao · 기상청 · Claude/Mistral"]
-  API -->|LISTEN NOTIFY → SSE / Web Push| UI
-```
+브라우저는 항상 **동일 오리진 `/api/*` 서버 프록시(BFF)** 만 호출한다 → ALB(http)·CORS 제약을 동시에 회피(백엔드 CORS 불필요, [ADR-0004](./docs/adr/0004-frontend-same-origin-proxy.md)). 공간검색·시공간 집계는 **DB 레이어(GiST 인덱스 + SQL 뷰)** 에서 돈다.
 
-> 전체 다이어그램(런타임·ETL·배포 CI/CD)과 데모 스크린샷은 **[docs/architecture.md](./docs/architecture.md)**. 배포(AWS·OIDC·Terraform)는 [DEPLOY.md](./DEPLOY.md).
+> 상세 다이어그램(런타임·ETL·배포 CI/CD)과 데모 스크린샷은 **[docs/architecture.md](./docs/architecture.md)**. 배포(AWS·OIDC·Terraform)는 [DEPLOY.md](./DEPLOY.md).
 
-## `survival_score` — 간판이 작동하는 방식
+## `survival_score` — 동작 방식
 
 "지금 이 장소가 갈만한가"를 0~100점 + 3색 등급(초록 좋음 / 노랑 보통 / 회색 정보 부족)으로 낸다.
 
@@ -127,25 +118,23 @@ GET /alerts/stream            # text/event-stream (SSE)
 
 ## 문서
 
-- **아키텍처·데모**: [`docs/architecture.md`](./docs/architecture.md) · **의사결정 기록**: [`docs/adr/`](./docs/adr) (ADR 0001–0027, [색인](./docs/adr/README.md))
-- **배포(AWS)**: [`DEPLOY.md`](./DEPLOY.md) · **Play 등록 인계**: [`docs/PLAY-STORE.md`](./docs/PLAY-STORE.md) · **현황·다음 작업**: [`HANDOFF.md`](./HANDOFF.md)
-- **면접 STAR**: [`docs/INTERVIEW.md`](./docs/INTERVIEW.md) · **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
-- 전체 목표·범위·ERD·API 스펙: [`CLAUDE.md`](./CLAUDE.md)
+- **프로젝트 스펙(목표·범위·ERD·API)**: [`docs/SPEC.md`](./docs/SPEC.md)
+- **아키텍처·데모**: [`docs/architecture.md`](./docs/architecture.md) · **의사결정 기록(ADR)**: [`docs/adr/`](./docs/adr) (0001–0027, [색인](./docs/adr/README.md))
+- **배포(AWS)**: [`DEPLOY.md`](./DEPLOY.md) · **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
+- **디자인·API 계약 레퍼런스**: [`docs/design-brief.md`](./docs/design-brief.md) · **프론트엔드**: [`frontend/README.md`](./frontend/README.md)
 
 <details>
-<summary><b>구현 이력 (W0 → P5 완주)</b></summary>
+<summary><b>구현 이력 (W0 → P5)</b></summary>
 
 - **W0** — Spring Boot 4 + PostGIS/Flyway + Testcontainers CI + AWS(ECS Fargate·RDS·Terraform·OIDC) 배포 파이프라인.
 - **P1** — 반경/kNN/bounds 공간검색 API 라이브 + 공공데이터 멱등 인제스천(쉼터 100건 + 공중화장실 59,768행 파서 → 카카오 지오코딩으로 52,334건 좌표 보완 + 전국 도서관 3,551건).
 - **P2 · UGC+인증** — 휘발성 제보(11타입·타입별 TTL, 레이트리밋 XFF/OOM 하드닝 TS-008) · **소셜 로그인**(카카오/구글 OAuth2+JWT, BFF code 교환) · **후기(review)** 영구 평판(로그인, 장소당 1건 upsert) · **사진 presign**(S3 SigV4, image 화이트리스트) · **trust_score** 실배선(로그인 제보 user_id 가중, V6) · **모더레이션**(신고 + ADMIN 검수 큐, V7).
-- **P3 · 스코어·추천·AI·데이터** — `survival_score`(SQL 뷰 + 순수 함수, 마커 3색, [ADR-0007](./docs/adr/0007-survival-score-sql-signals-java-compose.md)) · 시나리오 추천 [ADR-0008](./docs/adr/0008-recommendations-scenario-weighted-ranking.md) · **날씨**(기상청 초단기실황 + Redis TTL 캐시) + comfort 복원([ADR-0009](./docs/adr/0009-weather-comfort-additive-restore.md)) · **AI 한줄요약**(프로바이더 중립 OpenAI 호환 클라이언트, 현재 Mistral, graceful degradation, [ADR-0010](./docs/adr/0010-ai-summary-openrouter-provider.md)) · **공부공간 데이터 확장**(CAFE/STUDY_CAFE·soft-delete, V5, [ADR-0006](./docs/adr/0006-study-space-coverage-expansion.md)) · **주기동기화**(EventBridge→ECS RunTask + advisory lock, ENABLED, [ADR-0011](./docs/adr/0011-scheduled-public-data-sync.md)).
-- **P4 · 심화(간판 보강)** — **k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN/bounds GiST 사용 실증, V8 만료제보 인덱스, [ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)) · **ECS Service Auto Scaling**(CPU target-tracking, [ADR-0013](./docs/adr/0013-ecs-service-autoscaling.md)) · **관측성**(Micrometer/Prometheus + OTel 트레이싱 + 로컬 Grafana/Tempo, [ADR-0014](./docs/adr/0014-observability-otel-micrometer-grafana.md)) · **무료 HTTPS**(CloudFront 기본 도메인, [ADR-0015](./docs/adr/0015-cloudfront-default-domain-https.md)).
-- **P4 · 백로그 완주** — **실시간 제보 급증 알림**(Postgres LISTEN/NOTIFY→SSE, 멀티 인스턴스 팬아웃, V9, [ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)) · **시간대별 혼잡 파생**(자체 popular-times) · **GPS 방문 인증**(`verified`, ST_DWithin 100m, V10) · **추천 시나리오 focus/longstay** · **후기 커뮤니티**(댓글·리액션, V11) · **모더레이션 확장**(신고 RESOLVED→콘텐츠 숨김, V12) · **JaCoCo 0.70 게이트·캐시 심화**.
-- **데이터 커버리지(2026-07)** — 화장실 52,334 · **무더위쉼터 60,297**(safetydata, 냉방 정보 57,070, TS-027) · **상권 카페/스터디카페**(서울 distinct 29,886 + 6대 광역시 + 9개 도시) · 도서관 3,551. **총 15만+곳.** 외부 승인 블로커 0건.
-- **심화+additive(PR #61~#69)** — 시설 comfort SQL 통합(V13, [ADR-0017](./docs/adr/0017-place-feature-comfort-signal.md)) · verified→trust · 쉼터 냉방 백필(57,070) · 급증 SSE 프론트 · popular-times 히트맵 · 커뮤니티 최소 UI · **bookmarks**(V14) · **알림**(V15, 급증 재사용+인앱 센터, [ADR-0018](./docs/adr/0018-notifications-in-app-center-surge-reuse.md)) · **화장실 포함 경로**([ADR-0019](./docs/adr/0019-routes-toilet-waypoint-external-directions.md)).
-- **F1~F5 · N1~N9 · 데스크톱 반응형(#92) · C1~C4(#96~#99)** — 상권 9도시·화장실 도로 폴리라인([ADR-0021](./docs/adr/0021-road-polyline-kakao-navi-key-reuse.md)) · **Web Push**([ADR-0022](./docs/adr/0022-web-push-zerodep-vapid-feature-gated.md)) · 사진 presigned-GET·커뮤니티 UX·팔로우(V17·[ADR-0023](./docs/adr/0023-commons-safe-follow.md))·그늘/비 corridor([ADR-0024](./docs/adr/0024-shade-rain-route-corridor-overlay.md))·대규모 대비(V18·[ADR-0025](./docs/adr/0025-scale-prep-load-based-tuning.md)) · 데스크톱 지도앱 3분할 · **신고/모더레이션 프론트** · a11y 포커스 트랩 · **관심장소 상태변화 알림**([ADR-0026](./docs/adr/0026-bookmark-status-change-notification.md)) · **그늘 경유 경로**([ADR-0027](./docs/adr/0027-shade-waypoint-route.md)).
-- **P5 · 무료 배포** — PWA 설치([/install](https://geuneul.vercel.app/install)) — 안드로이드 **WebAPK 원탭**(브라우저가 진짜 설치 앱 생성) + **다운로드 서명 APK**([`/geuneul.apk`](https://geuneul.vercel.app/geuneul.apk), Bubblewrap TWA + [`/.well-known/assetlinks.json`](https://geuneul.vercel.app/.well-known/assetlinks.json) 도메인 검증) + iOS 홈 화면 추가. **스토어·비용 0.**
-- **자산화 사이클(D1~D5, #102~#107)** — README 30초 케이스 스터디 · [아키텍처 다이어그램](./docs/architecture.md) · 라이브 데모 스크린샷 · [면접 STAR](./docs/INTERVIEW.md) · 타깃 JD 정렬 · 무료 배포(WebAPK+TWA APK).
+- **P3 · 스코어·추천·AI·데이터** — `survival_score`(SQL 뷰 + 순수 함수, 마커 3색, [ADR-0007](./docs/adr/0007-survival-score-sql-signals-java-compose.md)) · 시나리오 추천 [ADR-0008](./docs/adr/0008-recommendations-scenario-weighted-ranking.md) · **날씨**(기상청 초단기실황 + Redis TTL 캐시) + comfort 복원([ADR-0009](./docs/adr/0009-weather-comfort-additive-restore.md)) · **AI 한줄요약**(프로바이더 중립 OpenAI 호환 클라이언트, graceful degradation, [ADR-0010](./docs/adr/0010-ai-summary-openrouter-provider.md)) · **공부공간 데이터 확장**(CAFE/STUDY_CAFE·soft-delete, V5, [ADR-0006](./docs/adr/0006-study-space-coverage-expansion.md)) · **주기동기화**(EventBridge→ECS RunTask + advisory lock, [ADR-0011](./docs/adr/0011-scheduled-public-data-sync.md)).
+- **P4 · 성능·관측성** — **k6 부하테스트 + EXPLAIN 인덱스 튜닝**(반경/kNN/bounds GiST 사용 실증, V8 만료제보 인덱스, [ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)) · **ECS Service Auto Scaling**(CPU target-tracking, [ADR-0013](./docs/adr/0013-ecs-service-autoscaling.md)) · **관측성**(Micrometer/Prometheus + OTel 트레이싱 + 로컬 Grafana/Tempo, [ADR-0014](./docs/adr/0014-observability-otel-micrometer-grafana.md)) · **무료 HTTPS**(CloudFront 기본 도메인, [ADR-0015](./docs/adr/0015-cloudfront-default-domain-https.md)).
+- **P4 · 실시간·커뮤니티** — **실시간 제보 급증 알림**(Postgres LISTEN/NOTIFY→SSE, 멀티 인스턴스 팬아웃, V9, [ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)) · **시간대별 혼잡 파생**(자체 popular-times) · **GPS 방문 인증**(`verified`, ST_DWithin 100m, V10) · **추천 시나리오 focus/longstay** · **후기 커뮤니티**(댓글·리액션, V11) · **모더레이션 확장**(신고 RESOLVED→콘텐츠 숨김, V12) · **JaCoCo 0.70 게이트**.
+- **데이터 커버리지(2026-07)** — 화장실 52,334 · **무더위쉼터 60,297**(냉방 정보 57,070) · **상권 카페/스터디카페**(서울 + 6대 광역시 + 9개 도시) · 도서관 3,551. **총 15만+곳.**
+- **기능 확장(PR #61~#99)** — 시설 comfort SQL 통합(V13, [ADR-0017](./docs/adr/0017-place-feature-comfort-signal.md)) · 쉼터 냉방 백필 · 급증 SSE 프론트 · popular-times 히트맵 · **bookmarks**(V14) · **알림**(V15, [ADR-0018](./docs/adr/0018-notifications-in-app-center-surge-reuse.md)) · **화장실/그늘 경유 경로**([ADR-0019](./docs/adr/0019-routes-toilet-waypoint-external-directions.md)·[0027](./docs/adr/0027-shade-waypoint-route.md), 도로 폴리라인 [ADR-0021](./docs/adr/0021-road-polyline-kakao-navi-key-reuse.md)) · **Web Push**([ADR-0022](./docs/adr/0022-web-push-zerodep-vapid-feature-gated.md)) · 팔로우(V17·[ADR-0023](./docs/adr/0023-commons-safe-follow.md)) · 그늘/비 corridor([ADR-0024](./docs/adr/0024-shade-rain-route-corridor-overlay.md)) · 부하 기반 튜닝(V18·[ADR-0025](./docs/adr/0025-scale-prep-load-based-tuning.md)) · 데스크톱 3분할 · 신고/모더레이션 프론트 · a11y 포커스 트랩 · **관심장소 상태변화 알림**([ADR-0026](./docs/adr/0026-bookmark-status-change-notification.md)).
+- **P5 · 배포** — PWA 설치([/install](https://geuneul.vercel.app/install)) — 안드로이드 **WebAPK 원탭** + **다운로드 서명 APK**([`/geuneul.apk`](https://geuneul.vercel.app/geuneul.apk), Bubblewrap TWA + [`assetlinks.json`](https://geuneul.vercel.app/.well-known/assetlinks.json) 도메인 검증) + iOS 홈 화면 추가. [개인정보처리방침](https://geuneul.vercel.app/privacy).
 
 </details>
 

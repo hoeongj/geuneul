@@ -28,6 +28,7 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
             JOIN users u ON u.id = f.followee_id
             WHERE f.follower_id = :followerId
             ORDER BY f.created_at DESC
+            LIMIT 100
             """, nativeQuery = true)
     List<FollowingView> findMyFollowing(@Param("followerId") long followerId);
 }

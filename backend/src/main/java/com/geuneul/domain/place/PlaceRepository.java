@@ -154,6 +154,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 
     long countBySource(String source);
 
+    /** soft-delete되지 않은 활성 장소 존재 확인 — 쓰기 경로의 유령 장소 방어. */
+    boolean existsByIdAndDeletedAtIsNull(long id);
+
     /**
      * GPS 방문 인증(ADR-0005 §④): 장소가 주어진 좌표의 meters 이내인가. 제보 생성 시 제보자 좌표가
      * 장소 100m 이내면 verified=true로 남긴다(허위제보 억제). geography(geom) 함수식이라 V3 GIST 함수

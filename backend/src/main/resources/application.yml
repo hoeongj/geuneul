@@ -58,7 +58,7 @@ weather:
 ai:
   summary:
     # 장소 AI 한줄 요약(P3, 곁다리) — 프로바이더 중립 OpenAI 호환 Chat Completions 클라이언트(현재 Mistral).
-    # Anthropic 키가 없어 CLAUDE.md §8 "Claude API 기본"에서 이탈(근거는 WORKLOG·ADR-0010). 지연검증(값
+    # Anthropic 키가 없어 docs/SPEC.md §8 "Claude API 기본"에서 이탈(근거는 WORKLOG·ADR-0010). 지연검증(값
     # 주입 전 배포돼도 앱은 뜬다, ChatCompletionClient가 호출 시점에 미설정을 감지해 empty로 폴백) —
     # 규칙 D: 값은 .env/SSM으로만.
     api-key: ${AI_SUMMARY_API_KEY:}
@@ -128,7 +128,7 @@ management:
       percentiles-histogram:
         # 히스토그램 버킷을 켜야 Grafana에서 histogram_quantile(p95/p99)을 계산할 수 있다(기본은 count/sum/max뿐
         # — 평균만 가능). HTTP 전체 + 커스텀 반경/kNN 타이머 3개만 켠다(전 메트릭 히스토그램은 카디널리티·저장
-        # 비용이 커 과설계, CLAUDE.md §0-2). k6(ADR-0012)가 이미 p95/p99로 보고하므로 같은 기준으로 맞춘다.
+        # 비용이 커 과설계, docs/SPEC.md §0-2). k6(ADR-0012)가 이미 p95/p99로 보고하므로 같은 기준으로 맞춘다.
         http.server.requests: true
         geuneul.place.search.radius: true
         geuneul.place.search.nearest: true

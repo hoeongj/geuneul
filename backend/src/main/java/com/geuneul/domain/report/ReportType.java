@@ -3,7 +3,7 @@ package com.geuneul.domain.report;
 import java.time.Duration;
 
 /**
- * 휘발성 제보 타입 (CLAUDE.md §8 reports.report_type).
+ * 휘발성 제보 타입 (docs/SPEC.md §8 reports.report_type).
  * ttl = 제보의 유효 수명 — expires_at 산정에 쓰이고, 지나면 조회/스코어에서 제외된다.
  * 수명은 상태의 변화 속도에 비례: 자리 여유(가장 빠름) < 체감온도 < 기상 리스크 < 벌레/냄새 < 시설 상태(느림).
  */

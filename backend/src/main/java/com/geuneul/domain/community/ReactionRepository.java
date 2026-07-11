@@ -27,8 +27,12 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
             FROM reactions rx
             JOIN reviews rv ON rv.id = rx.target_id
             JOIN places p ON p.id = rv.place_id
-            WHERE rx.user_id = :userId AND rx.target_type = 'REVIEW'
+            WHERE rx.user_id = :userId
+              AND rx.target_type = 'REVIEW'
+              AND NOT rv.hidden
+              AND p.deleted_at IS NULL
             ORDER BY rx.created_at DESC
+            LIMIT 100
             """, nativeQuery = true)
     List<MyReactionView> findMyReviewReactions(@Param("userId") long userId);
 }

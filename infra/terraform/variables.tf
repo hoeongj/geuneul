@@ -85,7 +85,7 @@ variable "ai_summary_api_key" {
 }
 
 variable "ingest_schedule_enabled" {
-  description = "EventBridge Scheduler(월1회 공공데이터 동기화 RunTask)를 실제로 켤지 여부. 2026-07-10 실트리거 검증 완료(library ingest RunTask exitCode=0, fetched=3555 upserted=3551 deactivated=0) 후 default를 true로 승격 — 운영 안전장치(CLAUDE.md §0.2)로 처음엔 false였고, 사람이 1회 수동 검증한 뒤 켜는 설계였다. 되돌리려면 apply 시 -var ingest_schedule_enabled=false."
+  description = "EventBridge Scheduler(월1회 공공데이터 동기화 RunTask)를 실제로 켤지 여부. 2026-07-10 실트리거 검증 완료(library ingest RunTask exitCode=0, fetched=3555 upserted=3551 deactivated=0) 후 default를 true로 승격 — 운영 안전장치(docs/SPEC.md §0.2)로 처음엔 false였고, 사람이 1회 수동 검증한 뒤 켜는 설계였다. 되돌리려면 apply 시 -var ingest_schedule_enabled=false."
   type        = bool
   default     = true
 }
@@ -121,7 +121,7 @@ variable "autoscaling_enabled" {
 }
 
 variable "autoscaling_max" {
-  description = "ECS Service Auto Scaling 최대 태스크 수. min은 1로 고정(autoscaling.tf). 기본 3 — Fargate 0.25vCPU/1GB 태스크 기준 베이스라인(~$12/월) 대비 최대 3배(~$36/월)로 비용을 유계시킨 값($200 크레딧 보호, CLAUDE.md §7)."
+  description = "ECS Service Auto Scaling 최대 태스크 수. min은 1로 고정(autoscaling.tf). 기본 3 — Fargate 0.25vCPU/1GB 태스크 기준 베이스라인(~$12/월) 대비 최대 3배(~$36/월)로 비용을 유계시킨 값($200 크레딧 보호, docs/SPEC.md §7)."
   type        = number
   default     = 3
 }

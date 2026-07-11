@@ -13,7 +13,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 
 /**
- * 리액션(CLAUDE.md §8 2차·살) — 후기/제보/댓글에 대한 "유용했어요" 등. target은 다형(target_type+target_id).
+ * 리액션(docs/SPEC.md §8 2차·살) — 후기/제보/댓글에 대한 "유용했어요" 등. target은 다형(target_type+target_id).
  * uq_reaction(target_type, target_id, user_id, type) 유니크로 중복 리액션 방지(토글 멱등). Flyway V11.
  */
 @Entity

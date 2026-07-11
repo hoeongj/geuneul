@@ -1,4 +1,4 @@
-# ElastiCache Redis (P3 날씨 초단기실황 TTL 캐시, CLAUDE.md §7).
+# ElastiCache Redis (P3 날씨 초단기실황 TTL 캐시, docs/SPEC.md §7).
 # 단일 노드 cache.t3.micro — 신규계정 프리티어(750h/월, 12개월) 대상 노드 타입. 프리티어 소진 시 ~$12/월.
 # 사설 서브넷 + SG로 ECS 태스크에서만 접근(6379). TLS 미사용(사설망·SG 잠금) → 앱 REDIS_SSL=false.
 #

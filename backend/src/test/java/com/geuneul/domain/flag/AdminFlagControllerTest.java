@@ -2,6 +2,8 @@ package com.geuneul.domain.flag;
 
 import com.geuneul.domain.auth.JwtService;
 import com.geuneul.domain.auth.Role;
+import com.geuneul.domain.auth.User;
+import com.geuneul.domain.auth.UserRepository;
 import com.geuneul.domain.flag.dto.FlagPendingItemResponse;
 import com.geuneul.domain.flag.dto.FlagPendingListResponse;
 import com.geuneul.domain.flag.dto.FlagResponse;
@@ -19,11 +21,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,8 +51,16 @@ class AdminFlagControllerTest {
     @MockitoBean
     JwtService jwtService;
 
+    @MockitoBean
+    UserRepository userRepository;
+
     private void stubToken(String token, Role role) {
         given(jwtService.parse(token)).willReturn(new JwtService.AuthPrincipal(10L, role));
+        if (role == Role.ADMIN) {
+            User admin = mock(User.class);
+            given(admin.getRole()).willReturn(Role.ADMIN);
+            given(userRepository.findById(10L)).willReturn(Optional.of(admin));
+        }
     }
 
     private static FlagPendingListResponse samplePage() {

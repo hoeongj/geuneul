@@ -76,7 +76,7 @@ class AiSummaryServiceTest {
     }
 
     @Test
-    @DisplayName("프롬프트는 침수 위험 표현을 순화하도록 시스템 프롬프트에 명시한다(공포 조장 금지, CLAUDE.md §0-6)")
+    @DisplayName("프롬프트는 침수 위험 표현을 순화하도록 시스템 프롬프트에 명시한다(공포 조장 금지, docs/SPEC.md §0-6)")
     void systemPromptForbidsFearMongering() {
         Report r = reportOf(ReportType.FLOOD, OffsetDateTime.now(CLOCK).minusMinutes(5));
         when(reportRepository.findTop20ByPlaceIdAndExpiresAtAfterAndHiddenFalseOrderByCreatedAtDesc(eq(1L), any()))

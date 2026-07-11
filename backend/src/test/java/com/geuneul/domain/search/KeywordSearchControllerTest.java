@@ -1,8 +1,11 @@
 package com.geuneul.domain.search;
 
 import com.geuneul.domain.auth.JwtService;
+import com.geuneul.domain.report.ExternalApiRateLimiter;
+import com.geuneul.domain.report.ProxyClientResolver;
 import com.geuneul.domain.search.dto.PlaceSearchResult;
 import com.geuneul.global.security.SecurityConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -41,6 +45,18 @@ class KeywordSearchControllerTest {
     @MockitoBean
     JwtService jwtService;
 
+    @MockitoBean
+    ExternalApiRateLimiter rateLimiter;
+
+    @MockitoBean
+    ProxyClientResolver clientResolver;
+
+    @BeforeEach
+    void allowByDefault() {
+        given(clientResolver.resolve(org.mockito.ArgumentMatchers.any())).willReturn("x:127.0.0.1");
+        given(rateLimiter.tryAcquire(anyString(), anyString(), org.mockito.ArgumentMatchers.anyInt())).willReturn(true);
+    }
+
     @Test
     @DisplayName("정상 검색: 200 + 결과 매핑, 클라이언트에 strip된 query 위임")
     void searchOk() throws Exception {
@@ -63,6 +79,20 @@ class KeywordSearchControllerTest {
     void blankQueryIs400() throws Exception {
         mvc.perform(get("/places/search").param("query", "   "))
                 .andExpect(status().isBadRequest());
+
+        then(keywordClient).should(never()).search(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("레이트리밋 초과면 429 — 카카오를 호출하지 않는다")
+    void rateLimitedIs429() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .willReturn(false);
+
+        mvc.perform(get("/places/search").param("query", "강남역"))
+                .andExpect(status().isTooManyRequests());
 
         then(keywordClient).should(never()).search(org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),

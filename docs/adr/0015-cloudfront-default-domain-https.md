@@ -2,7 +2,7 @@
 
 - 상태: 승인 (2026-07-10) · apply 완료·라이브
 - 관련: `infra/terraform/cloudfront.tf`(신규)·`outputs.tf`(https_url)·`alb.tf`(오리진), CloudFront 배포 `https://d2pedv974beobb.cloudfront.net`
-- 선행: [ADR-0004](0004-bff-proxy.md)(프론트는 동일 오리진 BFF로 ALB(http)에 서버사이드 접근 — 이 배포와 무관), CLAUDE.md §7(Infra)·§10 P4(공유 링크 신뢰도)
+- 선행: [ADR-0004](0004-bff-proxy.md)(프론트는 동일 오리진 BFF로 ALB(http)에 서버사이드 접근 — 이 배포와 무관), SPEC.md §7(Infra)·§10 P4(공유 링크 신뢰도)
 
 ## 문제(Context)
 
