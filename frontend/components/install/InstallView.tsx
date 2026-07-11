@@ -98,6 +98,11 @@ export function InstallView() {
         <p className="mt-8 text-center text-[11.5px] leading-relaxed text-muted">
           앱스토어·플레이스토어에 올리지 않아요. 브라우저 표준(PWA) 설치라 심사·비용·계정이 없습니다.
         </p>
+        <p className="mt-3 text-center text-[11.5px] text-muted">
+          <Link href="/privacy" className="font-semibold text-ink-3 hover:text-teal">
+            개인정보처리방침
+          </Link>
+        </p>
       </div>
     </div>
   );

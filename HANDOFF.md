@@ -5,7 +5,13 @@
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
 
-> 🎉 **2026-07-11 — 자산화 사이클 `docs/BACKLOG.md` D1~D5 전량 완료·머지·라이브(PR #102~#106) + D2 후속 다운로드 TWA APK(#107) + 문서 정합 마감. 기능 동결 후 "채용 자산화 + $0 배포" 완결. `/geuneul-finish` 일괄 구동.**
+> 🟢 **다음 세션 = ① Google Play 개발자 등록·앱 출시 · ② GitHub 정리.** 개발/자산화/배포는 **전부 끝났고**, 남은 건 이 두 운영 작업이다.
+> - **Play 등록**: 진행 절차·업로드 파일 위치·체크리스트를 **[`docs/PLAY-STORE.md`](./docs/PLAY-STORE.md)** 에 박아 뒀다. 요점: **AAB는 `.local/twa-build/geuneul-release.aab`**(세션 무관 영구 보존, gitignore), 개인정보처리방침 URL **<https://geuneul.vercel.app/privacy>**(라이브), keystore·비번 **`.local/`**(분실 시 업데이트 불가·백업 권장), 개인계정은 **폐쇄 테스트 12명×14일** 허들.
+> - **GitHub 정리**: main 클린·open PR 0·Co-Authored-By 0. 브랜치는 머지 즉시 삭제돼 왔음. 커밋 신원 `hoengj`. (정리할 게 있으면 그때 판단.)
+>
+> 🎉 **2026-07-11 — 자산화 사이클 D1~D5(#102~#106) + 다운로드 TWA APK(#107) + 문서 정합(#108) + 실사용 피드백 버그픽스(#109) + Play 인계 문서(#110) 완료·라이브. 기능 동결 후 "채용 자산화 + $0 배포" 완결.**
+> - **버그픽스(#109, 친구 실기기 필드테스트)**: ① 제보 페이지 가로 스크롤(코멘트 input `min-w-0` 누락 + 루트 `overflow-x-hidden`) — 프로덕션 360px scrollWidth=clientWidth 실측. ② 현재위치 FAB가 권한 없을 때 지도를 폴백(동작구)으로 튕기던 것 제거(`isFallback`이면 recenterKey 미증가). **수정 안 함(사유 기록)**: 급해요 시나리오 유사성=데이터 희소성(스코어링 튜닝=동결 대상)·쉼터/화장실만 뜸=지역 밀도 차(버그 아님)·지하철역 화장실=사용자 스킵 결정.
+> - **Play 준비(#110)**: `/privacy` 개인정보처리방침 페이지(라이브·실 데이터 취급 기술) + install 페이지 링크 + `docs/PLAY-STORE.md` 인계 + **AAB/APK/manifest를 `.local/twa-build/`에 영구 보존**(scratchpad 소멸 대비). TS-033(Bubblewrap 빌드 함정) 기록.
 > - **D5 타깃 JD 정렬(#102)**: 2026 JD 웹검증(당근·배민·토스 교집합=Spring Boot+PostgreSQL/PostGIS+Redis+부하테스트+JWT/OAuth2)으로 1차=위치기반 플랫폼·2차=모빌리티 백엔드 확정. 스펙 비종속 유지, 강조만 정렬. `.local/PORTFOLIO-CONTEXT.md` §5.
 > - **D3 데모 자산(#103)**: `docs/architecture.md` mermaid 3장(런타임·ETL·배포) + `docs/media/` **라이브 헤드리스 Chrome 실측 스크린샷 4장**(데스크톱 3분할·그늘 경유 경로·모바일 지도·시나리오 추천). mermaid-cli 렌더 검증.
 > - **D2 무료 배포(#104, 프로덕션 실측)**: `geuneul.vercel.app/install` — Android WebAPK 원탭(`beforeinstallprompt` 캡처 싱글턴·전역 조기 등록)+iOS 홈화면 안내+Desktop 유도+이미설치 감지. **(shell) 밖 독립 라우트라 모바일 셸 무변경.** iOS/Android 프로덕션 스크린샷으로 분기 렌더 확인.
