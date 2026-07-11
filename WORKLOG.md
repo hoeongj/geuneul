@@ -1093,3 +1093,10 @@ Play 등록 전 친구(안드로이드 실기기)가 설치·테스트한 피드
 - **수정 안 함(사유 명시)**: ① "급해요 시나리오가 화장실 빼고 비슷비슷" = **데이터 희소성**(유효 제보 없으면 시나리오가 약한 comfort 신호만으로 갈려 거리 지배 → 유사 정렬). 시나리오 카테고리 바이어스 강화는 **스코어링 튜닝=기능 동결 대상**이라 사용자 판단 후로 보류. ② "쉼터·화장실만 뜸" = 전국 적재분의 **지역별 밀도 차**(버그 아님). ③ "지하철역 화장실 아이콘" = 사용자가 포트폴리오용이라 스킵 결정.
 - **검증**: 프론트 tsc·eslint·build green. 프로덕션 배포 후 `/report` 가로 스크롤 0(scrollWidth≤clientWidth)·FAB 폴백시 미점프 실측 예정. 백엔드·마이그레이션 0.
 - **관련**: `report/page.tsx`·`page.tsx`·`lib/context/geo.tsx` · 실사용 피드백 계열(#90 TS-032) · [[geuneul-current-state]].
+
+## 2026-07-11 — Play 출시 준비 + 다음 세션(등록·GitHub 정리) 인계 문서화
+자산화·배포·버그픽스가 끝난 상태에서, **다음 세션의 Play 개발자 등록·앱 출시**가 매끄럽도록 문서·산출물을 정리했다. **백엔드·마이그레이션 0**(프론트 정적 페이지 1 + 문서).
+- **무엇**: ① `frontend/app/privacy/page.tsx` — **개인정보처리방침 페이지**(라이브 `/privacy`, Play 필수). 실제 데이터 취급(위치·소셜계정·UGC·사진·푸시구독·제3자 Kakao/구글/기상청/AI/AWS)을 사실대로 기술 + install 페이지에 링크. ② `docs/PLAY-STORE.md` — **등록 인계 체크리스트**(계정 설문 답·폐쇄 테스트 12명×14일·AAB 업로드·콘텐츠 등급·Data safety·재빌드 커맨드). ③ **빌드 산출물 영구 보존**: scratchpad는 세션 종료 시 소멸하므로 `app-release-bundle.aab`·서명 APK·`twa-manifest.json`·서명 지문을 **`.local/twa-build/`**(gitignore·persist)로 복사. keystore·비번은 기존 `.local/`.
+- **왜(why)**: ① **개인정보처리방침은 Play 등록 하드 요건** — 앱이 위치·이메일·사진·UGC를 실제로 다루므로 정확히 공개해야 Data safety 양식과 일치. ② **AAB는 Play 업로드용**(APK 아님)이라 다음 세션이 바로 올릴 수 있게 durable 위치에. ③ **인계 문서에 "위치와 절차"만, 비밀은 `.local` 참조**(§D) — keystore 분실=업데이트 영구 불가라 백업 경고 명시.
+- **검증**: 프론트 tsc·eslint·build green(`/privacy` static prerender). `.local/twa-build/*` gitignore 확인(check-ignore). HANDOFF 최상단을 "다음 세션=Play 등록+GitHub 정리"로 재작성 + PLAY-STORE.md 링크. README 문서 섹션·BACKLOG 배너 동기화.
+- **관련**: `docs/PLAY-STORE.md` · `/privacy` · TS-033(빌드) · `.local/twa-build/` · [[frontend-live-deployment]] · [[geuneul-current-state]]. **개발 백로그 0 — 남은 건 Play 등록·GitHub 정리(운영).**
