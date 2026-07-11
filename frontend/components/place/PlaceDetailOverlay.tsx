@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { IconChip } from "@/components/ui/IconChip";
@@ -89,6 +89,7 @@ export function PlaceDetailOverlay() {
   const { show } = useToast();
   const query = usePlace(id);
   const [route, setRoute] = useState<ToiletRoute | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   // 데스크톱 좌측 패널화는 지도 탭('/')에서만 — 다른 탭은 뒤에 지도가 없어 전체 오버레이로 덮는다.
   const onMap = usePathname() === "/";
 
@@ -101,6 +102,14 @@ export function PlaceDetailOverlay() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [id, close]);
+
+  // 열릴 때 패널로 포커스 이동, 닫힐 때 직전 포커스 복귀(데스크톱 키보드 접근성).
+  useEffect(() => {
+    if (id == null) return;
+    const prev = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [id]);
 
   if (id == null) return null;
 
@@ -152,7 +161,13 @@ export function PlaceDetailOverlay() {
   };
 
   return (
-    <div className={`gn-overlay absolute inset-0 z-40 flex flex-col overflow-y-auto bg-cream${onMap ? " lg:right-auto lg:w-[400px] lg:border-r lg:border-line-cream lg:shadow-[0_0_40px_rgba(0,0,0,0.14)]" : ""}`}>
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label="장소 상세"
+      tabIndex={-1}
+      className={`gn-overlay absolute inset-0 z-40 flex flex-col overflow-y-auto bg-cream focus:outline-none${onMap ? " lg:right-auto lg:w-[400px] lg:border-r lg:border-line-cream lg:shadow-[0_0_40px_rgba(0,0,0,0.14)]" : ""}`}
+    >
       {/* 헤더 */}
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line-cream bg-cream px-2 py-2">
         <button type="button" onClick={close} aria-label="뒤로" className="flex h-[38px] w-[38px] items-center justify-center rounded-full text-ink transition-colors lg:hover:bg-line-cream">
