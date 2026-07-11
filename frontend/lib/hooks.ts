@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { presignPhoto, uploadPhotoToS3 } from "./api";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, type PhotoPurpose } from "@/types/photo";
 
@@ -76,4 +76,83 @@ export function usePhotoUpload(purpose: PhotoPurpose) {
   );
 
   return { state, previewUrl, objectUrl, errorMessage, pick, reset };
+}
+
+// 데스크톱(≥lg=1024px) 여부를 JS에서 판정 — Tailwind의 `lg:` 브레이크포인트(#92)와 정렬한다. matchMedia를
+// useSyncExternalStore로 구독해(SSR 스냅샷=false) 하이드레이션 미스매치·set-state-in-effect 없이 반응한다.
+// 용도: 오버레이 포커스 트랩 범위 판단(C2) — 데스크톱 지도 탭은 오버레이가 좌측 패널이라 하드 트랩을 끈다.
+export function useIsLg() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia("(min-width: 1024px)");
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(min-width: 1024px)").matches,
+    () => false,
+  );
+}
+
+/**
+ * 오버레이(role=dialog) 공용 접근성 훅 — Esc 닫기 + 열림 시 패널 포커스 이동 + 닫힘 시 직전 포커스 복귀,
+ * 그리고 trapTab일 때 Tab/Shift+Tab을 패널 안에서만 순환(포커스 트랩)한다. PlaceDetailOverlay·UserProfileOverlay가
+ * 공유해 DRY(C2). 기존 두 오버레이의 Esc+focus-move+restore useEffect를 이 훅 하나로 통합했다.
+ *
+ * trapTab 판단은 호출부 몫이다: 데스크톱 지도 탭('/')에선 오버레이가 400px 좌측 패널이고 옆 지도·NavRail이
+ * 살아 있어(뒤가 inert 아님) 하드 트랩하면 오히려 키보드 사용자를 보이는 UI에서 격리한다 → 그 경우만 false로 끈다.
+ * 모바일 전 탭·데스크톱 비지도 탭은 오버레이가 전체를 덮으므로 트랩이 옳다.
+ */
+export function useDialogFocusTrap(
+  panelRef: RefObject<HTMLElement | null>,
+  active: boolean,
+  close: () => void,
+  options?: { trapTab?: boolean },
+) {
+  const trapTab = options?.trapTab ?? true;
+
+  // 열릴 때 패널로 포커스 이동, 닫힐 때 직전 포커스 복귀(데스크톱 키보드 접근성, #94).
+  useEffect(() => {
+    if (!active) return;
+    const prev = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [active, panelRef]);
+
+  // Esc 닫기 + (trapTab이면) Tab 순환 가두기. 열려 있을 때만 리스너.
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (!trapTab || e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      // 포커서블 수집 + 가시 필터(offsetParent가 null이면 display:none/detached라 실제 탭 스톱 아님).
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const cur = document.activeElement as HTMLElement | null;
+      const inside = panel.contains(cur);
+      if (e.shiftKey) {
+        // 첫 요소·패널 컨테이너·바깥에서 역방향 Tab → 마지막으로 래핑.
+        if (cur === first || cur === panel || !inside) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (cur === last || !inside) {
+        // 마지막 요소·바깥에서 정방향 Tab → 첫 요소로 래핑(패널 컨테이너는 브라우저가 first로 보냄).
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [active, close, trapTab, panelRef]);
 }

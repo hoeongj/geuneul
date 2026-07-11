@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { useDialogFocusTrap, useIsLg } from "@/lib/hooks";
 import { useSelectedPlace } from "@/lib/context/selected";
 import { useSelectedUser } from "@/lib/context/selectedUser";
 import { useToast } from "@/lib/context/toast";
@@ -19,24 +20,10 @@ export function UserProfileOverlay() {
   const panelRef = useRef<HTMLDivElement>(null);
   // 데스크톱 좌측 패널화는 지도 탭('/')에서만.
   const onMap = usePathname() === "/";
+  const isLg = useIsLg();
 
-  // Esc로 닫기 — 열려 있을 때만 리스너.
-  useEffect(() => {
-    if (id == null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [id, close]);
-
-  // 열릴 때 패널로 포커스 이동, 닫힐 때 직전 포커스 복귀.
-  useEffect(() => {
-    if (id == null) return;
-    const prev = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus();
-    return () => prev?.focus?.();
-  }, [id]);
+  // Esc 닫기 + 포커스 이동/복귀 + Tab 트랩(C2, PlaceDetailOverlay와 동일 정책).
+  useDialogFocusTrap(panelRef, id != null, close, { trapTab: !(onMap && isLg) });
 
   if (id == null) return null;
 
