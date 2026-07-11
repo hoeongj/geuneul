@@ -30,3 +30,4 @@
 | [0023](./0023-commons-safe-follow.md) | 커먼스 세이프 팔로우 — 작성자 공개 프로필 + "수만 공개, 목록은 비공개" 팔로우 | 승인·라이브 |
 | [0024](./0024-shade-rain-route-corridor-overlay.md) | 그늘/비 경로 — 경로 corridor 주변 그늘·실내 피난처 오버레이(F4) | 승인·라이브 |
 | [0025](./0025-scale-prep-load-based-tuning.md) | 대규모 대비 — 부하 기반 튜닝(task_cpu 0.5vCPU · EXPLAIN 인덱스 · 오토스케일링/풀 점검) | 승인·라이브 |
+| [0026](./0026-bookmark-status-change-notification.md) | 관심 장소 상태 변화 알림(C3) — 북마크 장소 단건 침수·미끄럼, V9 이벤트 재사용·제보시각 dedup 버킷·RETURNING 정확히 1회 푸시 | 승인 |
