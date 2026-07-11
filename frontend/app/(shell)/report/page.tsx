@@ -28,7 +28,7 @@ function PlacePicker({
   return (
     <div className="absolute inset-0 z-40 flex flex-col justify-end" role="dialog" aria-label="제보할 장소 선택">
       <button type="button" className="flex-1 bg-black/25" onClick={onClose} aria-label="닫기" />
-      <div className="gn-overlay max-h-[70%] rounded-t-[22px] bg-white shadow-sheet">
+      <div className="gn-overlay max-h-[70%] rounded-t-[22px] bg-white shadow-sheet lg:mx-auto lg:mb-6 lg:max-w-[460px] lg:rounded-[22px]">
         <div className="flex w-full justify-center pt-2.5 pb-1">
           <span className="h-[5px] w-[38px] rounded-full" style={{ background: "var(--color-sheet-handle)" }} />
         </div>
@@ -226,7 +226,7 @@ export default function ReportPage() {
       <div className="mb-5 flex items-center justify-between rounded-[14px] border border-line-cream bg-white px-3.5 py-3">
         <div className="min-w-0">
           <div className="text-[14px] font-bold text-ink">익명으로 제보</div>
-          <div className="text-[11px] text-muted">로그인하면 신뢰도 배지가 붙어요 · P2</div>
+          <div className="text-[11px] text-muted">로그인하면 신뢰도 배지가 붙어요</div>
         </div>
         <button
           type="button"

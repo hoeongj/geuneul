@@ -97,6 +97,13 @@ export function SearchBar({
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            else if (e.key === "Enter" && results.length > 0) {
+              e.preventDefault();
+              pick(results[0]);
+            }
+          }}
           placeholder="지역·장소 검색"
           aria-label="지역·장소 검색"
           enterKeyHint="search"
@@ -127,7 +134,7 @@ export function SearchBar({
                   <button
                     type="button"
                     onClick={() => pick(r)}
-                    className="flex w-full flex-col items-start gap-0.5 rounded-[10px] px-3 py-2.5 text-left active:bg-cream"
+                    className="flex w-full flex-col items-start gap-0.5 rounded-[10px] px-3 py-2.5 text-left transition-colors active:bg-cream lg:hover:bg-cream"
                   >
                     <span className="text-[14px] font-bold text-ink">{r.name}</span>
                     <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted">

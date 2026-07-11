@@ -26,7 +26,7 @@ export function PlaceRow({ place, onClick, compact = false, showStatus = true }:
       type="button"
       onClick={onClick}
       className={
-        "flex min-h-[44px] w-full items-center gap-3 border-b border-line-white-2 text-left last:border-b-0 active:bg-mint-3/40 " +
+        "flex min-h-[44px] w-full items-center gap-3 border-b border-line-white-2 text-left transition-colors last:border-b-0 active:bg-mint-3/40 lg:hover:bg-mint-3/30 " +
         (compact ? "py-2.5" : "py-3")
       }
     >

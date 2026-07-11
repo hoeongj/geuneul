@@ -13,7 +13,7 @@ export function NavRail({ className = "" }: { className?: string }) {
   const { close } = useSelectedPlace();
 
   return (
-    <nav className={"w-[76px] shrink-0 flex-col items-center gap-1 border-r border-line-cream bg-white pt-4 " + className}>
+    <nav aria-label="주 메뉴" className={"w-[76px] shrink-0 flex-col items-center gap-1 border-r border-line-cream bg-white pt-4 " + className}>
       <Link
         href="/"
         onClick={close}
@@ -31,7 +31,7 @@ export function NavRail({ className = "" }: { className?: string }) {
             href={tab.href}
             onClick={close}
             aria-current={active ? "page" : undefined}
-            className="flex w-full flex-col items-center gap-1 py-2.5"
+            className="flex w-full flex-col items-center gap-1 rounded-[12px] py-2.5 transition-colors lg:hover:bg-cream"
           >
             <span className={active ? "text-forest" : "text-muted-3"}>
               <Icon name={tab.icon} size={24} strokeWidth={active ? 2 : 1.8} />

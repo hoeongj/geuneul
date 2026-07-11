@@ -18,6 +18,7 @@ export function TabBar({ className = "" }: { className?: string }) {
 
   return (
     <nav
+      aria-label="주 메뉴"
       className={"flex shrink-0 border-t border-line-white bg-white px-2 pt-2 pb-1.5 " + className}
       style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}
     >

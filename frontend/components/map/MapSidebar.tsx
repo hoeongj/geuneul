@@ -33,7 +33,7 @@ export function MapSidebar({
   onWiden: () => void;
 }) {
   return (
-    <aside className="hidden lg:flex lg:h-full lg:w-[400px] lg:shrink-0 lg:flex-col lg:border-r lg:border-line-cream lg:bg-cream">
+    <aside aria-label="주변 장소 목록" className="hidden lg:flex lg:h-full lg:w-[400px] lg:shrink-0 lg:flex-col lg:border-r lg:border-line-cream lg:bg-cream">
       <div className="space-y-2.5 border-b border-line-cream px-3.5 py-3.5">
         <SearchBar coords={coords} onSelect={onSearchSelect} />
         <FilterChips selected={cats} onToggle={onToggleCat} onClear={onClearCats} />
@@ -41,7 +41,7 @@ export function MapSidebar({
       <header className="flex items-center justify-between px-4 pt-3.5 pb-2">
         <div className="min-w-0">
           <div className="text-[16px] font-extrabold text-ink">주변 {places.length}곳</div>
-          <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 지도를 움직여 탐색</div>
+          <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 내 위치 기준</div>
         </div>
       </header>
       <PlaceListBody places={places} loading={loading} onSelectPlace={onSelectPlace} onWiden={onWiden} />

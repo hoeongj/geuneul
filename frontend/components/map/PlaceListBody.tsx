@@ -32,7 +32,7 @@ export function PlaceListBody({
           <button
             type="button"
             onClick={onWiden}
-            className="mt-2 rounded-[12px] bg-forest px-4 py-2.5 text-[13px] font-bold text-cream"
+            className="mt-2 rounded-[12px] bg-forest px-4 py-2.5 text-[13px] font-bold text-cream transition-colors lg:hover:bg-forest/90"
           >
             반경 넓히기
           </button>

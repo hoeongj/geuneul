@@ -11,7 +11,7 @@ export function CurrentLocationFab({ hidden, onClick }: { hidden: boolean; onCli
       aria-label="현재 위치로 이동"
       className={
         // 모바일: 반쯤 펼친 시트 바로 위 우측. 데스크톱(lg): 시트가 없으므로 지도 우하단 고정.
-        "absolute right-3 bottom-[calc(46%+12px)] z-20 flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-white text-forest shadow-fab transition-opacity lg:right-6 lg:bottom-6 " +
+        "absolute right-3 bottom-[calc(46%+12px)] z-20 flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-white text-forest shadow-fab transition lg:right-6 lg:bottom-6 lg:opacity-100 lg:pointer-events-auto lg:hover:bg-mint " +
         (hidden ? "pointer-events-none opacity-0" : "opacity-100")
       }
     >

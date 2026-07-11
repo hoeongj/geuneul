@@ -123,7 +123,7 @@ export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSel
           <header className="flex items-center justify-between px-4 pb-2.5">
             <div className="min-w-0">
               <div className="text-[16px] font-extrabold text-ink">주변 {places.length}곳</div>
-              <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 지도를 움직여 탐색</div>
+              <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 내 위치 기준</div>
             </div>
             <button type="button" onClick={onToggle} className="shrink-0 text-[13px] font-bold text-teal">
               {snap === "full" ? "접기" : "더보기"}
