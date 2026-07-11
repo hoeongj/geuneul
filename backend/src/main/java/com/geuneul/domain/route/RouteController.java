@@ -11,7 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
- * 경로(B2, ADR-0019) — 화장실 포함 경로. 공개(로그인 불필요, 공개 커먼스). 그늘/비 경로는 ADR에 스코프 기록(후속).
+ * 경로(B2, ADR-0019) — 화장실 포함 경로. 공개(로그인 불필요, 공개 커먼스). 그늘/비 경로 오버레이(shadeSpots)는 RouteService에 구현됨(N8, ADR-0024).
  */
 @Tag(name = "Routes", description = "화장실 포함 경로 — 출발→경유 화장실→도착")
 @RestController
