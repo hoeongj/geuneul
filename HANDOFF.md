@@ -5,6 +5,17 @@
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
 
+> 🎉 **2026-07-11 — 자산화 사이클 `docs/BACKLOG.md` D1~D5 전량 완료·머지·라이브(PR #102~#106). 기능 동결 후 "채용 자산화 + $0 배포" 마감. `/geuneul-finish` 일괄 구동.**
+> - **D5 타깃 JD 정렬(#102)**: 2026 JD 웹검증(당근·배민·토스 교집합=Spring Boot+PostgreSQL/PostGIS+Redis+부하테스트+JWT/OAuth2)으로 1차=위치기반 플랫폼·2차=모빌리티 백엔드 확정. 스펙 비종속 유지, 강조만 정렬. `.local/PORTFOLIO-CONTEXT.md` §5.
+> - **D3 데모 자산(#103)**: `docs/architecture.md` mermaid 3장(런타임·ETL·배포) + `docs/media/` **라이브 헤드리스 Chrome 실측 스크린샷 4장**(데스크톱 3분할·그늘 경유 경로·모바일 지도·시나리오 추천). mermaid-cli 렌더 검증.
+> - **D2 무료 배포(#104, 프로덕션 실측)**: `geuneul.vercel.app/install` — Android WebAPK 원탭(`beforeinstallprompt` 캡처 싱글턴·전역 조기 등록)+iOS 홈화면 안내+Desktop 유도+이미설치 감지. **(shell) 밖 독립 라우트라 모바일 셸 무변경.** iOS/Android 프로덕션 스크린샷으로 분기 렌더 확인. TWA 서명 APK는 후속 보류(WebAPK가 수용기준 충족).
+> - **D1 README 쇼케이스(#105)**: 채용담당자 30초 케이스 스터디 — 정체성 1문장+라이브/설치·정량 배지(150k+·p95 ~1.4s·JaCoCo 71%·ADR 27·TS 32)+히어로 데모+증명 3불릿+인라인 mermaid. 지리공간=DB 엔지니어링 프레이밍. 수치 실측만·링크 전수 검증.
+> - **D4 면접 STAR(#106)**: `docs/INTERVIEW.md` 9개 STAR(TS-004/016/008/009/019/030/031·C3 RETURNING·k6 CPU)+적대적 리뷰 방법론. 그늘 고유축(지리·ETL·실시간·동시성·검증) 위주.
+> - **라이브 검증(2026-07-11)**: App·API·`/routes/shade` 200 · **`/install` 200(프로덕션 iOS·Android 분기 렌더 확인)** · README/architecture mermaid 렌더 OK. ADR 최신 **0027**·Flyway **V18**(기능 동결로 불변).
+> - **다음 = 남은 백로그 없음.** 새 요구가 생기면 `docs/BACKLOG.md`에 백로그 재정의. (후속 옵션: TWA 서명 APK 아티팩트 — WebAPK로 이미 배포 충족이라 선택.)
+
+> ── 이하 라인은 **이전 세션 기록(C1~C4, 히스토리·참고용)** ──
+
 > 🎉 **2026-07-11 — `docs/BACKLOG.md` C1~C4(2차·심화 마무리) 전량 완료·머지·라이브(PR #96~#99). `/geuneul-finish` 일괄 구동.**
 > 각 항목 기능 브랜치 → PR → **`gh pr checks` Backend/Next.js pass 눈확인(TS-025)** → squash 머지 → 배포. 커밋 신원 `hoengj`, Co-Authored-By 없음. **C1·C3·C4는 적대적 리뷰 워크플로(다렌즈→검증)로 확정 결함을 커밋 전 선제 수정.**
 > - **C2 a11y(#96, 프론트)**: `lib/hooks.ts` `useDialogFocusTrap`(Esc+포커스+Tab트랩 DRY, nested aria-modal 양보)·`useIsLg`(useSyncExternalStore) 신설. 두 오버레이 통합(트랩 `!(onMap&&isLg)`). SearchBar `useId` 콤보박스(role combobox/listbox/option·화살표 nav).

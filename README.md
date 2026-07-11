@@ -129,7 +129,7 @@ GET /alerts/stream            # text/event-stream (SSE)
 
 - **아키텍처·데모**: [`docs/architecture.md`](./docs/architecture.md) · **의사결정 기록**: [`docs/adr/`](./docs/adr) (ADR 0001–0027, [색인](./docs/adr/README.md))
 - **배포(AWS)**: [`DEPLOY.md`](./DEPLOY.md) · **현황·다음 작업**: [`HANDOFF.md`](./HANDOFF.md)
-- **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
+- **면접 STAR**: [`docs/INTERVIEW.md`](./docs/INTERVIEW.md) · **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
 - 전체 목표·범위·ERD·API 스펙: [`CLAUDE.md`](./CLAUDE.md)
 
 <details>
