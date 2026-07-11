@@ -1010,3 +1010,14 @@
   - **(FALSE_POSITIVE) 자기신고** — 백엔드 가드 부재는 사실이나 클라 숨김은 실효 방어 아님(§ "실제 방어는 백엔드")·409로 1건 캡·큐에서 우아히 반려 가능 → 검증 결과 수정 불필요(스킵).
 - **검증**: 프론트 tsc·eslint·build green(수정 후 재확인). 라우트 등록 확인(`/admin/flags`·`/api/flags`·`/api/admin/flags[/[id]/resolve]`). z-index: FlagSheet(fixed z-60)는 부모 오버레이(absolute z-40 스택 컨텍스트)에 갇혀 루트 토스트(z-50)보다 아래 → 에러 토스트가 시트 위에 정상 노출(확인). 모바일 무변경(추가 요소·모달만, 기존 레이아웃 불변). 마이그레이션·외부 API 없음(TS-016·TS-026 비해당).
 - **관련**: CLAUDE.md §0-7(모더레이션)·§9(커뮤니티=살)·§6(중립) · 적대적 리뷰 워크플로 wf_99b17604 · BACKLOG C1 · [[geuneul-current-state]].
+
+## 2026-07-11 — C3 관심 장소 상태 변화 알림: 북마크 장소 단건 침수·미끄럼 (BACKLOG C3, ADR-0026)
+ADR-0018 §2가 범위 밖으로 남긴 "관심 장소 단건 상태 변화"를 마감. 급증(≥3건) 게이트에 막혀 침수 1건은 알림이 안 가던 것을, 기존 V9 LISTEN/NOTIFY 이벤트·BOOKMARK_SURGE 규칙을 재사용해 실시간 인앱+F2 푸시로 채웠다. **마이그레이션·외부 API 0**(기존 스키마 재사용).
+- **무엇**: `ReportNotificationListener.handle()`이 모든 제보 NOTIFY마다 급증(onSurge)과 **독립 예외격리로** `onBookmarkStatus(placeId)` 무조건 호출 → `findRecentMeaningfulReports`(FLOOD·SLIPPERY, since=now-10분, `DISTINCT ON` 타입별 최신 1건, `MeaningfulReportView`=type+createdAt Instant) → 타입별 §6 중립 문구 → `insertBookmarkStatusReturning`(북마커의 활성 BOOKMARK_SURGE 규칙별 INSERT, `bmstatus:` dedup_key, `RETURNING user_id`) → 삽입된 유저에만 `pushService.sendToUser`(비동기·격리·비활성 no-op).
+- **왜(why)**: ① **이벤트-드리븐(급증 재사용)** — V9가 모든 제보 INSERT마다 NOTIFY하므로 신규 스케줄러 0(§0-2). F5 온디맨드와 달리 제보는 이산 이벤트. ② **기존 규칙 재사용(새 토글 금지, §9)** — "관심 장소 소식" 토글 하나가 급증·단건을 함께 관장. ③ **유의미 타입 좁힘(FLOOD·SLIPPERY)** — 모든 제보로 열면 COOL/SEAT_OK 스팸. §2 안전 우회 핵심만. ④ **§6 중립** — "최근 침수 제보가 있어요·우회를 권장해요"('위험!' 없음).
+- **적대적 리뷰(워크플로 3렌즈→검증, 확정 3건)로 초기 설계 결함 선제 수정** — 이 3건이 C3의 핵심 견고성:
+  - **(재알림) sliding since ↔ epoch bucket 불일치**: 초기엔 since=now-10분(sliding)·dedup bucket=now/10분(epoch-aligned)이라, 10분 내 침수 제보가 버킷 경계를 넘는 후속 제보(무관한 COOL 포함)에 딸려 in-app 재알림됐다. → **dedup 버킷을 제보 created_at에서 산정**(`report.createdAt/COOLDOWN`). 같은 제보=항상 같은 dedup_key라 몇 번 재조회해도 1건. 제보 자기 INSERT 이벤트가 즉시 알려 놓침도 없음.
+  - **(안전 알림 유실) LIMIT 1 최신 타입만**: V9 NOTIFY는 place_id만 실어 "최근 유의미"를 재조회하는데, LIMIT 1이면 FLOOD·SLIPPERY가 ms 차로 들어올 때 더 최근 타입이 오래된 타입 알림을 가려 하나를 잃었다. → `DISTINCT ON (report_type)`로 타입별 최신 각각 반환·루프.
+  - **(푸시 누락·중복) 사전 SELECT+inserted>0 가드는 틀림**: 사전 수신자 SELECT와 INSERT가 별도 스냅샷이고 dedup_key가 per-user라 "all-or-nothing"이 아님 — 두 문 사이 새 북마커면 in-app은 생기나 푸시 누락, 멀티 인스턴스 row-split이면 stale 목록 재발송으로 중복. → `INSERT ... RETURNING user_id`(EntityManager 커스텀 조각 `NotificationDeliveryRepositoryImpl` — Spring Data @Query가 INSERT를 @Modifying 전용으로 볼 CI 리스크(TS-009) 회피)로 **실제 삽입한 유저만** 푸시 → 삽입=푸시 집합 일치, 정확히 1회.
+- **검증**: 백엔드 compileJava/compileTestJava green, `NotificationServiceTest` **13건 green**(C3 4건: 침수 발송·비유의미 skip·RETURNING 빈목록 무푸시·타입별 각각). IT(`NotificationFlowIT` 3건: 침수 1건+dedup·COOL 0건·미북마크 0건)는 로컬 colima skip → **CI가 게이트**(RETURNING 커스텀 조각·DISTINCT ON 프로젝션 실 검증). TS-016(createdAt Instant 프로젝션)·TS-029(push 비동기) 준수.
+- **관련**: ADR-0026(신규, 0018 확장) · 적대적 리뷰 wf_b221ac0a · CLAUDE.md §2·§6·§9·§0-2 · [[geuneul-current-state]].
