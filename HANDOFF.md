@@ -1,7 +1,7 @@
 # 그늘(Geuneul) — 프로젝트 현황과 다음 작업
 
 > 현재 상태·완료분·다음 작업을 정리한 진행 문서. 전체 스펙·규칙은 [`CLAUDE.md`](./CLAUDE.md), 의사결정은 [`docs/adr/`](./docs/adr), 일지는 [`WORKLOG.md`](./WORKLOG.md), 사고기록은 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md).
-> 최종 갱신: 2026-07-10.
+> 최종 갱신: 2026-07-11.
 
 ## ▶ 세션 인계 — 다음 세션은 여기서 시작
 
@@ -13,7 +13,8 @@
 > - **부수**: TS-030(IT HikariCP 풀 캡 — 컨텍스트 다수 커넥션 소진), TS-031(멱등삽입 catch 후 같은 tx SELECT=PG 25P02 → NOT_SUPPORTED tx 분리, Follow·Reaction 둘 다), 브랜딩 로고·앱아이콘·회전 스플래시(#86).
 > - **실사용 피드백 수정(#90)**: ① 푸시 test 배너는 오는데 프론트 "실패" 오탐 = **BFF 프록시가 204에 빈 문자열 바디 → Response 생성자 TypeError → 502 오변환**(TS-032). `resBody||null`로 4개 프록시 헬퍼 수정 → **모든 204 경로**(push subscribe/test·알림 read/삭제) 정상화. ② 하단 시트 peek 96px→**46px 얇은 재열기 바**(목록·헤더 숨김)로 지도 최대. **사용자 실기기 확인 완료 — 둘 다 정상.**
 > - **라이브 현황(2026-07-11)**: 태스크데프 **rev68(cpu=512, N9)**, Flyway **V18**. API·App 200. 라이브 검증: `/places/search`(성균관대) · `/users/1` 200 · `/me/*` 401 · `/routes/toilet` shadeSpots 15 · 파비콘/아이콘/manifest(신규 PNG·bg #FFFBEB) · **F2 푸시 실기기 배너 수신 확인**. **k6 재부하: 반경 p95 2.68s→1.39s·부팅 93s→70s**(perf/k6/n9-results.md). ADR 최신 **0025**.
-> - **남은 것**: **BACKLOG 빈 상태 — N1~N9 + 실사용 피드백(#90) 전량 소진, F2 푸시·하단시트 실기기 확인 완료.** 다음 = 실사용 후 새 피드백 수집 → **새 백로그 정의부터**.
+> - **데스크톱 반응형(2026-07-11, PR #92)**: 실사용 피드백("PC에선 폰 앱처럼만 뜸") → 데스크톱(≥lg=1024px) **지도앱 표준 3분할**(풀블리드 지도 + 좌측 사이드바 + 좌측 내비 레일). 신규 `NavRail`·`MapSidebar`·`PlaceListBody`, 지도/오버레이/콘텐츠 `lg:` 분기, **모바일 무변경**. 전수 감사(21건)로 오버레이 라우트 스코핑 버그·hover/cursor/focus/Esc·문서 정합성까지 마무리.
+> - **남은 것**: **BACKLOG 빈 상태 — N1~N9 + 실사용 피드백(#90) + 데스크톱 반응형(#92) 전량 소진, F2 푸시·하단시트 실기기 확인 완료.** 다음 = 실사용 후 새 피드백 수집 → **새 백로그 정의부터**.
 
 > ── 이하 라인은 **이전 세션 기록(2026-07-10 이전, 히스토리·참고용)** ──
 
@@ -122,7 +123,7 @@ infra/      terraform/(VPC·RDS·ECS+오토스케일링·ALB·ECR·IAM OIDC·Ela
 frontend/   Next.js 16 App Router PWA — app/(shell)(홈지도·상세·급해요·제보·후기·내정보) · app/api(서버 프록시 BFF) · components · lib
 observability/  로컬 관측성 스택(Prometheus·Grafana·Tempo, docker-compose --profile observability)
 perf/       k6 부하테스트(spatial_load.js)·seed·EXPLAIN RESULTS(P4)
-docs/       adr/0001~0014 · design-brief.md
+docs/       adr/0001~0025 · design-brief.md
 .github/    ci.yml(백엔드 테스트) · deploy.yml(OIDC 배포, paths=backend/**) · frontend-ci.yml(paths=frontend/**)
 .local/     (gitignore) myInfo·PORTFOLIO-CONTEXT — 비밀·회사매핑
 ```
@@ -145,7 +146,7 @@ docs/       adr/0001~0014 · design-brief.md
 
 ## 다음 할 일 (우선순위)
 
-> 🎯 **현재 다음 할 일 = [`docs/BACKLOG.md`](./docs/BACKLOG.md)의 F1~F6**(코드 백로그 소진, 후속·외부 대기). F1(A8 나머지 지역, 쿼터)만 즉시 가능. 아래는 **완료된 것들의 히스토리(참고)**.
+> 🎯 **현재 다음 할 일 = 없음** — F1~F6·N1~N9·데스크톱 반응형(#92) 전량 완료·라이브(rev68·V18). 다음은 실사용 피드백 수집 → 새 백로그 정의. 아래는 **완료된 것들의 히스토리(참고)**.
 
 ### ✅ 심화+additive 완주 (2026-07-10, PR #61~#69)
 - A1 시설 comfort SQL 통합(V13, ADR-0017) · A2 verified→trust · A3 쉼터 냉방 백필(57,070 실적재) · A4 급증 SSE 프론트 · A5 popular-times 히트맵 · A6 커뮤니티 최소 UI · A7 bookmarks(V14) · A8 상권 6대 광역시 · B1 알림(V15, ADR-0018) · B2 루트(ADR-0019). 라이브 rev56.

@@ -24,3 +24,9 @@
 | [0017](./0017-place-feature-comfort-signal.md) | 시설(place_features) → survival_score comfort 통합 — 별도 SQL 뷰 집계 + Java 단조 상승, 등급은 실시간 신호로만 게이트 | 승인 |
 | [0018](./0018-notifications-in-app-center-surge-reuse.md) | 알림 — 인앱 센터 MVP + 급증 LISTEN/NOTIFY 재사용 평가, dedup_key로 멀티 인스턴스·cooldown 1회 발송, Web Push는 stretch | 승인 |
 | [0019](./0019-routes-toilet-waypoint-external-directions.md) | 루트 — 화장실 포함 경로: 경유지 선택은 우리 PostGIS(detour 최소), 도로 폴리라인은 외부 directions API(전략 추상화, 직선 MVP·Kakao 후속) | 승인(MVP) |
+| [0020](./0020-heat-escape-notification-on-demand-weather.md) | HEAT_ESCAPE 알림 — 온디맨드(pull) 날씨 평가, 새 스케줄러 없이 | 승인·라이브 |
+| [0021](./0021-road-polyline-kakao-navi-key-reuse.md) | 화장실 경로 도로 폴리라인 — 카카오내비 길찾기, 기존 REST 키 재사용 | 승인·라이브 |
+| [0022](./0022-web-push-zerodep-vapid-feature-gated.md) | Web Push 전송 — zerodep(BouncyCastle 없이) + VAPID, 기능 플래그 게이팅 | 승인·라이브 |
+| [0023](./0023-commons-safe-follow.md) | 커먼스 세이프 팔로우 — 작성자 공개 프로필 + "수만 공개, 목록은 비공개" 팔로우 | 승인·라이브 |
+| [0024](./0024-shade-rain-route-corridor-overlay.md) | 그늘/비 경로 — 경로 corridor 주변 그늘·실내 피난처 오버레이(F4) | 승인·라이브 |
+| [0025](./0025-scale-prep-load-based-tuning.md) | 대규모 대비 — 부하 기반 튜닝(task_cpu 0.5vCPU · EXPLAIN 인덱스 · 오토스케일링/풀 점검) | 승인·라이브 |
