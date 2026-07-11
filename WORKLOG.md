@@ -975,3 +975,14 @@
 - **왜 SearchBar 콤보박스는 안 했나**: 감사가 Enter/Esc(#92 완료)까지만 권하고 **화살표 activedescendant 콤보박스는 "스코프 확장"으로 명시 연기**함(규칙2). 그래서 손대지 않음.
 - **검증**: 프론트 tsc·eslint·build green. 프로그램적 focus()는 :focus-visible 미발동이라 마우스 사용자에겐 무영향, 키보드 사용자만 이득.
 - **관련**: [[geuneul-current-state]] · CLAUDE.md 규칙2 · 감사 a11y 렌즈 후속.
+
+## 2026-07-11 — 문서 정리·마무리 + 다음 사이클 백로그(C1~C4) 정의 + 커맨드 갱신
+사용자 요청: "다음 세션에서 전부 다 한번에 할 거니까, 모든 문서 정리·마무리하고 바로 다음 세션 작업 가능하게 만들고 명령어도 만들어줘." 계획 스코프가 전량 완료·라이브라, 의도적으로 미뤄둔 2차/심화를 **다음 세션이 재조사 없이 바로 구현**할 수 있게 실행가능 백로그로 박고 커맨드를 재타겟팅.
+- **무엇**:
+  - **스펙 워크플로(4렌즈 병렬)** — C1~C4 각 항목을 실제 코드에 대고 조사(무엇/현황·근본/수정위치 파일/엔드포인트/접근/수용기준/규모/리스크). 백엔드 신고(V7·FlagController·AdminFlagController·SecurityConfig), 알림 파이프라인(V9 트리거→ReportNotificationListener→NotificationService→insertBookmarkSurge·BOOKMARK_SURGE 규칙), 라우트(findBestToiletWaypoint·SHADE_CATEGORIES·DirectionsProvider), a11y(오버레이 role=dialog·SearchBar) 실존 확인.
+  - **`docs/BACKLOG.md` 재작성** — 빈 상태 → **C1~C4 실행 백로그**. C1 신고/모더레이션 프론트(2차·M, 백엔드 완비·마이그레이션0·§9 최소·비노출) · C2 a11y 심화(심화·M·프론트전용, 오버레이 Tab 트랩 `!(onMap&&isLg)`·검색 콤보박스 useId, 린트 안전성 검증) · C3 관심장소 상태변화 알림(심화·M, 북마크 단건 침수/미끄럼·V9 이벤트 재사용·기존 규칙 병합·ADR·마이그레이션0) · C4 그늘 경유 경로(심화·M·탐색적, F3 대칭 경유지1곳·자체라우팅 금지§0-2·ADR). 완료 요약표·결정 로그 포함.
+  - **커맨드 재타겟팅** — `.claude/commands/geuneul-finish.md`·`geuneul-start.md`를 N1~N9→C1~C4로. 상태검증 bash에 /flags 401·/routes/toilet 200 스팟체크 추가. 규율에 "모바일 무변경(lg: 게이트)·C4 라우팅 creep 금지·C3 새토글 금지" 반영.
+  - **HANDOFF·README·메모리** — ▶세션 인계와 "다음 할 일"을 C1~C4 + `/geuneul-finish`로. #93/#94 반영.
+- **왜(why)**: ① **왜 지금 백로그를 박나** — 사용자가 다음 세션 일괄 실행 의사를 밝힘. N1~N9 백로그가 "진단·수정위치까지 박아 재조사 불필요"였던 성공 패턴을 재현(HANDOFF 근거). ② **왜 워크플로로 스펙** — 4항목 조사가 독립·병렬이고, 파일/엔드포인트 정확성이 다음 세션 속도를 좌우 → fan-out으로 실코드 대조. ③ **왜 규칙1/2 준수** — 이건 "버그"가 아니라 의도적 2차/심화라 임의로 당기지 않고, 사용자 결정(다음 세션 일괄)에 맞춰 **백로그+커맨드로 준비만** 함. C4는 §0-2로 경유지1곳에 고정(라우팅 재랭크 creep 배제), C3는 §9로 기존 규칙 병합(기능 증식 배제).
+- **검증**: 커맨드 description이 C1~C4로 갱신됨(스킬 목록 반영 확인). 문서 간 정합(BACKLOG↔HANDOFF↔커맨드 동일 C1~C4·동일 결정). 다음 세션은 `/geuneul-finish`로 바로 착수 가능.
+- **관련**: 스펙 워크플로 wf_7ace2caa · [[geuneul-current-state]] · CLAUDE.md 규칙1(MVP 우선)·2(스코프)·§9·§0-2 · docs/BACKLOG.md C1~C4.

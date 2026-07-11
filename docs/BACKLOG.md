@@ -1,115 +1,95 @@
 # 그늘(Geuneul) — 백로그
 
-> **🎉 상태(2026-07-11 야간 세션): N1~N9 전량 완료·머지·라이브** — `/geuneul-finish` 실행으로 PR #81~#88(+브랜딩 #86)
-> 모두 CI Backend pass 확인 후 머지·배포·라이브 검증. 아래 N1~N9는 **완료 기록(참고용)**. 새 백로그는 없음(빈 상태).
-> 로드맵 W0~P5 + 심화/additive(A1~A7·B1~B2) + F1·F2·F3·F5 + **N1~N9** 전량 완료·라이브. 라이브 태스크데프 **rev68(cpu=512)**·Flyway **V18**.
->
-> **N1~N9 완료 요약(PR)**: N1 사진 presigned-GET(#81) · N2 댓글 UX(#81) · N3 제보 capture 제거(#81) · N4 하단시트 3단 스냅(#82) ·
-> N5 지정 장소 검색 카카오 keyword(#83) · N6 내 글 관리(#84) · N7 커먼스세이프 팔로우 V17·ADR-0023(#85) · N8 그늘/비 경로 ADR-0024(#87) ·
-> N9 대규모 대비 task_cpu 512·V18 인덱스·ADR-0025(#88). 부수: TS-030(IT 풀 캡)·TS-031(멱등삽입 tx 분리)·브랜딩(로고·스플래시 #86)·**실사용 피드백 수정(#90: 푸시 204 프록시 오탐 TS-032·하단시트 peek 46px)**. **F2 푸시·하단시트 실기기 확인 완료.**
+> **상태(2026-07-11): 계획 스코프 전량 완료·라이브. 다음 사이클 = "2차·심화 마무리" C1~C4 정의됨.**
+> 로드맵 W0~P5 + 심화/additive(A1~A7·B1~B2) + F1~F5 + **N1~N9** + 실사용 피드백(#90) + **데스크톱 반응형(#92)·백엔드 하이진(#93)·오버레이 포커스(#94)** 전량 완료·머지·라이브. 라이브 태스크데프 **rev68(cpu=512)**·Flyway **V18**·ADR **0025**.
+> 아래 **C1~C4는 "버그·미완성"이 아니라 CLAUDE.md 규칙1/2로 의도적으로 미뤄둔 2차/심화**다. 근본현황·수정위치(파일)·접근·수용기준까지 박아 뒀으니 **재조사 없이 바로 구현**한다. **전부 한 번에 실행하려면 `/geuneul-finish`.** 현황 검증만 하려면 `/geuneul-start`.
 
-> **철칙(CLAUDE.md·TS)**: 기능 브랜치 → PR → **머지 전 `gh pr checks <N>`로 "Backend (Gradle, JDK 21)" pass 눈확인(TS-025)** → squash 머지.
-> 커밋 신원 `hoengj`/`seongjuice999@gmail.com`, **Co-Authored-By: Claude 금지(§A)**. 비밀·개인정보(키·IP)는 `.local`·env로만(§D).
-> 결정은 웹 2026 트렌드 확인 + `WORKLOG.md`, 사고는 `TROUBLESHOOTING.md`, 아키텍처는 `docs/adr/`. 새 외부 API는 코드 前 실호출 계약검증(TS-026).
-> 네이티브 프로젝션 시각컬럼=`Instant`+UTC(TS-016). **로컬 IT는 Testcontainers/colima docker-java 이슈로 skip → SKIP≠통과, CI가 유일 게이트(TS-009)**.
-> Boot 4=Jackson 3 — Jackson2 `ObjectMapper` 주입 금지(TS-028). 외부 서비스 전송은 응답 경로에서 동기 대기 금지·비동기로(TS-029).
-> **모델 역할 분리(규칙 E)**: 설계·검증·머지 판단은 세션 메인 모델(Opus/Fable), 단순·기계적 실작업은 **codex·agy 먼저(각 기본 코딩 모델)→토큰 소진 시 Sonnet 폴백**. 위임 결과는 메인이 검증 후 커밋.
-> 간판(지리·스코어링) 우선, **커뮤니티는 살**(§0-9, 리뷰앱화·친구망화 금지). 침수/위험 표현 공포 조장 금지(§6).
+> **철칙(CLAUDE.md·TS)**: 기능 브랜치 → PR → **머지 전 `gh pr checks <N>`로 "Backend (Gradle, JDK 21)" pass 눈확인(TS-025)** → squash 머지 → 배포·라이브 검증. 커밋 신원 `hoengj`/`seongjuice999@gmail.com`, **Co-Authored-By: Claude 금지(§A)**. 비밀·개인정보(키·IP)는 `.local`·env로만(§D). 결정은 웹 2026 트렌드 확인 + `WORKLOG.md`(무엇/왜/대안/근거), 사고는 `TROUBLESHOOTING.md`, 아키텍처는 `docs/adr/`. **로컬 IT는 colima docker-java 이슈로 skip → SKIP≠통과, CI가 유일 게이트(TS-009).** Boot 4=Jackson 3(TS-028), 외부 전송 비동기(TS-029), 시각컬럼=`Instant`+UTC(TS-016), 새 외부 API는 코드 前 실호출 계약검증(TS-026). **간판(지리·스코어링) 우선, 커뮤니티는 살(§9, 리뷰앱·친구망화 금지).** 침수/위험 표현 공포 조장 금지(§6). **범위 임의 확장 금지(§0-2).**
+> **모델 역할 분리(규칙 E)**: 설계·검증·머지 판단은 세션 메인 모델(Opus/Fable). 단순·기계적 실작업은 **codex·agy 먼저(각 기본 코딩 모델)→토큰 소진 시 Sonnet 폴백**. 위임 결과는 메인이 검증 후 커밋.
+
+---
+
+## 🎯 다음 사이클 실행 백로그 (C1~C4) — `/geuneul-finish`가 구동
+
+> 권장 순서: **완성도(C2, 프론트 전용·저위험) → 기능(C1·C3) → 탐색(C4)**. 관련 묶음은 함께 1 PR. 각 항목의 **현황·수정위치·수용기준은 실제 코드 대조로 박음**(2026-07-11 스펙 워크플로) — 재조사 말고 바로 구현.
+
+### C1. 신고/모더레이션 프론트 진입점 【2차 · 규모 M】
+- **무엇**: 로그인 사용자가 **최근 제보·후기 각 항목의 작은 "신고" 진입점**으로 사유(스팸/허위정보/불쾌·명예훼손/기타)+선택 코멘트를 골라 신고(POST /flags). **ADMIN 전용 검수 큐 화면**에서 PENDING 신고를 대상 요약과 함께 보고 RESOLVED(대상 숨김)/DISMISSED 처리. **§9대로 최소·비노출** — 하단 탭 신설 금지, 신고는 작은 텍스트/오버플로 버튼.
+- **현황(근본)**: **백엔드 완비, 프론트 진입점 0건. 신규 마이그레이션 불필요.**
+  - 백엔드: `V7__flags.sql`(테이블 존재). `FlagController`(POST /flags, 201, reporterId는 `@AuthenticationPrincipal`에서 — 바디로 안 받음), `AdminFlagController`(GET /admin/flags/pending, GET /admin/flags?status=, POST /admin/flags/{id}/resolve). enum: `FlagStatus`(PENDING/RESOLVED/DISMISSED), `FlagReason`(SPAM/FALSE_INFO/OFFENSIVE/OTHER), `FlagTargetType`(REPORT/REVIEW). `SecurityConfig`가 POST /flags=authenticated(401), /admin/**=hasRole("ADMIN")(403). resolve의 RESOLVED는 대상 콘텐츠 숨김. 중복 신고·이미 처리건 409, 대상 없음 404.
+  - 프론트: `/api/flags`·`/api/admin` 프록시 없음, `types/flag.ts` 없음, `app/(shell)/admin` 라우트 없음, 후기/제보에 신고 배선 없음. 단 `types/user.ts` User에 `role:"USER"|"ADMIN"`이 이미 있고 `useMe()`가 내려줌(현재 미사용) → 관리자 UI 게이팅 즉시 가능. 신고 대상 id(Report.id·Review.id)도 렌더에서 이미 사용 중.
+- **수정위치**:
+  - `frontend/app/api/flags/route.ts`(신규 POST 프록시) · `frontend/app/api/admin/flags/route.ts`(신규 GET, **주의: `lib/backend.ts`의 proxyAuthed는 쿼리스트링을 포워딩 안 하므로 라우트에서 `request.nextUrl.searchParams`를 path에 직접 결합**) · `frontend/app/api/admin/flags/[id]/resolve/route.ts`(신규 POST)
+  - `frontend/types/flag.ts`(신규, 백엔드 DTO와 1:1) · `frontend/lib/api.ts`(createFlag/fetchAdminFlags/resolveFlag, 기존 ApiError·CLIENT_TIMEOUT 패턴) · `frontend/lib/queries.ts`(선택: useAdminFlags/useResolveFlag)
+  - `frontend/components/place/FlagButton.tsx`(신규 공용 — targetType/targetId prop, 사유 라디오+코멘트≤500 시트, 비로그인은 useMe로 분기해 토스트) · `ReviewsSection.tsx`·`PlaceDetailOverlay.tsx`(RecentReports 제보 li)에 최소 배치
+  - `frontend/app/(shell)/admin/flags/page.tsx`(신규 검수 큐, useMe role 게이트) · `mypage/page.tsx`(role===ADMIN일 때만 조건부 링크, 하단 탭 신설 금지)
+- **접근**: 신규 마이그레이션 없음. (1) types/flag.ts DTO 1:1 → (2) BFF 프록시 3개(proxyAuthedPost·proxyAuthed 재사용, admin GET은 searchParams 직접 결합) → (3) lib/api.ts 3함수 → (4) FlagButton(성공 "신고가 접수됐어요", 409 "이미 신고한 항목이에요", 비로그인 "로그인이 필요해요") → (5) 후기·제보 li 최소 배치 → (6) admin/flags 화면(GET status=PENDING→targetSummary→resolve→invalidate) → (7) mypage 조건부 링크.
+- **수용기준**: ① 로그인 사용자 신고→201·토스트, 재신고→409, 비로그인→백엔드 안 가고 안내. ② ADMIN이 큐에서 PENDING 확인·RESOLVED(숨김)/DISMISSED, 비관리자/비로그인은 403/401 우아하게 처리(**현재 api.ts는 401만 특별처리 → 403도 처리 추가**). ③ §9대로 최소·비노출(신설 하단 탭 없음). ④ CI green. ⑤ Flyway 신규 0건.
+- **주의**: §9 모더레이션이 주인공 되지 않게. §6 중립 톤. 클라 role 게이트는 UX용, 실제 방어는 백엔드. 신규 외부 API 없음(TS-026 비해당), 마이그레이션 없음(TS-016 비해당).
+
+### C2. a11y 심화 — 오버레이 Tab 포커스 트랩 + 검색 콤보박스 화살표 nav 【심화 · 규모 M · 프론트 전용】
+- **무엇**: 키보드 사용자 마감 2종. (1) 장소상세/작성자프로필 오버레이 열림 시 **Tab/Shift+Tab을 패널 안에서만 순환**(현재는 뒤의 지도·NavRail·TabBar로 샘). (2) 검색 드롭다운 **ArrowUp/Down 하이라이트→Enter 선택 + role=combobox/listbox/option·aria-activedescendant**. 마우스·터치·디바운스 동작 전부 유지.
+- **현황**: #94에서 두 오버레이 role=dialog+열림 focus()/닫힘 복귀+Esc까지 완료. SearchBar는 Enter(첫 결과)/Esc만(#92). **없는 것**: (a) Tab 순환 가두기, (b) 검색 화살표 nav·콤보박스 ARIA. 감사가 "스코프 확장"으로 연기한 것(버그 아님).
+- **수정위치**:
+  - `frontend/lib/hooks.ts` — **공유 훅 `useDialogFocusTrap(panelRef, active, close, {trapTab})` 신설**(기존 두 오버레이의 Esc+focus-move+restore+신규 Tab트랩을 한 훅으로 DRY). 파일 상단 이미 'use client'.
+  - `frontend/components/place/PlaceDetailOverlay.tsx`·`frontend/components/user/UserProfileOverlay.tsx` — 기존 두 useEffect를 훅 호출로 대체.
+  - `frontend/components/map/SearchBar.tsx` — `useId` import, `active` 상태, onKeyDown에 ArrowUp/Down/Enter, input role/aria, ul role=listbox+id, 각 option(button)에 role=option+id+aria-selected+`tabIndex=-1`+하이라이트. `onChange`·디바운스 성공·`clear`·닫힘에서 `setActive(-1)`.
+- **접근·핵심 판단**:
+  - **트랩 범위 = `!(onMap && isLg)`** — 데스크톱 지도 탭('/')에선 오버레이가 400px 좌측 패널이고 옆 지도·NavRail이 살아있어(뒤가 inert 아님) 하드 트랩하면 키보드 사용자를 눈에 보이는 UI에서 격리 → **해로움**. 모바일 전 탭·데스크톱 비지도 탭은 오버레이가 전체를 덮으므로 트랩이 옳음. `isLg`=`matchMedia('(min-width:1024px)')`(+change 리스너 cleanup), `onMap`=usePathname()==='/'. Esc·focus-move·복귀는 두 레이아웃 다 유지.
+  - Tab 트랩: keydown에서 포커서블 수집(`'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'` + `offsetParent!==null` 가시필터) → first↔last 래핑. 헤더 '뒤로' 버튼이 first 보장.
+  - 콤보박스: `const listboxId=useId()`(두 SearchBar 동시 마운트라 정적 id 금지·useId 필수). option role은 **button에 두고 tabIndex=-1**(aria-activedescendant 패턴 — 옵션이 탭 스톱이면 화살표 nav와 충돌). **린트 검증됨**: 이 프로젝트 eslint에 no-interactive-element-to-noninteractive-role 미활성이라 `<button role=option>` 안전. 단 role-has-required-aria-props가 combobox의 aria-expanded 요구 → 반드시 포함.
+- **수용기준**: 비지도/모바일에서 오버레이 Tab이 첫↔마지막 순환·뒤로 안 샘·Esc 복귀; 데스크톱 지도 탭은 의도적 비트랩(옆 지도로 이동 가능)+Esc 복귀. 검색 화살표로 하이라이트·activedescendant·Enter 선택, 입력변경/닫힘 시 초기화, 두 인스턴스 id 충돌 0. lint/typecheck/build green(CI 유일 게이트).
+- **주의**: 마이그레이션·외부 API 없음. matchMedia cleanup 필수. 프론트 테스트 인프라 없음 → 수동 키보드 워크스루로 확인. (메모: `report/page.tsx` PlacePicker도 role=dialog라 훅 재사용 가능하나 이번 스코프 밖.)
+
+### C3. 관심 장소 상태 변화 알림 — 북마크 장소 단건 유의미 제보(침수/미끄럼) 【심화 · 규모 M】
+- **무엇**: 북마크(관심 장소, A7)한 장소에 **유의미한 안전 제보(FLOOD 침수·SLIPPERY 미끄럼)가 1건**이라도 올라오면 저장한 유저에게 인앱 알림 1건(+F2 푸시 기기엔 OS 배너). 문구는 §6 중립("최근 침수 제보가 있어요 · 우회를 권장해요"). **새 토글·새 화면 없음** — 기존 마이페이지 "관심 장소 소식" 토글·BOOKMARK_SURGE 규칙 그대로 재사용.
+- **현황(근본)**: 파이프라인은 있고 **"단건 유의미 제보" 트리거만 없음.** 기존 BOOKMARK_SURGE는 `ReportSurgeService`의 **급증(≥3건/10분)일 때만** 발송(`handle()`이 surgeForPlace().ifPresent()로 게이팅) → 침수 **1건**은 임계 미달로 알림 안 감. 파이프라인: reports INSERT → V9 트리거 `pg_notify('geuneul_report_surge', place_id)` → `ReportNotificationListener.handle()` → `NotificationService.onSurge()` → `NotificationDeliveryRepository.insertBookmarkSurge()`(bookmarks 조인, dedup_key UNIQUE, 멀티인스턴스 1건, pushService 연동). ADR-0018 §2는 단건 상태변화를 범위 밖으로 남겨둠.
+- **수정위치**(백엔드 중심):
+  - `NotificationDeliveryRepository.java` — `insertBookmarkStatus(...)` 네이티브 INSERT(`insertBookmarkSurge` 복제, dedup_key 접두사 `bmstatus:`, bookmarks JOIN + notification_rules type='BOOKMARK_SURGE' 재사용, ON CONFLICT DO NOTHING).
+  - `NotificationService.java` — `onBookmarkStatus(placeId)`: 최근 유의미 제보 타입 조회→없으면 return→§6 단수 중립 문구→insertBookmarkStatus + `pushService.sendToUser`(비동기·실패 격리).
+  - `ReportNotificationListener.java` — `handle()`에서 onSurge와 **별개로 무조건** `onBookmarkStatus(placeId)` 호출(단건은 급증 게이트 밖). 예외 격리 유지.
+  - `ReportRepository.java` — `findLatestMeaningfulReportType(placeId, types, since)`(미만료·미숨김 최신 1건, idx_reports_place_created 경로).
+  - `SurgeInfo.java`(문구 톤 참조·'몰리고 있어요'→단수 '있어요') · `NotificationsSection.tsx`(L196 desc 소폭 조정, 선택) · 테스트 `NotificationServiceTest`·`NotificationFlowIT` · `docs/adr/000X-bookmark-status-change.md`(신규, 0018 확장).
+- **접근**: **이벤트-드리븐(V9 LISTEN/NOTIFY 재사용) — 온디맨드 아님.** 근거: V9가 이미 모든 제보 INSERT마다 NOTIFY하므로 `handle()`에 한 줄 훅=신규 인프라 0. F5가 온디맨드로 간 이유(폭염은 상태·트리거 소스 없음)는 여기 적용 안 됨(제보는 이산 이벤트·트리거 존재). 침수 우회는 시급(§2 통학러)이라 실시간이 맞음. **신규 마이그레이션 불필요**: notification_deliveries.type VARCHAR(24)·dedup_key VARCHAR(200)이 `bmstatus` 키 수용, 규칙 재사용이라 컬럼 추가 0.
+- **수용기준**: `NotificationFlowIT` — 유저A가 장소P 북마크+BOOKMARK_SURGE ON, P에 FLOOD 1건→onBookmarkStatus→GET /notifications 1건, body §6 중립('위험!' 없음). 같은 place·type 버킷 내 재호출 dedup 1건. 비유의미 타입(COOL·SEAT_OK) 단건은 0. 북마크 안 함·규칙 OFF는 0. CI Backend pass(로컬 IT skip→CI 게이트).
+- **주의**: §9 — 새 규칙타입/토글/화면 만들지 말고 기존 BOOKMARK_SURGE에 병합. §6 단수 중립. 급증+침수 동시면 onSurge·onBookmarkStatus 둘 다 dedup_key 달라 2건 가능(정보 달라 허용, ADR 명시). 유의미 타입 FLOOD·SLIPPERY로 좁혀 스팸 방지. push 비동기(TS-029), 시각 Instant+UTC(TS-016). **ADR 필요**(0018 확장 — 단건 트리거·이벤트 재사용·유의미 타입 집합).
+
+### C4. 그늘 경로 — 쿨링쉼터 경유지 경로 【심화 · 규모 M · 탐색적】
+- **무엇**: 장소 상세 "화장실 경유 경로"(F3) 옆에 **"그늘 경유 경로"** 버튼. 현재위치→도착 사이 **우회 최소 쿨링쉼터/실내 1곳을 경유지로** 끼운 경로("가는 길에 쉼터에서 쉬어가기"). N8 shadeSpots 오버레이("길 근처 피할 곳")는 유지 — 이건 "실제로 쉼터를 통과하는 길". §3/§10 루트 3종(비/그늘/화장실) 중 '그늘 경로'를 F3와 대칭으로 채움.
+- **현황**: F3 화장실 경로(GET /routes/toilet → `RouteService.toiletRoute` → `PlaceRepository.findBestToiletWaypoint`(corridor+detour-min, V3 GIST) → `KakaoDirectionsProvider`@Primary mode=road)·N8 shadeSpots 오버레이(`RouteService.SHADE_CATEGORIES`=COOLING_SHELTER/LIBRARY/UNDERGROUND, `findShadeAlongCorridor`)는 완료. 추천 시나리오 enum=REST30/RESTROOM/RAIN/FOCUS/LONGSTAY(**SHADE 없음**). **'그늘 경로'가 '경로'로는 없음** — N8은 peripheral 오버레이일 뿐. §0-2가 자체 가중 라우팅을 금지해 미뤄둠.
+- **수정위치**:
+  - `PlaceRepository.java` — `findBestToiletWaypoint`의 고정 category='TOILET'를 `:categories`(CSV `ANY(string_to_array)`, 인젝션 안전)로 일반화한 `findBestWaypointByCategories` 추가. `RouteWaypointView`에 `getCategory()`(p.category 프로젝션).
+  - `RouteService.java` — `toiletRoute`를 공통 `viaRoute(from,to,categoriesCsv,라벨)`로 추출 → `toiletRoute`=TOILET 위임 + `shadeRoute`=SHADE_CATEGORIES 신설. 폴리라인·shadeSpots 오버레이 공통.
+  - `RouteController.java`(GET /routes/shade, /routes/toilet 미러·공개·requireKorea) · `RouteResponse.java`/`RouteWaypointView.java`(waypoint category 노출 — 미니맵 아이콘 구분용).
+  - `frontend/lib/api.ts`(fetchRoute(via) 일반화) · `frontend/app/api/routes/shade/route.ts`(신규 1줄 미러) · `PlaceDetailOverlay.tsx`(두 번째 버튼 onShadeRoute, setRoute 재사용) · `RouteMiniMapLive.tsx`(경유지 마커 하드코딩 'toilet'→waypoint.category 아이콘) · `types/route.ts`(waypoint category) · `docs/adr/000X-shade-waypoint-route.md`.
+- **접근(제안 수준·방어적 최소안)**: (1) 리포 일반화 → (2) 서비스 대칭화(F3 인프라 100% 재사용, 경유지 없으면 기존 graceful 폴백) → (3) GET /routes/shade → (4) DTO waypoint category → (5) 프론트 버튼·프록시·미니맵 아이콘 → (6) ADR·테스트 미러. **새 마이그레이션 불필요**(V18 유지, V3 GIST 재사용), **새 외부 API 없음**(Kakao directions 재사용, TS-026 이미 충족).
+- **핵심 방어선(§0-2)**: **자체 가중 라우팅 금지.** "우회최소 경유지 1곳"을 PostGIS corridor 쿼리(간판)로 고르고 폴리라인은 기존 DirectionsProvider가 그린다 — **F3와 완전 대칭**. 프롬프트에서 나온 "그늘 많은 경로 재랭크 토글"안은 대안경로 다중 추출+Kakao 대안경로 카운팅(라우팅 creep·TS-026 재검증)이라 **범위 제외**.
+- **수용기준**: 상세에서 "그늘 경유 경로"→미니맵에 출발→쿨링쉼터(경유지 마커=쉼터 아이콘)→도착 폴리라인+배지 "그늘 경유(+피할 곳 N)". 경유 쉼터 없으면 직선/도로+오버레이만 폴백. GET /routes/shade가 /routes/toilet과 동일 스키마. CI Backend pass(RouteServiceTest/RouteToiletIT shade 케이스). 마이그레이션 무변경.
+- **주의**: 가장 탐색적 → 범위를 "경유지 1곳"에 고정. 대안 최소안(규모 S): RecommendationScenario에 SHADE 추가(순수 additive)지만 REST30/LONGSTAY와 겹치고 '경로'가 아니라 §3 라인 못 채움 → 경유지 경로안이 우위, 시간 압박 시에만 폴백. N8 오버레이와 중복 인상은 UX 카피로 분리. DTO waypoint category는 additive지만 프론트 타입·미니맵 동시 수정 필요(안 하면 쉼터가 화장실 아이콘).
+
+> **ADR 번호**: C3·C4 각각 신규 ADR(현재 최신 0025) — 머지 순서로 0026·0027 확정. C1·C2는 ADR 불필요(C1 기존 백엔드 계약, C2 프론트 폴리시).
 
 ---
 
 ## ✅ 완료 (참고용)
 
-| 항목 | PR | 산출물 |
+| 사이클 | PR | 산출물 |
 |---|---|---|
-| 로드맵 W0~P4 + A1~A7·B1~B2 | #61~#69 | V13·V14·V15, ADR 0017~0019 (심화+additive) |
-| **F5** HEAT_ESCAPE 폭염 피난 알림 | #73 | 온디맨드·kNN 쉼터·§6 권유형·3h dedup (ADR-0020) |
-| **F1** 상권 9개 도시 확장 | 스크립트 | 수원·성남·용인·창원·청주·전주·천안·포항·김해·제주 ≈24,204행 |
-| **F3** 화장실 도로 폴리라인 | #76 | KakaoDirectionsProvider(@Primary)·**기존 키 재사용**·프론트 폴리라인 (ADR-0021, mode=road 라이브) |
-| **F2** Web Push | #77·#79 | zerodep(BouncyCastle 無)·플래그 게이팅·async 전송(TS-029)·rev60~61 **enabled=true 라이브** (ADR-0022) |
+| 로드맵 W0~P4 + A1~A7·B1~B2 | #61~#69 | V13·V14·V15, ADR 0017~0019 |
+| F5 폭염 피난 알림 | #73 | HEAT_ESCAPE 온디맨드·§6 권유형 (ADR-0020) |
+| F1 상권 9도시 · F3 화장실 도로 폴리라인 | 스크립트·#76 | KakaoDirectionsProvider@Primary·기존 키 재사용 (ADR-0021) |
+| F2 Web Push | #77·#79 | zerodep·async·라이브 (ADR-0022) |
+| **N1~N9** | #81~#88(+브랜딩 #86) | 사진 presigned-GET·댓글UX·하단시트 3단·지정검색·내글관리·팔로우(V17·ADR-0023)·그늘/비 corridor(ADR-0024)·대규모대비(V18·ADR-0025) |
+| 실사용 피드백 | #90·#91 | 푸시 204 프록시 오탐(TS-032)·하단시트 peek 46px |
+| **데스크톱 반응형** | #92 | ≥lg 3분할(NavRail·MapSidebar·PlaceListBody)+감사 20건(오버레이 라우트 스코핑·hover/cursor/focus/Esc·문서 정합성) |
+| 백엔드 하이진 · 오버레이 포커스 | #93·#94 | orphan @Component 제거·경로 javadoc · role=dialog+focus in/restore |
 
 **결정 로그**:
-- **F1 잔여 중소도시 = 미실시(WON'T DO)**. 9개 도시로 충분. 더 적재하면 data-padding으로 포트폴리오 메리트 하락(사용자 결정 2026-07-11).
-- **대규모 대비 = 선제적 우선순위로 승격(구 F6)**. "트래픽 대기"가 아니라 k6 재부하로 미리 만든다(포트폴리오 심화 스토리, 아래 N9).
-- **작성자 팔로우 = "커먼스 세이프" 버전만**(아래 N7). 풀 소셜 그래프(팔로워 목록·피드·맞팔 역학)는 §0-9 위배라 배제.
-
----
-
-## 🎯 다음 세션 실행 백로그 (N1~N9) — `/geuneul-finish`가 구동
-
-> 권장 순서: **버그/UX 먼저(N1~N5, 빠른 실사용 개선)** → **기능(N6·N7) → 심화(N8·N9)**. 각 항목 1 PR(관련 묶음은 함께).
-> 각 항목의 **근본원인·수정위치는 이미 진단 완료**(WORKLOG 2026-07-11 진단 참조) — 재조사 말고 바로 구현.
-
-### N1. 사진 표시 — 리뷰·제보 사진 안 보임 【버그·최우선, 공유 수정】
-- **증상**: 리뷰/제보에 사진 첨부(갤러리 선택→제출)는 되는데, 다시 보면 사진이 안 뜸.
-- **근본원인(진단 high·검증됨)**: **두 결함**.
-  1. **프론트 미렌더(리뷰)**: `frontend/components/place/ReviewsSection.tsx` ReviewList가 `r.photos`를 그리는 `<img>`가 없음(데이터는 정상 왕복: 저장=objectUrl→photos_json, 읽기 DTO `ReviewResponse.photos` 반환, 클라 타입 `photos:string[]`). 제보 사진은 이미 `<img src={r.photoUrl}>`로 그림(`PlaceDetailOverlay.tsx:73`).
-  2. **비공개 S3 버킷 403(공유·핵심)**: 저장 URL이 raw `https://{bucket}.s3.{region}.amazonaws.com/{key}`인데 버킷이 완전 비공개(`infra/terraform/s3.tf:20-26` 퍼블릭 차단·BucketOwnerEnforced·정책 없음, CloudFront는 ALB만 프론트). → `<img>`가 떠도 **403**. **제보 사진도 이 이유로 이미 깨지는 중**.
-- **수정**:
-  - (A, 프론트) `ReviewsSection.tsx` 코멘트 라인 뒤에 `r.photos` `<img>` 루프 추가(가로 스크롤 썸네일, `no-img-element` eslint-disable).
-  - (B, 백엔드·공유) **읽기 시 presigned GET** 발급. `PhotoService`에 `presignGet(objectUrl|key)` 추가 → `ReviewService.listByPlace`·`create` 응답의 각 사진 URL + **제보 읽기 경로(`ReportResponse.photoUrl`)** 를 presigned GET으로 변환해 반환. (대안: photos 버킷에 CloudFront+OAC 배포 — 더 무겁고 새 배포 필요. presigned-GET-at-read 권장, 기존 인프라에 맞음. **버킷 퍼블릭 전환 금지** — s3.tf가 의도적으로 막음.)
-- **수용 기준**: 리뷰·제보 상세에서 첨부 사진이 실제로 보임(403 없음). 프론트는 plain `<img>`라 next/image 도메인 화이트리스트 불필요.
-
-### N2. 리뷰 댓글 "개수만 보이고 내용 안 보임" 【버그·경미, 백엔드 무변경】
-- **증상**: 댓글 달면 개수는 느는데 내용이 안 보임.
-- **근본원인(진단 high·검증됨 — 가설 기각)**: **읽기 경로는 정상**(`GET /reviews/{id}/comments` → `ReviewCommentService.listByReview` → 내용 반환, `CommunityFlowIT:91-94`가 댓글 텍스트 왕복 검증·green). 카운트와 내용은 **같은 fetch 배열**이라 펼친 상태에선 못 갈라짐. 진짜 원인 = **댓글 섹션 접힘(collapse) UX**: 카운트는 접힌 헤더(`ReviewsSection.tsx:105 data.length`)에 뜨는데 리스트는 `{open && ...}`로 숨김. 또는 **stale Vercel 배포**(A6 커밋 d462e86 이전 번들).
-- **수정**: (1) 현재 main으로 프론트 재배포 확인. (2) UX 개선 — 댓글 **작성 성공 시 섹션 자동 펼침**, 그리고/또는 접힌 상태 카운트가 오해 없게(예: 펼쳤을 때만 카운트 노출, 또는 내용 미리보기 1줄). **백엔드 변경 없음.**
-- **수용 기준**: 댓글 작성 직후 내가 쓴 댓글이 바로 보임. 카운트-내용 불일치 착시 제거.
-
-### N3. 제보 사진이 카메라로 바로 넘어감 【버그·1줄】
-- **근본원인**: `frontend/app/(shell)/report/page.tsx:179` `capture="environment"` 가 후면 카메라를 강제. 리뷰 입력엔 `capture`가 없어 "사진 보관함/사진 찍기/파일 선택" 전체 선택지가 뜸.
-- **수정**: `report/page.tsx`의 `capture="environment"` **한 줄 제거**(리뷰 입력과 동일하게).
-- **수용 기준**: 제보 사진 탭 시 네이티브 선택지(보관함/카메라/파일) 표시.
-
-### N4. 지도 하단 시트 안 내려감 【UX】
-- **증상**: 지도 하단 "주변 N곳" 시트를 아래로 밀어 지도를 크게 보고 싶은데 안 내려감.
-- **근본원인**: `frontend/components/map/BottomSheet.tsx` — 탭 토글로 half(46%)↔full(82%)만 있고 **드래그 없음·"접힌(peek)" 상태 없음**(최소 46%가 화면 절반을 덮음).
-- **수정**: **3단 스냅(peek≈12%/half/full) + 드래그(pointer/touch) 제스처** 추가. 핸들 드래그 → 가장 가까운 스냅으로. peek에서 지도 크게 보임. 라이브러리 없이 pointer 이벤트로 구현하거나 경량 제스처만.
-- **수용 기준**: 시트를 아래로 스와이프하면 peek로 접혀 지도가 크게 보이고, 위로 스와이프/탭하면 다시 펼쳐짐.
-
-### N5. "지정 장소 검색" 실구현 【기능 — 지금 준비중 스텁】
-- **증상**: 상단 검색바 탭 → "검색은 준비 중이에요" 토스트만(`frontend/components/map/SearchBar.tsx` MVP 스텁, `app/(shell)/page.tsx:93`).
-- **수정**: **카카오 로컬 키워드 검색**(`GET https://dapi.kakao.com/v2/local/search/keyword.json`) 실구현. 키는 지오코딩과 동일 카카오 REST 키(이미 SSM). **백엔드 검색 엔드포인트(BFF 프록시, 키 노출 방지)** → 결과 리스트 → 선택 시 지도 recenter + 마커. TS-026 실호출 계약검증(keyword.json은 지오코딩과 같은 도메인이라 인가 확실).
-- **수용 기준**: "강남역", "성균관대" 등 검색 → 결과 목록 → 선택 시 지도가 그 위치로 이동. 반경 검색은 기존대로 지도 이동 기반.
-
-### N6. 내 정보 — "내 글 관리" 【기능, N7과 코드 공유】
-- **무엇**: 마이페이지에서 **내가 쓴 후기 / 내가 쓴 댓글 / 내가 "유용해요" 누른 글** 목록을 모아보고 관리(삭제 진입 등).
-- **수정**: 백엔드 읽기 경로 — `GET /me/reviews`·`GET /me/comments`·`GET /me/reactions`(로그인). 각 유저 필터 쿼리(기존 review/comment/reaction 리포지토리 확장). 프론트 마이페이지 탭/섹션 3종.
-- **수용 기준**: 내 활동 3종이 최신순으로 보이고, 각 항목에서 원문(장소/후기)로 이동.
-- **공유**: 작성자별 후기 조회 쿼리는 N7 "작성자 공개 프로필"과 동일 로직 → 함께 설계.
-
-### N7. 작성자 팔로우 — "커먼스 세이프" 버전 【기능·사용자 확정 설계】
-- **사용자 확정 설계(2026-07-11)**: "특정 사람 후기가 좋아서 가끔 찾아보고 싶으면 팔로잉". 구체:
-  - **작성자 공개 프로필** `GET /users/{id}` — 닉네임 · **trust_score(신뢰도 배지)** · **팔로워 수(공개 카운트)** · **그 사람 공개 후기 목록**. 후기의 닉네임 탭으로 진입. (팔로우 안 해도 커먼스라 누구나 봄.)
-  - **팔로우/언팔로우** `POST/DELETE /users/{id}/follow`(로그인, 멱등). `follows(follower_id, followee_id, created_at)` UNIQUE(follower,followee).
-  - **내 팔로잉 목록** `GET /me/following` — **나만** 봄(마이페이지). 이걸로 팔로우한 작성자 후기 찾아보기.
-  - **팔로워 목록은 노출 안 함**(카운트만). **팔로우 피드/맞팔 알림/스토리 없음**(§0-9 방어 — 친구망화 금지).
-- **왜 이 형태인가**: 팔로워 "수"만 신뢰/인기 신호로 노출하고(허영 리스트·피드는 배제), 팔로잉은 사적 북마크. → 커먼스 정체성 유지하며 "좋은 작성자 다시 찾기" 욕구 충족. trust_score 축 강화(포트폴리오: 신뢰도/평판).
-- **수정**: Flyway `V17__follows.sql` + `domain.follow`(엔티티·리포·서비스·컨트롤러) + `/users/{id}` 프로필 응답에 팔로워수·후기목록 + 프론트 작성자 프로필 화면·팔로우 버튼·마이페이지 팔로잉 목록.
-- **수용 기준**: 후기 닉네임 탭 → 작성자 프로필(후기·신뢰도·팔로워수) → 팔로우 → 마이페이지 팔로잉에서 그 사람 재방문. 팔로워 목록은 어디에도 안 뜸. ADR로 "커먼스 세이프 팔로우" 결정 기록.
-
-### N8. F4 그늘/비 경로 【심화·설계 있음】
-- **무엇**: 화장실 경로(F3)에 이어, **경로 주변 그늘/실내 POI(쉼터·도서관·지하상가) 오버레이**. 자체 가중 라우팅은 §0-2 지양 → 경로 corridor 반경 안의 쉼터/실내를 지도에 표시.
-- **수정**: `RouteService`가 폴리라인 corridor(ST_DWithin)로 근처 쉼터/실내 POI를 조회해 응답에 실음 + 프론트 오버레이 마커. F3 인프라 재사용.
-- **수용 기준**: 경로 화면에 경로 주변 쉼터/실내가 표시돼 "더울 때 피할 곳"이 보임. ADR.
-
-### N9. 대규모 대비 — k6 재부하 → 오토스케일링·인덱스 튜닝 【심화·선제, 구 F6 승격】
-- **무엇**: "트래픽 대기" 대신 **선제적으로** 대규모 서비스 대비를 만들어 P4 심화 스토리를 강화.
-- **수정**:
-  1. **k6 재부하** — 반경/kNN/bounds/추천/상세(사진 presign 포함) 시나리오로 부하(신규 데이터·뷰 반영: 상권 확장·V13 signals·V16). 결과(p95, 에러율, DB CPU) 기록.
-  2. **오토스케일링·태스크 튜닝** — 결과 기반 **ECS Service Auto Scaling 임계 재조정 + task_cpu 512 승격(구 F6, 부팅 93초 TS-005 근본)**.
-  3. **EXPLAIN 재튜닝** — 신규 뷰/조인(place_feature_signals V13·notifications·상권 대량) EXPLAIN → 필요 인덱스 추가(Flyway).
-  4. **캐시·커넥션풀 점검** — 핫 쿼리 캐시 전략·HikariCP 풀 사이즈 부하 기반 조정.
-- **수용 기준**: k6 리포트 + before/after 개선치 + ADR(부하 근거 튜닝). 인덱스/오토스케일링 변경은 프로덕션 반영·재측정.
-
----
+- **F1 잔여 중소도시 = 미실시(WON'T DO)** — 9도시로 충분, data-padding 회피(2026-07-11).
+- **작성자 팔로우 = "커먼스 세이프"만** — 팔로워 수만 공개·목록 없음·피드 없음(§9, N7·ADR-0023).
+- **데스크톱 = 지도앱 표준 3분할** — 카카오/네이버맵 정렬, 모바일 무변경(≥lg, #92).
+- **C4 그늘 경로 = 경유지 1곳(F3 대칭)** — 자체 가중 라우팅·대안경로 재랭크는 §0-2로 범위 제외.
+- **C3 알림 = 이벤트-드리븐(V9 재사용)·기존 규칙 병합** — 새 규칙타입/토글 금지(§9).
 
 ## 남은 사용자 액션
-- ~~F2 실기기 최종 확인~~ **✅ 완료(2026-07-11)** — 실기기 설치형 PWA에서 테스트 배너 정상 수신 확인. 도중 발견한 프론트 "실패" 오탐(배너는 오는데)은 **204 프록시 버그(TS-032)** 였고 **PR #90에서 수정·확인 완료**.
-- **하단 시트 실기기 확인** ✅ **완료** — peek을 46px 얇은 바로 낮춰 지도를 크게 볼 수 있음 확인(PR #90).
-- **남은 사용자 액션 없음** — N1~N9 + 실사용 피드백 전량 소진. 다음은 실사용하며 새 피드백 수집.
-
-## 참고 — 완료 체크리스트(직전 세션)
-- [x] 규칙 E · F5 · F1(9도시) · F3(라이브) · F2(라이브·async fix) · F1잔여 중단 결정 · 대규모 승격 결정 · 팔로우 커먼스세이프 설계 확정 · 버그 N1·N2 진단 완료
-- [x] **N1~N9 전량 완료·머지·라이브(2026-07-11 야간, PR #81~#88 + 브랜딩 #86)** — CI Backend pass 확인 후 머지, 프로덕션 배포·라이브 검증 완료. rev68(cpu=512)·Flyway V18.
-- [x] **실사용 피드백 수정(#90)** — 푸시 test 204 프록시 오탐(TS-032)·하단시트 peek 46px. 사용자 실기기 확인 완료(F2 푸시·하단시트 둘 다 정상).
+- **없음.** C1~C4는 코드로 실행 가능(외부 승인·키 신청 블로커 0건 — 백엔드/인프라 이미 완비). `/geuneul-finish`로 다음 세션에 일괄 구동.
