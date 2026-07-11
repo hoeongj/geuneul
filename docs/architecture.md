@@ -87,6 +87,7 @@ flowchart LR
 - **키 없는 배포** — GitHub Actions가 OIDC로 AWS 역할을 맡아 장기 자격증명 없이 ECR 푸시·ECS 롤아웃([DEPLOY.md](../DEPLOY.md)).
 - **IaC** — VPC·ALB·RDS·ElastiCache·S3·EventBridge·오토스케일링까지 Terraform으로 선언. 프론트는 Vercel, 로컬은 Docker Compose(PostGIS+Redis).
 - **CI 게이트** — 공간쿼리·인제스천은 Testcontainers 실 PostGIS로 검증. 머지 전 `gh pr checks`로 Backend/Frontend pass 눈확인(TS-025).
+- **무료 설치·배포** — `/install`에서 스토어 없이 $0 설치: 안드로이드 **WebAPK 원탭**(Chrome이 진짜 설치 앱 생성) + **다운로드 서명 APK**(Bubblewrap TWA, `/geuneul.apk` + `/.well-known/assetlinks.json` 도메인 검증) + iOS 홈 화면 추가. keystore는 `.local`(§D)에만.
 
 ---
 
