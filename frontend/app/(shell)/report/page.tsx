@@ -114,7 +114,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="relative h-full overflow-y-auto px-4 pt-5 pb-6 lg:mx-auto lg:max-w-[720px] lg:px-8 lg:pt-8">
+    <div className="relative h-full overflow-y-auto overflow-x-hidden px-4 pt-5 pb-6 lg:mx-auto lg:max-w-[720px] lg:px-8 lg:pt-8">
       <header className="mb-4">
         <h1 className="text-[23px] font-extrabold tracking-[-0.4px] text-ink">제보하기</h1>
         <p className="mt-1 text-[13px] text-ink-3">한 탭이면 끝. 지금 상태를 알려주세요.</p>
@@ -215,7 +215,7 @@ export default function ReportPage() {
           placeholder="한 줄 코멘트 (선택)"
           aria-label="한 줄 코멘트"
           maxLength={120}
-          className="h-[76px] flex-1 rounded-[14px] border border-line-cream bg-white px-3.5 text-[14px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
+          className="h-[76px] min-w-0 flex-1 rounded-[14px] border border-line-cream bg-white px-3.5 text-[14px] text-ink placeholder:text-muted-2 focus:border-teal focus:outline-none"
         />
       </div>
       {photo.state === "error" && photo.errorMessage && (

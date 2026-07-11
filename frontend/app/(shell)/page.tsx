@@ -73,9 +73,15 @@ export default function MapPage() {
   };
 
   const recenter = () => {
-    setRecenterKey((k) => k + 1);
     geo.locate();
-    show(geo.isFallback ? "현재 위치 권한을 확인해 주세요" : "현재 위치로 이동했어요");
+    if (geo.isFallback) {
+      // 아직 실제 위치가 없음(권한 미허용/실패) → 지도를 폴백(동작구)으로 튕기지 않는다.
+      // 권한이 잡히면 위 grantedRef 이펙트가 recenterKey를 올려 실제 위치로 이동한다.
+      show("현재 위치를 확인하는 중… 권한을 허용해 주세요");
+    } else {
+      setRecenterKey((k) => k + 1);
+      show("현재 위치로 이동했어요");
+    }
   };
 
   // 검색 bias 좌표(폴백이면 없음) + 선택 핸들러 — 모바일 오버레이·데스크톱 사이드바가 공유.
