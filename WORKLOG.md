@@ -1044,3 +1044,15 @@ README·install에 박을 시각 자산 확보. **코드·마이그레이션 0**
 - **왜(why)**: ① **다이어그램은 mermaid**(GitHub 네이티브 렌더·PNG 대비 diff 가능·유지보수). ADR 링크를 노드에 달아 "그림→근거" 한 클릭. ② **스크린샷은 헤드리스 Chrome 라이브 캡처**(`puppeteer-core` + 설치된 Chrome.app, geolocation override로 필드테스트 거점 동작구 상도 고정) — 목업 아님, 실동작 증명(웹검증: 채용담당자 84%가 동작앱 원함). ③ **그늘 경유 경로 샷을 히어로로** — 미니맵 폴리라인이 쿨링쉼터를 통과 + AI 한줄요약 + 제보(실시간)/후기(영구) 2단이 한 프레임에 = 간판 전부.
 - **검증**: mermaid 3블록 전부 `mmdc`(mermaid-cli)로 렌더 에러 0 확인(엣지라벨 괄호 제거로 GitHub 렌더 안전화). 스크린샷은 라이브 200 상태에서 캡처, `sips`로 리사이즈(데스크톱 1600w·모바일 508w)·개인정보/키 노출 없음(§D). 마커 "정보 부족"(회색)은 촬영시점 유효 제보 부재 실상태(과장 없이 그대로, 실측만).
 - **관련**: BACKLOG D3 · D1(README 임베드 연동) · ADR 색인 · [[geuneul-current-state]].
+
+## 2026-07-11 — D2 무료 자체 배포: /install 페이지 (WebAPK 원탭 + iOS 홈화면 안내) (BACKLOG D2, 자산화 사이클)
+스토어 없이 $0로 두 플랫폼 설치 진입점. **백엔드 무변경·마이그레이션 0**(프론트 신규 1페이지 + 캡처 훅).
+- **무엇**: `app/install/page.tsx`(서버, metadata) + `components/install/InstallView.tsx`(클라, 플랫폼 분기) — **(shell) 밖 독립 라우트**라 지도 셸/하단 탭 없음(모바일 셸 무변경). `lib/pwa-install.ts`(beforeinstallprompt 캡처 싱글턴 + appinstalled + display-mode 감지 + 플랫폼 감지) · `lib/hooks.ts` `useInstallState`(useSyncExternalStore) · `app/providers.tsx`에 `initPwaInstall()` 조기 등록(UI 무변경).
+  - **Android**: 캡처된 프롬프트 있으면 "홈 화면에 앱 설치" 원탭(WebAPK) → outcome 인라인 피드백. 미도착이면 Chrome ⋮ '앱 설치' 안내(도착 시 버튼 승격).
+  - **iOS**: beforeinstallprompt 미지원(정책) → "공유 → 홈 화면에 추가 → 추가" 3스텝 안내 카드.
+  - **Desktop**: 휴대폰 유도 + 데스크톱 Chrome 설치 아이콘 안내.
+  - 공통: 이미 설치됨(standalone) 감지 시 "이미 설치되어 있어요", 왜 설치? 4칸(전체화면·빠른실행·오프라인·공유).
+- **왜(why) + 2026 웹검증(규칙B)**: ① **WebAPK 1순위** — PWA `beforeinstallprompt`→Chrome이 진짜 WebAPK 자동생성(런처 아이콘·standalone·설정앱 등록), **사이드로딩·경고·$25·개발자검증 전부 불필요**(브라우저 주도라 2026 개발자검증 규제서 자유). ② **iOS는 홈화면추가가 유일 무료 공개배포**(App Store·공개 TestFlight 모두 $99/년, .ipa 자체호스팅 불가) → 안내 배너로 대체. ③ **캡처는 전역 조기 등록** — beforeinstallprompt는 1회 발화라 홈/직접진입/SPA 이동 어디서든 놓치지 않게 Providers에서 init. ④ **effect setState 회피** — 플랫폼 감지는 useSyncExternalStore(서버 스냅샷 null)로 하이드레이션 안전(eslint react-hooks/set-state-in-effect 준수).
+- **범위 결정**: **TWA 서명 APK(보조 아티팩트)는 이번 스코프 보류.** 근거 — WebAPK 원탭이 이미 D2 수용기준("/install→원탭 설치→런처 아이콘·전체화면")을 충족(경고 0·규제 자유·1순위). TWA는 keystore 생성·Bubblewrap·서명비밀(.local) 호스팅·assetlinks SHA-256 정합이 필요한 "여력되면" 항목이라, 자산화 사이클(D1 README·D4 STAR) 우선. 후속 additive로 남김(BACKLOG 갱신).
+- **검증**: 프론트 `tsc --noEmit` 0 · `eslint`(신규 5파일) 0 · `pnpm build` green(`/install` static prerender 확인). manifest 설치요건 충족(name·standalone·192/512+maskable 아이콘·SW·HTTPS). ToastHost는 (shell) 전용이라 install 피드백은 인라인 status로(셸 의존 0). 모바일 무변경(신규 라우트만, 기존 셸/레이아웃 불변).
+- **관련**: BACKLOG D2 · manifest.ts · [[frontend-live-deployment]] · [[geuneul-current-state]].

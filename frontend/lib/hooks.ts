@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { presignPhoto, uploadPhotoToS3 } from "./api";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, type PhotoPurpose } from "@/types/photo";
+import { canPromptInstall, isAppInstalled, subscribeInstall } from "./pwa-install";
 
 // 뷰포트 idle 재조회 등 과호출 방지용 디바운스 콜백.
 export function useDebouncedCallback<A extends unknown[]>(fn: (...args: A) => void, delay: number) {
@@ -159,4 +160,12 @@ export function useDialogFocusTrap(
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [active, close, trapTab, panelRef]);
+}
+
+// PWA 설치 상태 구독(D2) — beforeinstallprompt 캡처 여부·이미 설치됨을 useSyncExternalStore로.
+// 서버/최초 렌더는 false(하이드레이션 안전), 클라에서 이벤트 도착 시 리렌더.
+export function useInstallState(): { canInstall: boolean; installed: boolean } {
+  const canInstall = useSyncExternalStore(subscribeInstall, canPromptInstall, () => false);
+  const installed = useSyncExternalStore(subscribeInstall, isAppInstalled, () => false);
+  return { canInstall, installed };
 }
