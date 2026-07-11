@@ -11,8 +11,9 @@
 > - **N4** 하단시트 3단 스냅+드래그(#82, Pointer Events). **N5** 지정 장소 검색(#83, 카카오 keyword.json BFF, TS-026 계약검증). **N6** 내 글 관리(#84, `/me/reviews·comments·reactions`).
 > - **N7** 커먼스세이프 팔로우(#85, `domain.follow`·V17·`/users/{id}`·팔로워 수만 공개·ADR-0023). **N8** 그늘/비 경로(#87, corridor ST_DWithin 오버레이·ADR-0024). **N9** 대규모 대비(#88, **task_cpu 0.5vCPU**·**V18 인덱스**·ADR-0025).
 > - **부수**: TS-030(IT HikariCP 풀 캡 — 컨텍스트 다수 커넥션 소진), TS-031(멱등삽입 catch 후 같은 tx SELECT=PG 25P02 → NOT_SUPPORTED tx 분리, Follow·Reaction 둘 다), 브랜딩 로고·앱아이콘·회전 스플래시(#86).
-> - **라이브 현황(2026-07-11)**: 태스크데프 **rev68(cpu=512, N9)**, Flyway **V18**. API·App 200. 라이브 검증: `/places/search`(성균관대) · `/users/1` 200 · `/me/*` 401 · `/routes/toilet` shadeSpots 15 · 파비콘/아이콘/manifest(신규 PNG·bg #FFFBEB). **k6 재부하: 반경 p95 2.68s→1.39s·부팅 93s→70s**(perf/k6/n9-results.md). ADR 최신 **0025**.
-> - **남은 것**: BACKLOG 빈 상태(N1~N9 소진). 사용자 액션 = ① F2 실기기 PWA 푸시 최종 확인(선택) ② 실사용 후 새 피드백 수집. **다음 세션 = 새 백로그 정의부터**.
+> - **실사용 피드백 수정(#90)**: ① 푸시 test 배너는 오는데 프론트 "실패" 오탐 = **BFF 프록시가 204에 빈 문자열 바디 → Response 생성자 TypeError → 502 오변환**(TS-032). `resBody||null`로 4개 프록시 헬퍼 수정 → **모든 204 경로**(push subscribe/test·알림 read/삭제) 정상화. ② 하단 시트 peek 96px→**46px 얇은 재열기 바**(목록·헤더 숨김)로 지도 최대. **사용자 실기기 확인 완료 — 둘 다 정상.**
+> - **라이브 현황(2026-07-11)**: 태스크데프 **rev68(cpu=512, N9)**, Flyway **V18**. API·App 200. 라이브 검증: `/places/search`(성균관대) · `/users/1` 200 · `/me/*` 401 · `/routes/toilet` shadeSpots 15 · 파비콘/아이콘/manifest(신규 PNG·bg #FFFBEB) · **F2 푸시 실기기 배너 수신 확인**. **k6 재부하: 반경 p95 2.68s→1.39s·부팅 93s→70s**(perf/k6/n9-results.md). ADR 최신 **0025**.
+> - **남은 것**: **BACKLOG 빈 상태 — N1~N9 + 실사용 피드백(#90) 전량 소진, F2 푸시·하단시트 실기기 확인 완료.** 다음 = 실사용 후 새 피드백 수집 → **새 백로그 정의부터**.
 
 > ── 이하 라인은 **이전 세션 기록(2026-07-10 이전, 히스토리·참고용)** ──
 
