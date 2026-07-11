@@ -967,3 +967,11 @@
 - **왜(why)**: BACKLOG 소진 상태에서 "남은 일"은 곧 **방금 배포한 데스크톱 작업의 완성도 + 코드/문서 정합성**이다. 감사를 워크플로로 병렬 fan-out해 사각을 줄이고, CLAUDE.md 규칙2에 따라 **inScope(마무리)만 실행하고 new-feature(신고 프론트 진입점=계획된 2차)는 제안만** 남겼다. 모바일은 카피 2건 외 무변경(폴리시는 전부 `lg:`/`:focus-visible`/전역 커서라 모바일 레이아웃·동작 불변).
 - **검증**: 프론트 tsc·eslint·build green. 빌드 CSS에 `cursor:pointer`·`:focus-visible{outline teal}`·`lg:hover:*`(@media 64rem)·`lg:opacity-100` 컴파일 확인. 데스크톱 4탭 스크린샷(지도 3분할·급해요·내정보·제보) 확인. 백엔드 무변경(백엔드 하이진은 별도 PR).
 - **관련**: 감사 워크플로 wf_0780adbe · CLAUDE.md 규칙2(스코프)·E(모델 역할) · PR #92 · [[geuneul-current-state]].
+
+## 2026-07-11 — 데스크톱 a11y 마무리 — 오버레이 포커스 관리 (PR 후속)
+감사가 "여력 되면" 권한 항목으로 남긴 오버레이 포커스 관리를 마무리(BACKLOG 소진 후 남은 정당한 완성분).
+- **무엇**: `PlaceDetailOverlay`·`UserProfileOverlay`에 `role="dialog"`+`aria-label`+`tabIndex=-1` 부여, **열릴 때 패널로 포커스 이동**(`panelRef.focus()`)·**닫힐 때 직전 포커스 복귀**(cleanup에서 이전 `activeElement.focus()`). `focus:outline-none`으로 프로그램적 포커스 시 링 억제(:focus-visible는 키보드 모달리티에만 떠서 무영향).
+- **왜(why)**: 데스크톱 오버레이(Esc 닫기는 #92에서 완료)의 키보드 접근성 완성. **완전한 포커스 트랩(Tab 순환 가두기)은 의도적으로 안 함** — 감사가 "더 큰 후속"으로 분리했고, 지도 탭에선 오버레이가 400px 좌측 패널이라 뒤 지도가 inert가 아니어서 `aria-modal`도 안 붙임(거짓 모달 주장 회피). role=dialog + 포커스 인/복귀까지가 정확·저위험 지점.
+- **왜 SearchBar 콤보박스는 안 했나**: 감사가 Enter/Esc(#92 완료)까지만 권하고 **화살표 activedescendant 콤보박스는 "스코프 확장"으로 명시 연기**함(규칙2). 그래서 손대지 않음.
+- **검증**: 프론트 tsc·eslint·build green. 프로그램적 focus()는 :focus-visible 미발동이라 마우스 사용자에겐 무영향, 키보드 사용자만 이득.
+- **관련**: [[geuneul-current-state]] · CLAUDE.md 규칙2 · 감사 a11y 렌즈 후속.
