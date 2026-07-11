@@ -116,7 +116,7 @@ GET /places/1/popular-times
 
 ## 문서
 
-- **아키텍처·의사결정 기록**: [`docs/adr/`](./docs/adr) (ADR 0001–0025, [색인](./docs/adr/README.md))
+- **아키텍처·의사결정 기록**: [`docs/adr/`](./docs/adr) (ADR 0001–0027, [색인](./docs/adr/README.md))
 - **배포(AWS)**: [`DEPLOY.md`](./DEPLOY.md) · **현황·다음 작업**: [`HANDOFF.md`](./HANDOFF.md)
 - **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
 - 전체 목표·범위·ERD·API 스펙: [`CLAUDE.md`](./CLAUDE.md)
@@ -132,7 +132,7 @@ GET /places/1/popular-times
 - **P4 · 백로그 완주(승인 불필요 ①~⑨)** — **실시간 제보 급증 알림**(Postgres LISTEN/NOTIFY→SSE, 멀티 인스턴스 팬아웃, V9, [ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)) · **시간대별 혼잡 파생**(자체 popular-times, KST 요일×시간, Redis 캐시) · **GPS 방문 인증**(`verified`, ST_DWithin 100m → survival 가중, V10) · **place_features 등급화**(콘센트/wifi/noise_level → 상세 등급 칩) · **추천 시나리오 focus/longstay** · **후기 커뮤니티**(댓글·리액션, V11) · **모더레이션 확장**(신고 RESOLVED→콘텐츠 숨김, V12) · **프론트 노출**(카테고리 필터·등급·verified·AI요약) · **JaCoCo 0.70·캐시 심화**.
 - **데이터 커버리지(2026-07)** — 화장실 52,334 · **무더위쉼터 60,297**(safetydata, 냉방 정보 57,070, TS-027) · **상권 카페/스터디카페**(서울 distinct 29,886 + 6대 광역시 확장) · 도서관 3,551. **총 ~150,000+곳.** 상권 나머지 지역은 일일 쿼터상 후속(F1). **외부 승인 블로커 0건.**
 - **심화+additive 완주(2026-07-10, PR #61~#69)** — **시설 comfort SQL 통합**(V13 뷰, [ADR-0017](./docs/adr/0017-place-feature-comfort-signal.md)) · verified→trust 보너스 · **쉼터 냉방 백필**(57,070 실적재) · 급증 SSE 프론트·popular-times 히트맵·커뮤니티 최소 UI · **bookmarks**(V14) · 상권 6대 광역시 확장 · **알림**(V15, 급증 재사용+인앱 센터, [ADR-0018](./docs/adr/0018-notifications-in-app-center-surge-reuse.md)) · **화장실 포함 경로**(detour 최소 경유지+직선 MVP, [ADR-0019](./docs/adr/0019-routes-toilet-waypoint-external-directions.md)).
-- **F1~F6·N1~N9 전량 완료·라이브(rev68·V18)** + 프론트 **데스크톱 반응형**(≥lg 3분할: NavRail·MapSidebar·PlaceListBody, PR #92). 다음 = 실사용 피드백 수집 후 새 백로그 → [`docs/BACKLOG.md`](./docs/BACKLOG.md)·`/geuneul-start`로 구동.
+- **F1~F6·N1~N9 + 데스크톱 반응형(#92) + C1~C4(2차·심화 마무리, #96~#99) 전량 완료·라이브(V18·ADR 0027)**. C1 신고/모더레이션 프론트 · C2 a11y 트랩·콤보박스 · C3 관심장소 상태변화 알림(ADR-0026) · C4 그늘 경유 경로(ADR-0027). 다음 = 실사용 피드백 수집 후 새 백로그 → [`docs/BACKLOG.md`](./docs/BACKLOG.md)·`/geuneul-start`로 구동.
 
 </details>
 
