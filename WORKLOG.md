@@ -1029,3 +1029,11 @@ ADR-0018 §2가 범위 밖으로 남긴 "관심 장소 단건 상태 변화"를 
 - **왜(why)**: ① **경유지 1곳(F3 대칭)·자체 라우팅 금지(§0-2)** — 우리 간판은 지리검색이지 라우팅 엔진 아님. "우회 최소 경유지"를 PostGIS corridor(간판)로 고르고 폴리라인은 기존 DirectionsProvider가 그린다. 프롬프트의 "그늘 많은 경로 재랭크 토글"안(대안경로 다중 추출+Kakao 대안경로 카운팅, 라우팅 creep·TS-026 재검증)은 **범위 제외**. ② **SHADE_CATEGORIES(쉼터·도서관·지하상가)** — 셋 다 실내/지붕이라 폭염·비 동시 해결(N8과 동일 집합). ③ **N8 오버레이 유지 + 경로 추가** — "길 근처 피할 곳"(N8)과 "실제로 통과하는 길"(C4)은 다른 정보 → 경유지 경로 + 주변 피난처를 함께("그늘 경유 +피할 곳 N"). ④ **waypoint category DTO** — 안 하면 경유 쉼터가 미니맵에서 화장실 아이콘으로 뜸.
 - **검증**: 백엔드 compile green, `RouteServiceTest` **4건 green**(화장실 경유·경유지 없음 폴백·**그늘 쉼터 경유+카테고리**·shadeSpots). `RouteToiletIT`에 shade 3건(쉼터 경유·카테고리 COOLING_SHELTER·화장실은 안 고름 / 쉼터 없으면 폴백 / 해외 400) 추가 → CI 게이트. 프론트 tsc·eslint·build green(`/api/routes/shade` 등록). 모바일 무변경(버튼 1개 추가·기존 미니맵 아이콘만 category 반영). 자체 가중 라우팅 없음(§0-2).
 - **관련**: ADR-0027(신규) · ADR-0019·0021(F3)·0024(N8) 대칭 · CLAUDE.md §0-2·§3·§10 · [[geuneul-current-state]].
+
+## 2026-07-11 — D5 타깃 직무 JD 정렬 + 헤드라인 확정 (BACKLOG D5, 자산화 사이클)
+기능 동결 후 "채용 자산화" 사이클의 첫 항목. PORTFOLIO-CONTEXT §5의 "타깃 직무 미확정"을 2026 JD 웹검증으로 해소하고, 그늘 헤드라인/강조점을 그 JD 교집합에 정렬했다. **스펙(CLAUDE.md)은 여전히 특정 회사 비종속 — 강조만 조정**(§0-2 범위 불변, 코드·마이그레이션 0).
+- **무엇**: 1차 타깃 = **위치기반 플랫폼 백엔드(하이퍼로컬/커머스)**, 2차 = **모빌리티 백엔드**로 확정. `.local/PORTFOLIO-CONTEXT.md` §5 갱신(gitignore, 커밋 안 함). README 헤드라인 정렬은 D1(README 쇼케이스화)에서 반영.
+- **왜(why) + 2026 JD 웹검증 근거(규칙B)**: 당근·배민·토스 등 실제 JD 교집합 **필수** = Java/Kotlin + Spring Boot + RDBMS(MySQL/PostgreSQL) + REST API + JWT/OAuth2 + Docker, **우대** = 대용량 트래픽/동시성 · Redis 캐시 · 부하테스트/성능튜닝 · MSA · **공간데이터(PostGIS)**. 당근 서버 JD가 "RDBMS(MySQL/PostgreSQL)·백오피스 자체제작·대규모 트래픽 동시성"을 명시 → 그늘 코어(PostGIS 반경/kNN·survival_score·모더레이션 admin 큐·k6 p95·동시성 RETURNING·Redis TTL 캐시)와 **1:1**. PostGIS 공간데이터는 위치회사엔 **우대사항 직결**, 타 회사엔 중립~플러스라 범용성 유지.
+- **검토한 대안**: (a) 특정 회사 1곳 과종속 헤드라인 → §0-2 "스펙 비종속" 위배·지원 폭 좁힘으로 기각, "계열(위치/커머스/모빌리티)"로 확정. (b) 지리공간을 "프론트 지도 UX"로 프레이밍 → JD가 원하는 건 DB 엔지니어링이라 **"GiST 인덱스·kNN·EXPLAIN 튜닝·대용량 공간검색"**으로 프레이밍(D1 반영).
+- **근거(출처)**: 당근 careers/원티드 백엔드 JD("RDBMS MySQL/PostgreSQL·대규모 트래픽 동시성") · 인프런 2026 신입 백엔드 로드맵(우대: Redis·대용량·PostGIS 공간데이터) · 사람인 Redis 직무. (웹검색 2026-07-11.)
+- **관련**: `.local/PORTFOLIO-CONTEXT.md` §5 · BACKLOG D5 · D1(README 헤드라인 연동) · [[geuneul-current-state]] · [[portfolio-landscape]].
