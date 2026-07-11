@@ -9,7 +9,7 @@ import type { Place } from "@/types/place";
 // 탭으로 펼침/접힘. peek는 헤더 두 줄이 안 잘리게 px로 고정하고 half/full은 컨테이너 대비 %.
 export type SheetSnap = "peek" | "half" | "full";
 
-const PEEK_PX = 96; // 핸들 + "주변 N곳" 헤더가 안 잘리는 최소 높이
+const PEEK_PX = 46; // 핸들 + 한 줄 라벨만 — peek에선 목록을 숨겨 지도를 거의 꽉 채운다
 const HALF_FRACTION = 0.46;
 const FULL_FRACTION = 0.82;
 const TAP_THRESHOLD_PX = 6; // 이 이하로 움직이면 드래그가 아니라 탭으로 본다
@@ -81,10 +81,10 @@ export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSel
     onSnapChange(nearest);
   };
 
-  // 탭(드래그 아님) → 펼침/접힘 토글. 드래그 직후 발생하는 click은 억제.
+  // 탭(드래그 아님) → 단계 전환. peek→half(목록 열기)·half→full·full→half. peek로 완전히 접기는 아래로 드래그.
   const onToggle = () => {
     if (dragRef.current?.dragged) return;
-    onSnapChange(snap === "full" ? "half" : "full");
+    onSnapChange(snap === "peek" ? "half" : snap === "full" ? "half" : "full");
   };
 
   const heightStyle = dragH != null ? `${dragH}px` : snapHeightCss(snap);
@@ -110,40 +110,55 @@ export function BottomSheet({ snap, onSnapChange, radius, places, loading, onSel
         <span className="h-[5px] w-[38px] rounded-full" style={{ background: "var(--color-sheet-handle)" }} />
       </button>
 
-      {/* 헤더 */}
-      <header className="flex items-center justify-between px-4 pb-2.5">
-        <div className="min-w-0">
-          <div className="text-[16px] font-extrabold text-ink">주변 {places.length}곳</div>
-          <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 지도를 움직여 탐색</div>
-        </div>
-        <button type="button" onClick={onToggle} className="shrink-0 text-[13px] font-bold text-teal">
-          {snap === "full" ? "접기" : "더보기"}
+      {snap === "peek" ? (
+        // peek — 목록·헤더를 숨긴 얇은 재열기 바(지도 최대). 탭/위로 드래그하면 목록이 열린다.
+        <button
+          type="button"
+          onClick={onToggle}
+          className="-mt-1 flex w-full items-center justify-center gap-1.5 pb-1 text-[13px] font-bold text-ink-2"
+          aria-label={`주변 ${places.length}곳 · 목록 열기`}
+        >
+          주변 {places.length}곳
+          <Icon name="chev" size={13} className="-rotate-90 text-muted-3" />
         </button>
-      </header>
-
-      {/* 리스트 / 상태 */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-        {loading && places.length === 0 ? (
-          <div className="flex h-full items-center justify-center py-10 text-[13px] text-muted">주변 장소를 불러오는 중…</div>
-        ) : empty ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-            <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-mint text-status">
-              <Icon name="mapicon" size={26} />
+      ) : (
+        <>
+          {/* 헤더 */}
+          <header className="flex items-center justify-between px-4 pb-2.5">
+            <div className="min-w-0">
+              <div className="text-[16px] font-extrabold text-ink">주변 {places.length}곳</div>
+              <div className="text-[11px] text-muted">반경 {radiusLabel(radius)} · 지도를 움직여 탐색</div>
             </div>
-            <div className="text-[15px] font-bold text-ink">이 근처엔 아직 정보가 없어요</div>
-            <div className="text-[12.5px] text-ink-3">필터를 바꾸거나 반경을 넓혀보세요.</div>
-            <button
-              type="button"
-              onClick={onWiden}
-              className="mt-2 rounded-[12px] bg-forest px-4 py-2.5 text-[13px] font-bold text-cream"
-            >
-              반경 넓히기
+            <button type="button" onClick={onToggle} className="shrink-0 text-[13px] font-bold text-teal">
+              {snap === "full" ? "접기" : "더보기"}
             </button>
+          </header>
+
+          {/* 리스트 / 상태 */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+            {loading && places.length === 0 ? (
+              <div className="flex h-full items-center justify-center py-10 text-[13px] text-muted">주변 장소를 불러오는 중…</div>
+            ) : empty ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-mint text-status">
+                  <Icon name="mapicon" size={26} />
+                </div>
+                <div className="text-[15px] font-bold text-ink">이 근처엔 아직 정보가 없어요</div>
+                <div className="text-[12.5px] text-ink-3">필터를 바꾸거나 반경을 넓혀보세요.</div>
+                <button
+                  type="button"
+                  onClick={onWiden}
+                  className="mt-2 rounded-[12px] bg-forest px-4 py-2.5 text-[13px] font-bold text-cream"
+                >
+                  반경 넓히기
+                </button>
+              </div>
+            ) : (
+              places.map((p) => <PlaceRow key={p.id} place={p} onClick={() => onSelectPlace(p)} />)
+            )}
           </div>
-        ) : (
-          places.map((p) => <PlaceRow key={p.id} place={p} onClick={() => onSelectPlace(p)} />)
-        )}
-      </div>
+        </>
+      )}
     </section>
   );
 }

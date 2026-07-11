@@ -928,3 +928,16 @@
 - **왜(why)**: ADR-0025 상세. 핵심 = **"추측 말고 측정 후 튜닝"**. 부하가 CPU를 가리켜 task_cpu를 올렸고, EXPLAIN이 seq scan을 딱 두 쿼리에서만 잡아 인덱스도 그 둘만 추가. 오토스케일링/풀은 데이터가 병목으로 안 가리켜 근거 있게 유지(모든 노브를 돌리는 게 튜닝이 아님).
 - **검증**: k6 before/after(`perf/k6/n9-results.md`) + EXPLAIN before/after(`perf/explain/`) 문서화. V18은 로컬 실 PostGIS에 적용해 인덱스 스캔 확인 + CI Testcontainers가 게이트. task_cpu 512 프로덕션 라이브(rev67)·health 200·k6 재측정 완료. 부팅 70.09s 로그 확인.
 - **관련**: BACKLOG N9 · ADR-0025 · ADR-0012·0013 · TS-005. Flyway V18. **N1~N9 전량 완료.**
+
+## 2026-07-11 — 실사용 피드백 2건 수정 (PR #90, 프론트 전용)
+사용자 실기기 확인 후 피드백: ① 푸시 "테스트"가 배너는 뜨는데 "실패" 오탐 ② 하단 시트를 완전히 못 내려 지도만 크게 못 봄.
+- **① 푸시 테스트 오탐(TS-032)**: 백엔드 `/push/test`가 204(async 발송이라 바로 No Content)인데, BFF 프록시가
+  `new NextResponse("", {status:204})`로 재구성 → **Fetch 표준상 204에 non-null 바디(빈 "" 포함)는 TypeError** →
+  프록시 catch가 502로 오변환 → 프론트 `res.ok=false` "실패". 실제로는 배너 발송 성공. 수정: `resBody || null`(빈 바디→null)
+  을 4개 프록시 헬퍼(proxyPost/proxyAuthed/proxyPhotoPresign/proxyOptionalAuth)에 적용 → **모든 204 경로**(push subscribe/test·알림 read/삭제) 정상화.
+- **② 하단 시트 peek 최소화(N4 후속)**: peek가 96px로 헤더까지 보여 지도를 다 못 키웠다 → **peek를 46px 얇은 재열기 바**
+  ("주변 N곳 ▲", 목록·헤더 숨김)로. 탭/위로 드래그하면 목록이 열린다. 탭 전환도 peek→half·half→full·full→half로 정리.
+- **왜**: ①은 "백엔드 성공인데 프론트만 실패"라 응답 파이프라인(프록시 204 재구성)을 의심해 찾음(TS-032 학습). ②는 사용자가
+  "지도만 크게"를 원했는데 peek 96px가 과함 → 얇은 바로 지도 최대 노출, 재열기 affordance는 유지.
+- **검증**: `node -e 'new Response("",{status:204})'`로 TypeError 재현·null은 통과 확인. 프론트 tsc·eslint·build green. 백엔드 무변경.
+- **관련**: TS-032·TS-029(같은 증상 다른 원인) · BACKLOG N4 · CLAUDE.md §7(PWA 푸시).
