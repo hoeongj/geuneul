@@ -1037,3 +1037,10 @@ ADR-0018 §2가 범위 밖으로 남긴 "관심 장소 단건 상태 변화"를 
 - **검토한 대안**: (a) 특정 회사 1곳 과종속 헤드라인 → §0-2 "스펙 비종속" 위배·지원 폭 좁힘으로 기각, "계열(위치/커머스/모빌리티)"로 확정. (b) 지리공간을 "프론트 지도 UX"로 프레이밍 → JD가 원하는 건 DB 엔지니어링이라 **"GiST 인덱스·kNN·EXPLAIN 튜닝·대용량 공간검색"**으로 프레이밍(D1 반영).
 - **근거(출처)**: 당근 careers/원티드 백엔드 JD("RDBMS MySQL/PostgreSQL·대규모 트래픽 동시성") · 인프런 2026 신입 백엔드 로드맵(우대: Redis·대용량·PostGIS 공간데이터) · 사람인 Redis 직무. (웹검색 2026-07-11.)
 - **관련**: `.local/PORTFOLIO-CONTEXT.md` §5 · BACKLOG D5 · D1(README 헤드라인 연동) · [[geuneul-current-state]] · [[portfolio-landscape]].
+
+## 2026-07-11 — D3 데모 자산: 아키텍처 다이어그램 + 라이브 스크린샷 (BACKLOG D3, 자산화 사이클)
+README·install에 박을 시각 자산 확보. **코드·마이그레이션 0**(문서·이미지 전용).
+- **무엇**: ① `docs/architecture.md` — mermaid 3장(런타임 요청흐름 브라우저→BFF→CloudFront→ALB→ECS→RDS PostGIS/Redis/S3 + LISTEN/NOTIFY→SSE·Web Push·외부API / 데이터·ETL 멱등 ingestion→지오코딩→PostGIS + UGC 2단 / 배포 CI·OIDC·ECR·ECS·Terraform). ② `docs/media/` 라이브 실측 스크린샷 4장 — 데스크톱 3분할(지도+공간 리스트+거리), 그늘 경유 경로(C4 폴리라인→무더위쉼터+AI요약+2단 UGC), 모바일 지도(바텀시트 3단), 시나리오 추천 5종.
+- **왜(why)**: ① **다이어그램은 mermaid**(GitHub 네이티브 렌더·PNG 대비 diff 가능·유지보수). ADR 링크를 노드에 달아 "그림→근거" 한 클릭. ② **스크린샷은 헤드리스 Chrome 라이브 캡처**(`puppeteer-core` + 설치된 Chrome.app, geolocation override로 필드테스트 거점 동작구 상도 고정) — 목업 아님, 실동작 증명(웹검증: 채용담당자 84%가 동작앱 원함). ③ **그늘 경유 경로 샷을 히어로로** — 미니맵 폴리라인이 쿨링쉼터를 통과 + AI 한줄요약 + 제보(실시간)/후기(영구) 2단이 한 프레임에 = 간판 전부.
+- **검증**: mermaid 3블록 전부 `mmdc`(mermaid-cli)로 렌더 에러 0 확인(엣지라벨 괄호 제거로 GitHub 렌더 안전화). 스크린샷은 라이브 200 상태에서 캡처, `sips`로 리사이즈(데스크톱 1600w·모바일 508w)·개인정보/키 노출 없음(§D). 마커 "정보 부족"(회색)은 촬영시점 유효 제보 부재 실상태(과장 없이 그대로, 실측만).
+- **관련**: BACKLOG D3 · D1(README 임베드 연동) · ADR 색인 · [[geuneul-current-state]].

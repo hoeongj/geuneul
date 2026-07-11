@@ -1,0 +1,103 @@
+# 아키텍처 — 그늘(Geuneul)
+
+> 런타임 데이터 흐름 + 배포 파이프라인. 간판(PostGIS 대용량 지리검색 · 실시간 UGC 시공간 스코어링)이 어디서 돌고, 요청이 브라우저에서 DB까지 어떻게 흐르는지 한 장으로.
+> 결정 근거는 각 노드의 ADR 링크 참고([색인](./adr/README.md)).
+
+## 런타임 (요청 흐름)
+
+```mermaid
+flowchart LR
+  subgraph client["브라우저 · PWA"]
+    UI["Next.js 16 App Router<br/>Kakao Maps · Serwist SW<br/>TanStack Query"]
+  end
+
+  subgraph vercel["Vercel"]
+    BFF["BFF — Next Route Handlers<br/>동일 오리진 /api/* 프록시<br/>(ADR-0004)"]
+  end
+
+  subgraph aws["AWS"]
+    CF["CloudFront<br/>무료 HTTPS (ADR-0015)"]
+    ALB["ALB (http)"]
+    subgraph ecs["ECS Fargate"]
+      API["Spring Boot 4 · Java 21<br/>반경 ST_DWithin · kNN &lt;-&gt; (GiST)<br/>survival_score (SQL 뷰 + 순수 함수)<br/>시나리오 추천 2단 랭킹<br/>멱등 ETL + 지오코딩"]
+    end
+    PG[("PostgreSQL + PostGIS<br/>RDS · geometry(Point,4326)")]
+    REDIS[("ElastiCache Redis<br/>날씨 TTL · 조회 캐시")]
+    S3[("S3<br/>제보·후기 사진<br/>presigned URL")]
+    EB["EventBridge → ECS RunTask<br/>공공데이터 주기 동기화<br/>(ADR-0011)"]
+  end
+
+  subgraph ext["외부 API (곁다리)"]
+    KAKAO["Kakao 지오코딩 · 도로 경로"]
+    KMA["기상청 초단기실황"]
+    AI["Claude / Mistral<br/>한 줄 요약"]
+  end
+
+  UI -->|동일 오리진| BFF
+  BFF -->|HTTPS| CF --> ALB --> API
+  API -->|Hibernate Spatial + JTS| PG
+  API --> REDIS
+  API -->|SigV4 presign| S3
+  API -.지오코딩·경로.-> KAKAO
+  API -.날씨.-> KMA
+  API -.요약.-> AI
+  EB -.RunTask.-> API
+  API -->|LISTEN NOTIFY → SSE| BFF
+  API -->|Web Push| UI
+```
+
+- **동일 오리진 BFF** — 브라우저는 항상 Vercel 위 `/api/*` 서버 프록시만 호출한다. ALB(http)·CORS 제약을 동시에 회피(백엔드 CORS 불필요, [ADR-0004](./adr/0004-frontend-same-origin-proxy.md)). 곁다리 외부 키(Kakao/KMA/AI)도 서버에만 있다.
+- **간판은 DB 레이어** — 반경(`ST_DWithin`)·최근접(kNN `<->`)·bounds는 GiST 인덱스로, 시공간 집계(`place_report_signals`)는 SQL 뷰로 돈다. 무거운 집계는 DB, 자주 튜닝하는 가중치 정책만 순수 Java 함수로 분리([ADR-0007](./adr/0007-survival-score-sql-signals-java-compose.md)).
+- **실시간** — 제보 INSERT → Postgres `LISTEN/NOTIFY` → 멀티 인스턴스 팬아웃 → SSE 스트림 / Web Push. 과설계(Kafka) 없이 이미 있는 Postgres·Redis로([ADR-0016](./adr/0016-realtime-report-surge-listen-notify-sse.md)).
+
+## 데이터 · ETL
+
+```mermaid
+flowchart TB
+  SRC["공공데이터<br/>무더위쉼터 60,297 · 공중화장실 52,334<br/>도서관 3,551 · 상권 카페/스터디카페<br/>(전국 표준데이터)"]
+  ING["멱등 ingestion<br/>source + source_external_id 자연키<br/>배치 upsert · 스냅샷 이탈 행 soft-delete"]
+  GEO["카카오 지오코딩<br/>WGS84 결측 좌표 보완 · 결과 저장(멱등)"]
+  PG[("places · place_features<br/>geom(Point,4326) + GiST")]
+  UGC["UGC 2단<br/>reports(휘발성·expires_at) → freshness<br/>reviews(영구 평판) → reputation"]
+
+  SRC --> ING --> GEO --> PG
+  UGC --> PG
+```
+
+- **멱등(idempotent)** — 같은 소스를 두 번 넣어도 중복이 안 생긴다(`source + source_external_id` 자연키 upsert). 스냅샷에서 사라진 행은 soft-delete로 비활성화(§0-3).
+- **지오코딩 보완** — 공중화장실은 2025-02 이후 WGS84 좌표 미제공 → 카카오 로컬 API로 주소→좌표를 보완하고 결과를 저장(멱등·rate limit 회피).
+- **UGC 2단** — 제보(휘발성 상태, `expires_at`)는 `survival_score`의 freshness를, 후기(영구 평판)는 커뮤니티 콘텐츠를 굴린다. 시공간 랭킹은 DB(PostGIS/SQL)에서.
+
+## 배포 (CI/CD · IaC)
+
+```mermaid
+flowchart LR
+  DEV["git push / PR"]
+  GA["GitHub Actions<br/>Backend(Gradle JDK21)·Frontend CI<br/>Testcontainers(실 PostGIS)·gitleaks"]
+  OIDC["OIDC (키 없는 배포)"]
+  ECR["ECR"]
+  ECS["ECS Fargate<br/>Service Auto Scaling (ADR-0013)"]
+  TF["Terraform (IaC)"]
+
+  DEV --> GA -->|OIDC| OIDC --> ECR --> ECS
+  TF -.provision.-> ECS
+  GA --> VZ["Vercel 배포 (프론트)"]
+```
+
+- **키 없는 배포** — GitHub Actions가 OIDC로 AWS 역할을 맡아 장기 자격증명 없이 ECR 푸시·ECS 롤아웃([DEPLOY.md](../DEPLOY.md)).
+- **IaC** — VPC·ALB·RDS·ElastiCache·S3·EventBridge·오토스케일링까지 Terraform으로 선언. 프론트는 Vercel, 로컬은 Docker Compose(PostGIS+Redis).
+- **CI 게이트** — 공간쿼리·인제스천은 Testcontainers 실 PostGIS로 검증. 머지 전 `gh pr checks`로 Backend/Frontend pass 눈확인(TS-025).
+
+---
+
+## 데모
+
+| 데스크톱 3분할 (지도앱 표준) | 그늘 경유 경로 + AI 요약 |
+|---|---|
+| ![데스크톱 3분할](./media/demo-desktop-3pane.png) | ![그늘 경유 경로](./media/demo-shade-route.png) |
+
+| 모바일 지도 (바텀시트 3단) | 시나리오 추천 |
+|---|---|
+| ![모바일 지도](./media/demo-mobile-map.png) | ![시나리오 추천](./media/demo-mobile-scenarios.png) |
+
+> 모두 **라이브(geuneul.vercel.app) 실측 캡처**(2026-07, 필드테스트 거점 동작구 상도). 마커 상태 배지("정보 부족")는 촬영 시점 유효 제보가 없어 회색 — 제보가 쌓이면 survival_score 등급대로 초록/노랑으로 칠해진다.
