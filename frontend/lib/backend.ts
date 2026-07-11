@@ -51,7 +51,8 @@ export async function proxyPost(path: string, request: Request): Promise<NextRes
       cache: "no-store",
     });
     const resBody = await res.text();
-    return new NextResponse(resBody, {
+    // 빈 바디는 null로(204/205/304 null-body status에 "" 주면 Response 생성자가 TypeError→502 오변환, 푸시 test 실패 오탐).
+    return new NextResponse(resBody || null, {
       status: res.status,
       headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
     });
@@ -90,7 +91,8 @@ export async function proxyAuthed(method: string, path: string, request: NextReq
       cache: "no-store",
     });
     const resBody = await res.text();
-    return new NextResponse(resBody, {
+    // 빈 바디는 null로(204/205/304 null-body status에 "" 주면 Response 생성자가 TypeError→502 오변환, 푸시 test 실패 오탐).
+    return new NextResponse(resBody || null, {
       status: res.status,
       headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
     });
@@ -126,7 +128,8 @@ export async function proxyOptionalAuth(method: string, path: string, request: N
       cache: "no-store",
     });
     const resBody = await res.text();
-    return new NextResponse(resBody, {
+    // 빈 바디는 null로(204/205/304 null-body status에 "" 주면 Response 생성자가 TypeError→502 오변환, 푸시 test 실패 오탐).
+    return new NextResponse(resBody || null, {
       status: res.status,
       headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
     });
@@ -168,7 +171,8 @@ export async function proxyPhotoPresign(request: NextRequest): Promise<NextRespo
       cache: "no-store",
     });
     const resBody = await res.text();
-    return new NextResponse(resBody, {
+    // 빈 바디는 null로(204/205/304 null-body status에 "" 주면 Response 생성자가 TypeError→502 오변환, 푸시 test 실패 오탐).
+    return new NextResponse(resBody || null, {
       status: res.status,
       headers: { "content-type": res.headers.get("content-type") ?? "application/json; charset=utf-8" },
     });
