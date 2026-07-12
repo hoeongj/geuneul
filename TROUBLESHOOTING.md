@@ -493,3 +493,14 @@ provided androidSdk isn't correct.` ③ 그다음엔 Gradle이 `build file 'app/
 - **해결 과정:** CloudWatch에서 checksum mismatch 대상 버전 확인 → `git checkout <이전커밋> -- <V*.sql>`로 V19(신규)를 제외한 적용분 10개 파일을 **원본 바이트로 원복**(#112) → 재배포 성공, V19만 새로 적용(0.299s). `flyway repair`(히스토리 체크섬 갱신)도 가능했지만, "파일이 진실"이라는 원칙과 어긋나고 리라이트 흔적을 남겨 기각.
 - **핵심 학습 포인트:** ① **적용된 마이그레이션 파일은 주석·공백 포함 불변이다** — 리네임·리포맷·참조 정리류 일괄 치환에서 `db/migration`은 반드시 제외. ② 이 실패는 CI가 못 잡는다(새 DB엔 비교할 히스토리가 없음) — 마이그레이션 파일 diff가 있는 PR은 "신규 버전 추가인가, 기존 파일 수정인가"를 사람이 확인해야 한다. ③ 서킷브레이커 + 롤백 덕에 다운타임 0(구 리비전이 계속 서빙) — 배포 안전장치가 설계대로 동작했다.
 - **관련:** PR #111(원인)·#112(수정), V19__integrity_indexes.sql. 계열: TS-016(실 환경에서만 드러나는 계약)·TS-025(게이트가 못 보는 영역).
+
+## TS-035 — 라이브 RDS를 무손실 암호화: 스냅샷 복원 + 프리티어 백업 상한
+
+- **문제 상황:** 프로덕션 RDS가 미암호화·자동백업 0으로 돌고 있었다. `storage_encrypted`는 기존 인스턴스에서 바꿀 수 없어(immutable) 그냥 `true`로 두고 apply하면 terraform이 데이터 손실 replace를 시도한다.
+- **원인/접근:** RDS 저장 암호화는 **생성 시에만** 지정 가능 → 기존 데이터를 살리려면 **스냅샷을 KMS로 암호화 복사한 뒤 그 스냅샷에서 복원**하는 게 유일한 무손실 경로다. ① `create-db-snapshot`(원본 안전망) → ② `copy-db-snapshot --kms-key-id alias/aws/rds`(암호화본) → ③ `rds.tf`에 `snapshot_identifier`+`storage_encrypted=true` → `terraform apply`(replace, 암호화 스냅샷에서 복원).
+- **함정 3가지:**
+  - **프리티어 백업 상한** — `backup_retention_period=7`이 `FreeTierRestrictionError: exceeds the maximum available to free tier`로 거부됐다(원래 rds.tf 주석이 맞았다). 1일은 허용(`PendingModifiedValues`에 반영) → **이 계정 프리티어 최대는 1일**. 1일로 자동백업+PITR 확보.
+  - **deletion_protection과 replace 충돌** — `deletion_protection=true`면 replace의 destroy 단계가 막힌다 → replace 시엔 `false`로, 복원·암호화 검증 후 별도 apply로 `true`(in-place modify) 2단계.
+  - **중단된 apply가 반복 replace를 유발** — 첫 apply가 backup 에러로 실패하며 `snapshot_identifier`가 state에 기록되지 못했다. `lifecycle.ignore_changes`는 "이미 state에 있는 값의 변경"만 무시하지 신규 추가는 못 막으므로, 두 번째 apply가 snapshot_identifier를 새 값(ForceNew)으로 보고 **또 replace**했다(DB가 두 번 재복원). apply를 끝까지 완주시켜 state에 기록되자 그제서야 `terraform plan`이 `No changes`로 안정됐다. → **파괴적 replace를 만드는 apply는 반드시 완주 확인**(중단되면 state가 부분 기록돼 다음 apply가 예측 불가). 데이터는 스냅샷 복원이라 매번 무손실이었다.
+- **핵심 학습 포인트:** ① **RDS 암호화는 in-place 불가 — 스냅샷 복원이 유일한 무손실 마이그레이션.** ② **replace해도 엔드포인트는 identifier 기반이라 유지**된다(`geuneul-db.<...>.rds.amazonaws.com`) → 앱 `DB_HOST` 재배선 불필요. 이게 replace를 안전하게 만든 결정적 사실(health UP·데이터 복원 즉시 확인). ③ 파괴적 인프라 작업 전 **수동 스냅샷 이중 안전망**(원본+암호화본)을 먼저 만든다. ④ 프리티어 제약은 문서가 아니라 실측으로 확정(7 거부·1 허용).
+- **관련:** ADR-0029, rds.tf, `geuneul-db-encrypted`/`geuneul-db-pre-encrypt-v1` 스냅샷. 계열: TS-034(인프라 변경이 CI 아닌 프로덕션에서만 드러남)·TS-025(게이트 밖 영역).

@@ -1,5 +1,6 @@
 package com.geuneul.domain.report;
 
+import com.geuneul.domain.ai.AiSummaryService;
 import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
@@ -63,7 +64,8 @@ class PopularTimesCacheProxyTest {
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
             PhotoService photoService = new PhotoService(mock(S3Presigner.class), "", "ap-northeast-2", CLOCK);
             ctx.registerBean(ReportService.class,
-                    () -> new ReportService(reportRepository, placeRepository, trustScoreService, photoService, CLOCK));
+                    () -> new ReportService(reportRepository, placeRepository, trustScoreService, photoService,
+                            mock(AiSummaryService.class), CLOCK));
             ctx.register(CacheConfig.class);
             ctx.refresh();
 

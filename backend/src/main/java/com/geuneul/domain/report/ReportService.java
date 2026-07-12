@@ -1,5 +1,6 @@
 package com.geuneul.domain.report;
 
+import com.geuneul.domain.ai.AiSummaryService;
 import com.geuneul.domain.auth.JwtService;
 import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.photo.PhotoService;
@@ -30,14 +31,17 @@ public class ReportService {
     private final PlaceRepository placeRepository;
     private final TrustScoreService trustScoreService;
     private final PhotoService photoService;
+    private final AiSummaryService aiSummaryService;
     private final Clock clock;
 
     public ReportService(ReportRepository reportRepository, PlaceRepository placeRepository,
-                         TrustScoreService trustScoreService, PhotoService photoService, Clock clock) {
+                         TrustScoreService trustScoreService, PhotoService photoService,
+                         AiSummaryService aiSummaryService, Clock clock) {
         this.reportRepository = reportRepository;
         this.placeRepository = placeRepository;
         this.trustScoreService = trustScoreService;
         this.photoService = photoService;
+        this.aiSummaryService = aiSummaryService;
         this.clock = clock;
     }
 
@@ -66,6 +70,8 @@ public class ReportService {
         if (userId != null) {
             trustScoreService.recalculate(userId);
         }
+        // 새 제보가 장소 상태를 바꿨으니 AI 한줄요약 캐시를 버린다 — 다음 상세 조회 때 최신 반영 요약을 새로 생성.
+        aiSummaryService.evictSummary(request.placeId());
         // 비공개 버킷이라 저장 URL은 그대로 못 본다 → 조회 시점 presigned GET으로 변환(N1, 제보 사진도 리뷰와 공유 수정).
         return ReportResponse.of(saved, photoService.presignGet(saved.getPhotoUrl()));
     }
