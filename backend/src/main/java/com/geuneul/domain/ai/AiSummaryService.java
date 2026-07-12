@@ -3,6 +3,7 @@ package com.geuneul.domain.ai;
 import com.geuneul.domain.report.Report;
 import com.geuneul.domain.report.ReportRepository;
 import com.geuneul.domain.report.ReportType;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -65,6 +66,16 @@ public class AiSummaryService {
      * <p>Optional 반환값은 Spring 캐시 프록시가 언랩하므로 {@code #result}는 String(또는 empty면 null) —
      * WeatherClient.fetchNowcast의 TS-011 교훈과 동일하게 {@code unless = "#result == null"}로 판정한다.
      */
+    /**
+     * 장소에 새 제보가 들어오면 그 장소의 요약 캐시를 버린다 — 다음 상세 조회 때 최신 제보가 반영된 요약을
+     * 새로 생성하게 한다(제보 목록·배지·점수는 이미 실시간이므로 요약만 3h 지연되던 것을 없앤다).
+     * {@link com.geuneul.domain.report.ReportService}가 제보 저장 성공 후 호출한다 — 외부 빈 호출이라
+     * 캐시 프록시를 거쳐 {@code @CacheEvict}가 동작한다(self-invocation 아님).
+     */
+    @CacheEvict(cacheNames = "aiSummary", key = "#placeId")
+    public void evictSummary(long placeId) {
+    }
+
     @Cacheable(cacheNames = "aiSummary", key = "#placeId", unless = "#result == null")
     public Optional<String> summarize(long placeId) {
         List<Report> reports = reportRepository

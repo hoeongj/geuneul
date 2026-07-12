@@ -1116,3 +1116,20 @@ Play 등록 전 친구(안드로이드 실기기)가 설치·테스트한 피드
 - **왜(why)**: 진짜 개선은 "ADR로 완화책 서술"이 아니라 노출을 실제로 닫는 것. ALB 443/ACM은 커스텀 도메인이 없어 불가(ADR-0015가 CloudFront로 HTTPS 담당) → CloudFront prefix list 격리가 도메인 없이 되는 정석. BFF 전환이 선행 필수(안 하면 BFF가 prefix list 밖이라 차단됨).
 - **정직하게 남긴 것**: RDS 저장 암호화·백업은 의도적으로 안 켬(라이브 DB replace 다운타임·프리티어 제약·데이터 재현가능). 신규 배포는 암호화 코드에 반영. ADR-0028에 트레이드오프 명시 — "다 켜기"보다 "제약 알고 판단"이 더 정직한 신호.
 - **관련**: ADR-0028(신규)·ADR-0004(BFF)·ADR-0015(CloudFront HTTPS) · network.tf · [[geuneul-current-state]].
+
+## 2026-07-12 — AI 요약 실시간화(제보 시 캐시 무효화) + RDS 저장 암호화·백업 (ADR-0029)
+
+사용자 요청으로 실시간성의 마지막 틈과 RDS 보안 트레이드오프를 닫았다.
+
+### AI 한줄요약 실시간화
+- **무엇**: `AiSummaryService.evictSummary(placeId)`(@CacheEvict "aiSummary") 추가 + `ReportService.create`가 제보 저장 성공 후 호출. 제보가 올라오면 그 장소 요약 캐시를 즉시 버려, 다음 상세 조회 때 최신 제보가 반영된 요약을 새로 생성한다.
+- **왜(why)**: 제보 목록·survival 배지·점수는 이미 실시간인데 AI 요약만 Redis 3h TTL이라 최대 3시간 옛 문장을 보였다(실시간성의 마지막 틈). 외부 빈(ReportService→AiSummaryService) 호출이라 캐시 프록시를 거쳐 evict가 정상 동작(self-invocation 아님). evict는 부가 작업이라 실패해도 제보 저장 롤백과 무관.
+- **검증**: `ReportServiceTest`에 "익명 제보도 evictSummary(placeId) 호출"을 Mockito verify로 추가. 생성자 시그니처 변경으로 PopularTimesCacheProxyTest도 갱신. `./gradlew test jacocoTestCoverageVerification` green.
+
+### RDS 저장 암호화 + 자동 백업 (ADR-0029, TS-035)
+- **무엇**: 라이브 RDS를 미암호화→KMS 암호화, backup 0→1일, deletion_protection on. **데이터 무손실**(스냅샷 경유).
+- **절차**: create-db-snapshot(원본 안전망 `geuneul-db-pre-encrypt-v1`) → copy-db-snapshot --kms-key-id alias/aws/rds(`geuneul-db-encrypted`) → rds.tf에 `storage_encrypted=true`+`snapshot_identifier` → terraform apply(replace, 암호화 스냅샷에서 복원).
+- **왜(why)**: RDS 저장 암호화는 생성 시에만 지정 가능(immutable)이라, 기존 데이터를 살리려면 스냅샷을 암호화 복사 후 복원하는 게 유일한 무손실 경로. **RDS replace해도 엔드포인트는 identifier 기반이라 유지**돼 앱 DB_HOST 재배선 불필요(health UP·데이터 복원 즉시 확인).
+- **함정(TS-035)**: ① 프리티어 backup 상한=1일(7 거부, 실측). ② deletion_protection=true는 replace의 destroy를 막아 2단계(replace는 false→검증 후 true). ③ **첫 apply가 backup 에러로 중단→snapshot_identifier가 state 미기록→두 번째 apply가 신규 값(ForceNew)으로 보고 반복 replace**(ignore_changes는 신규 추가는 못 막음). apply 완주 후 `terraform plan`=No changes로 안정. 데이터는 매 복원 무손실.
+- **결과(실측)**: `StorageEncrypted=true·KmsKeyId 존재·Backup=1·DeletionProtection=true·available`, health UP, /api/places 200. 두 스냅샷(원본+암호화)이 이중 안전망. ADR-0028의 "남겨 둔 RDS 트레이드오프"를 ADR-0029로 해소.
+- **관련**: ADR-0029·TS-035 · rds.tf · AiSummaryService/ReportService · [[geuneul-current-state]].
