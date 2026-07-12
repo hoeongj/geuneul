@@ -42,7 +42,8 @@ apply 후 output 확인:
 ## 비용 메모
 - 상시: **ALB ~$16/월 + Fargate 태스크(0.5 vCPU/1GB 상시 1개) ~$20/월**(Fargate는 프리티어 없음). RDS(db.t3.micro)는 프리티어, ECS control plane 무료, SSM/ECR/CloudFront(저트래픽) 사실상 무료.
 - 오토스케일링(CPU 60% target-tracking, min1/max3) 스케일아웃 시 최대 ~$60/월 수준(부하 종료 후 원복).
-- 내리기: `terraform destroy` (RDS `skip_final_snapshot=true`라 즉시 삭제 — 데이터는 공공데이터+재현 가능 제보라 재적재로 복구 가능).
+- **전체 내리기(상시 비용 $0)**: `./infra/teardown.sh` — RDS 삭제보호 해제 + final 스냅샷 충돌 정리 + `terraform destroy`를 한 번에. 데이터 스냅샷은 부활용으로 남긴다(거의 무료). Vercel 프론트는 무료라 그대로 둬도 된다.
+- **부활**: `cd infra/terraform && terraform apply` → 첫 배포 → 공공데이터 재적재(아래 '운영 인제스천'). CloudFront 도메인이 새로 발급되면 README 배지·Vercel `GEUNEUL_API_BASE`를 갱신한다.
 
 ## 운영 인제스천 (공공데이터 → 프로덕션 RDS)
 RDS는 프라이빗 서브넷이라 로컬에서 직접 접속할 수 없다(의도된 보안 설계). 적재는 **같은 VPC 안의 ECS one-off task**로 실행한다 — 서비스와 동일한 태스크 정의(이미지·SSM 비밀·SG)를 재사용:
