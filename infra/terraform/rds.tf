@@ -14,7 +14,10 @@ resource "aws_db_instance" "postgres" {
   instance_class         = "db.t3.micro" # 프리티어 대상
   allocated_storage      = 20
   storage_type           = "gp3"
-  storage_encrypted      = true # 저장 암호화(신규 인스턴스). ⚠️ 아래 lifecycle 참고.
+  storage_encrypted      = true # 저장 암호화(KMS). 라이브 DB는 암호화 스냅샷에서 복원해 적용(아래 snapshot_identifier·TS-035).
+  # 기존 데이터를 무손실로 암호화하기 위해, 미암호화 인스턴스의 스냅샷을 KMS로 암호화 복사한 뒤
+  # 그 스냅샷에서 복원한다(수동: create-db-snapshot → copy-db-snapshot --kms-key-id → 이 값 참조).
+  snapshot_identifier    = "geuneul-db-encrypted"
   db_name                = var.db_name
   username               = var.db_username
   password               = var.db_password
@@ -22,18 +25,20 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
   multi_az               = false
-  # 자동 백업/PITR: 프리티어는 retention을 제약(7일 거부)한다. 유료 전환 시 backup_retention_period=7로
-  # PITR을 켠다(백로그). 현재 데이터는 공공데이터+재현 가능 제보라 백업 부재 리스크가 낮다.
-  skip_final_snapshot = true
-  deletion_protection = false
-  apply_immediately   = true
-  tags                = { Name = "${var.project}-db" }
+  # 자동 백업(PITR) — 이 계정 프리티어는 retention 최대 1일(7일은 FreeTierRestrictionError, 실측 TS-035).
+  # 1일이라도 자동 스냅샷 + 1일 PITR을 확보한다(유료 전환 시 7일로). 백업 스토리지는 DB 크기 이하라 무료.
+  backup_retention_period   = 1
+  backup_window             = "18:00-18:30" # UTC = 03:00 KST(트래픽 낮은 새벽)
+  copy_tags_to_snapshot     = true
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "geuneul-db-final"
+  deletion_protection       = true # 복원·암호화 검증 완료 후 실수 삭제 방지.
+  apply_immediately         = true
+  tags                      = { Name = "${var.project}-db" }
 
-  # storage_encrypted는 기존 인스턴스에서 변경 불가(immutable) 속성이다. 라이브 DB는 이 설정 이전
-  # 생성분이라 미암호화 상태이며, 여기에 넣으면 apply가 replace(=데이터 손실)를 시도한다.
-  # → ignore_changes로 replace를 막는다(신규 배포만 암호화). 라이브 DB 암호화는 스냅샷→암호화 복원
-  #   마이그레이션으로 별도 수행(백로그). 데이터는 공공데이터+재현 가능 제보라 재적재로 복구 가능.
+  # snapshot_identifier는 최초 복원에만 쓰이는 create-time 속성 — 이후 변경/제거가 또 replace를 유발하지
+  # 않도록 고정한다(ignore). 자동백업이 켜졌으니 이후 장애 복구는 PITR/자동 스냅샷으로 한다.
   lifecycle {
-    ignore_changes = [storage_encrypted]
+    ignore_changes = [snapshot_identifier]
   }
 }

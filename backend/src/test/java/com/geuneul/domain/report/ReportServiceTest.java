@@ -2,6 +2,7 @@ package com.geuneul.domain.report;
 
 import com.geuneul.domain.auth.JwtService;
 import com.geuneul.domain.auth.Role;
+import com.geuneul.domain.ai.AiSummaryService;
 import com.geuneul.domain.auth.TrustScoreService;
 import com.geuneul.domain.photo.PhotoService;
 import com.geuneul.domain.place.PlaceRepository;
@@ -38,6 +39,7 @@ class ReportServiceTest {
     private ReportRepository reportRepository;
     private PlaceRepository placeRepository;
     private TrustScoreService trustScoreService;
+    private AiSummaryService aiSummaryService;
     private ReportService reportService;
 
     @BeforeEach
@@ -45,9 +47,10 @@ class ReportServiceTest {
         reportRepository = mock(ReportRepository.class);
         placeRepository = mock(PlaceRepository.class);
         trustScoreService = mock(TrustScoreService.class);
+        aiSummaryService = mock(AiSummaryService.class);
         // PhotoService는 버킷 미설정이라 presignGet이 저장 photoUrl을 그대로 통과시킨다(N1 passthrough 분기).
         PhotoService photoService = new PhotoService(mock(S3Presigner.class), "", "ap-northeast-2", CLOCK);
-        reportService = new ReportService(reportRepository, placeRepository, trustScoreService, photoService, CLOCK);
+        reportService = new ReportService(reportRepository, placeRepository, trustScoreService, photoService, aiSummaryService, CLOCK);
 
         when(placeRepository.existsByIdAndDeletedAtIsNull(1L)).thenReturn(true);
         when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -64,6 +67,8 @@ class ReportServiceTest {
 
         assertThat(response.anonymous()).isTrue();
         verify(trustScoreService, never()).recalculate(anyLong());
+        // 익명 제보라도 장소 상태가 바뀌었으니 AI 요약 캐시는 무효화된다(다음 조회 때 최신 반영).
+        verify(aiSummaryService).evictSummary(1L);
     }
 
     @Test
