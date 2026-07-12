@@ -1106,3 +1106,13 @@ Play 등록 전 친구(안드로이드 실기기)가 설치·테스트한 피드
 
 ## 2026-07-12 — 배포 롤백 복구: Flyway 체크섬 불일치 (TS-034)
 #111의 참조 일괄 치환이 적용된 V4~V17 마이그레이션 주석까지 수정 → 프로덕션 Flyway validate 실패 → 서킷브레이커 롤백(다운타임 0). 적용분 10개 파일을 원본 바이트로 원복(#112)하고 재배포 — V19만 신규 적용(0.299s), health·/places·/places/search·앱·/install·/privacy 전부 200 실측. 상세·학습은 TS-034.
+
+## 2026-07-12 — ALB를 CloudFront 뒤로 격리 (인터넷 직접 HTTP 노출 제거, ADR-0028)
+전수 감사에서 트레이드오프로 남겼던 "ALB HTTP 0.0.0.0/0 노출"을 실제로 닫았다. 라이브 프론트+인프라를 순차로 건드리는 작업이라 각 단계 실측 검증하며 진행.
+- **선행 확인(실측)**: CloudFront 캐시정책=Managed-CachingDisabled(제보·상태 실시간성 무영향)·허용 메서드 GET~DELETE 전부·origin request=AllViewer(쿼리스트링·Authorization 전달)·origin=ALB http-only:80. → BFF를 CloudFront 뒤로 넣어도 POST·로그인·실시간 전부 안전함을 배포 전에 확증.
+- **① BFF 전환**: Vercel `GEUNEUL_API_BASE`를 ALB 직접 URL→CloudFront 도메인으로 재설정 + redeploy. 앱 전 경로(/·/install·/api/places·urgent·routes·search) 200·데이터 정상 실측.
+- **② ALB SG 잠금**: `data.aws_ec2_managed_prefix_list "cloudfront_origin"`(com.amazonaws.global.cloudfront.origin-facing, pl-22a6434b) 참조 → ingress 80을 `0.0.0.0/0`→prefix list로. **SG description은 immutable이라 문자열 변경 시 SG replace=ALB 다운타임** → description 문자열은 유지하고 ingress 규칙만 in-place 변경(무중단). `terraform apply -target`(태스크데프 cpu drift 회피).
+- **결과(실측)**: ALB 직접 http→연결 timeout(000, 차단) · CloudFront https→200 유지 · 앱 BFF→200 유지. 진입점이 CloudFront(HTTPS) 하나로 수렴, 평문 우회 경로 제거.
+- **왜(why)**: 진짜 개선은 "ADR로 완화책 서술"이 아니라 노출을 실제로 닫는 것. ALB 443/ACM은 커스텀 도메인이 없어 불가(ADR-0015가 CloudFront로 HTTPS 담당) → CloudFront prefix list 격리가 도메인 없이 되는 정석. BFF 전환이 선행 필수(안 하면 BFF가 prefix list 밖이라 차단됨).
+- **정직하게 남긴 것**: RDS 저장 암호화·백업은 의도적으로 안 켬(라이브 DB replace 다운타임·프리티어 제약·데이터 재현가능). 신규 배포는 암호화 코드에 반영. ADR-0028에 트레이드오프 명시 — "다 켜기"보다 "제약 알고 판단"이 더 정직한 신호.
+- **관련**: ADR-0028(신규)·ADR-0004(BFF)·ADR-0015(CloudFront HTTPS) · network.tf · [[geuneul-current-state]].
