@@ -1133,3 +1133,11 @@ Play 등록 전 친구(안드로이드 실기기)가 설치·테스트한 피드
 - **함정(TS-035)**: ① 프리티어 backup 상한=1일(7 거부, 실측). ② deletion_protection=true는 replace의 destroy를 막아 2단계(replace는 false→검증 후 true). ③ **첫 apply가 backup 에러로 중단→snapshot_identifier가 state 미기록→두 번째 apply가 신규 값(ForceNew)으로 보고 반복 replace**(ignore_changes는 신규 추가는 못 막음). apply 완주 후 `terraform plan`=No changes로 안정. 데이터는 매 복원 무손실.
 - **결과(실측)**: `StorageEncrypted=true·KmsKeyId 존재·Backup=1·DeletionProtection=true·available`, health UP, /api/places 200. 두 스냅샷(원본+암호화)이 이중 안전망. ADR-0028의 "남겨 둔 RDS 트레이드오프"를 ADR-0029로 해소.
 - **관련**: ADR-0029·TS-035 · rds.tf · AiSummaryService/ReportService · [[geuneul-current-state]].
+
+## 2026-07-12 — 원클릭 서버 종료 스크립트(teardown) + 비용 마감
+
+프로젝트 마감. 크레딧 소진/인턴 시즌 종료 시 상시 비용을 $0으로 만드는 원클릭 스크립트를 준비했다.
+- **무엇**: `infra/teardown.sh` — RDS 삭제보호 해제(deletion_protection=true라 안 하면 destroy 실패) → 기존 final 스냅샷 제거(destroy 재생성 충돌 방지) → `terraform destroy`. 데이터 스냅샷은 부활용으로 남긴다(거의 무료). Vercel 프론트는 무료라 유지.
+- **왜**: 새 AWS 프리티어 크레딧 $117.35 남음·월 ~$60 → ~2개월 소진, 무료기간 만료 2027-01-02. **크레딧 소진/만료 시 자동 청구가 아니라 서비스 접근 종료**(Upgrade 안 하면 $0). 예산 알림 $1 설정됨. 인턴 지원 한 달은 크레딧으로 충분히 커버 → 그대로 두다가, 필요 시 teardown 한 번으로 정리.
+- **DEPLOY.md**에 전체 내리기/부활 절차 추가. 부활: terraform apply → 재적재 → CloudFront 도메인 갱신.
+- **관련**: infra/teardown.sh · DEPLOY.md · ADR-0029(deletion_protection) · [[geuneul-teardown]] 메모리.
