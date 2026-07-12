@@ -32,3 +32,4 @@
 | [0025](./0025-scale-prep-load-based-tuning.md) | 대규모 대비 — 부하 기반 튜닝(task_cpu 0.5vCPU · EXPLAIN 인덱스 · 오토스케일링/풀 점검) | 승인·라이브 |
 | [0026](./0026-bookmark-status-change-notification.md) | 관심 장소 상태 변화 알림(C3) — 북마크 장소 단건 침수·미끄럼, V9 이벤트 재사용·제보시각 dedup 버킷·RETURNING 정확히 1회 푸시 | 승인 |
 | [0027](./0027-shade-waypoint-route.md) | 그늘 경유 경로(C4) — 쿨링쉼터/실내 경유지 1곳(F3 화장실 경로와 대칭), 자체 가중 라우팅 없이 PostGIS corridor로 경유지 선택 | 승인 |
+| [0028](./0028-alb-cloudfront-origin-lockdown.md) | ALB를 CloudFront origin-facing prefix list로 격리 — 인터넷 직접 HTTP 노출 제거, BFF도 CloudFront(HTTPS) 경유로 전환 | 승인·라이브 |

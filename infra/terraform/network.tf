@@ -47,16 +47,25 @@ resource "aws_route_table_association" "public" {
 }
 
 # --- 보안 그룹 (ALB → ECS → RDS 로 계단식 잠금) ---
+# CloudFront가 커스텀 오리진(ALB)을 칠 때 나가는 IP 대역(AWS 관리형 prefix list).
+# ALB ingress를 이 대역으로만 제한 = 인터넷에서 ALB 직접 타격을 차단하고 CloudFront(HTTPS)만 진입.
+# 브라우저·BFF(Vercel)는 전부 CloudFront 경유라 영향 없음(ADR-0028).
+data "aws_ec2_managed_prefix_list" "cloudfront_origin" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
 resource "aws_security_group" "alb" {
-  name        = "${var.project}-alb-sg"
-  description = "ALB: HTTP from internet only" # SG description은 ASCII만 허용(한글 불가)
+  name = "${var.project}-alb-sg"
+  # description 문자열은 SG immutable이라 그대로 둔다(바꾸면 SG replace→ALB 다운타임). 실제 규칙은 아래
+  # ingress가 CloudFront origin-facing prefix list로 진입을 제한한다(ADR-0028).
+  description = "ALB: HTTP from internet only"
   vpc_id      = aws_vpc.main.id
   ingress {
-    description = "HTTP from anywhere"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "HTTP from CloudFront edge only (ADR-0028)"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront_origin.id]
   }
   egress {
     from_port   = 0
