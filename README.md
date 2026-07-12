@@ -10,7 +10,7 @@
 [![Public Data](https://img.shields.io/badge/공공데이터-150k%2B_POI-2f9e44)](#데이터--etl-멱등-적재--지오코딩)
 [![Radius p95](https://img.shields.io/badge/반경검색_p95-~1.4s-17957e)](./docs/adr/0012-k6-load-explain-index-tuning.md)
 [![Coverage](https://img.shields.io/badge/JaCoCo-71%25-17957e)](#기술-스택)
-[![ADR](https://img.shields.io/badge/ADR-27-informational)](./docs/adr/README.md)
+[![ADR](https://img.shields.io/badge/ADR-28-informational)](./docs/adr/README.md)
 [![Troubleshooting](https://img.shields.io/badge/Troubleshooting-34건-informational)](./TROUBLESHOOTING.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
 
@@ -119,7 +119,7 @@ GET /alerts/stream            # text/event-stream (SSE)
 ## 문서
 
 - **프로젝트 스펙(목표·범위·ERD·API)**: [`docs/SPEC.md`](./docs/SPEC.md)
-- **아키텍처·데모**: [`docs/architecture.md`](./docs/architecture.md) · **의사결정 기록(ADR)**: [`docs/adr/`](./docs/adr) (0001–0027, [색인](./docs/adr/README.md))
+- **아키텍처·데모**: [`docs/architecture.md`](./docs/architecture.md) · **의사결정 기록(ADR)**: [`docs/adr/`](./docs/adr) (0001–0028, [색인](./docs/adr/README.md))
 - **배포(AWS)**: [`DEPLOY.md`](./DEPLOY.md) · **개발 일지**: [`WORKLOG.md`](./WORKLOG.md) · **트러블슈팅**: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
 - **디자인·API 계약 레퍼런스**: [`docs/design-brief.md`](./docs/design-brief.md) · **프론트엔드**: [`frontend/README.md`](./frontend/README.md)
 
