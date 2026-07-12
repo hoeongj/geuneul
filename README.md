@@ -11,7 +11,7 @@
 [![Radius p95](https://img.shields.io/badge/반경검색_p95-~1.4s-17957e)](./docs/adr/0012-k6-load-explain-index-tuning.md)
 [![Coverage](https://img.shields.io/badge/JaCoCo-71%25-17957e)](#기술-스택)
 [![ADR](https://img.shields.io/badge/ADR-27-informational)](./docs/adr/README.md)
-[![Troubleshooting](https://img.shields.io/badge/Troubleshooting-33건-informational)](./TROUBLESHOOTING.md)
+[![Troubleshooting](https://img.shields.io/badge/Troubleshooting-34건-informational)](./TROUBLESHOOTING.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
 
 [![CI](https://github.com/ghdtjdwn/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/ci.yml)

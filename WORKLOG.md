@@ -1103,3 +1103,6 @@ Play 등록 전 친구(안드로이드 실기기)가 설치·테스트한 피드
   - **후속 결함 예방(메인 검증에서 발견)**: 새 GET 레이트리밋이 BFF 경유 시 Vercel egress IP 버킷으로 뭉치는 문제 — GET `proxy()`에 원 클라이언트 신원(x-client-ip·x-proxy-auth) 전달을 추가해 유저별 버킷 보장(검색·경로 3개 라우트).
 - **인프라 하드닝(적용·라이브 검증)**: GitHub OIDC trust를 `ref:refs/heads/main`으로 한정 + `iam:PassRole`에 `PassedToService=ecs-tasks` 조건 + `ecs:UpdateService`를 서비스 ARN으로 스코핑(taskdef API는 AWS 제약상 `*`) · **ECR IMMUTABLE**(SHA 태그 전용이라 안전) — 타겟 apply로 라이브 반영(무관한 태스크데프 드리프트는 회피). deploy.yml `concurrency`(배포 직렬화) · gitleaks allowlist를 파일 전체 제외→placeholder 패턴만으로 축소(전 히스토리 재스캔 leaks 0) · docker-compose 전 포트 127.0.0.1 바인딩 · `.env.example`/`terraform.tfvars.example`을 실제 설정명·필수 변수와 1:1로 정정 · perf 문서 ADR 참조 오류·프로덕션 URL 하드코딩 제거.
 - **감사 방법**: codex 3계열(백엔드/프론트/인프라) 병렬 전수 감사 → 메인 모델이 확정/기각 판정(기각 예: ProxyClientResolver XFF 건 — 프로덕션 시크릿 활성·TS-008 문서화된 하위호환 / RDS 백업·암호화 — rds.tf에 트레이드오프 기록 존재). 수정도 codex 위임 후 diff 전건 메인 검증·테스트 재실행.
+
+## 2026-07-12 — 배포 롤백 복구: Flyway 체크섬 불일치 (TS-034)
+#111의 참조 일괄 치환이 적용된 V4~V17 마이그레이션 주석까지 수정 → 프로덕션 Flyway validate 실패 → 서킷브레이커 롤백(다운타임 0). 적용분 10개 파일을 원본 바이트로 원복(#112)하고 재배포 — V19만 신규 적용(0.299s), health·/places·/places/search·앱·/install·/privacy 전부 200 실측. 상세·학습은 TS-034.
