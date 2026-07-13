@@ -39,11 +39,11 @@ Check a place's condition, amenities, and recent reports, then find a route with
 
 ### Mobile PWA
 
-<a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="Mobile map: search and nearby-place bottom sheet" width="320" /></a>
+<p align="center">
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="Mobile map: search and nearby-place bottom sheet" width="240" /></a>
+</p>
 
-<a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-scenarios.png" alt="Mobile urgent recommendations: restroom, rest, rain shelter, study, and long stay" width="320" /></a>
-
-On mobile, the map and bottom sheet support nearby discovery, while scenario recommendations help users choose a place quickly. The service works in a browser and can also be installed as a PWA or Android app. More screens are in the [architecture document](./docs/architecture.md#데모).
+On mobile, the map and bottom sheet support nearby discovery, while scenario recommendations help users choose a place quickly. The service works in a browser and can also be installed as a PWA or Android app. More screens, including scenario recommendations, are in the [architecture document](./docs/architecture.md#데모).
 
 ---
 
