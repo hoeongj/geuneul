@@ -155,6 +155,7 @@ GET /alerts/stream
 ## Documentation
 
 - Product scope, ERD, and API contract: [docs/SPEC.md](./docs/SPEC.md)
+- Complete feature, implementation, and stack guide: [docs/FEATURES.md](./docs/FEATURES.md) (Korean)
 - Architecture and screenshots: [docs/architecture.md](./docs/architecture.md)
 - Technical decision records: [docs/adr/](./docs/adr) ([index](./docs/adr/README.md), 0001–0029)
 - AWS deployment: [DEPLOY.md](./DEPLOY.md)
