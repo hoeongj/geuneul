@@ -23,12 +23,28 @@
 [![Frontend CI](https://github.com/hoeongj/geuneul/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/frontend-ci.yml)
 [![Deploy (AWS ECS)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml)
 
-<p align="center">
-  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-shade-route.png" alt="Desktop web: place detail and shade-aware route" width="700" /></a>
-  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="Mobile PWA: map and bottom sheet" width="220" /></a>
+## Screenshots
+
+### Map search and place discovery
+
+<a href="https://geuneul.vercel.app"><img src="./docs/media/demo-desktop-3pane.png" alt="Desktop web: three-pane layout with search, nearby places, and map" /></a>
+
+Search for nearby shelters, public toilets, and cafés while comparing the list and map markers.
+
+### Shade-aware routes and place details
+
+<a href="https://geuneul.vercel.app"><img src="./docs/media/demo-shade-route.png" alt="Desktop web: place detail and shade-aware route" /></a>
+
+Check a place's condition, amenities, and recent reports, then find a route with a cooling-shelter or public-toilet waypoint.
+
+### Mobile PWA
+
+<p>
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="Mobile map: search and nearby-place bottom sheet" width="300" /></a>
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-scenarios.png" alt="Mobile urgent recommendations: restroom, rest, rain shelter, study, and long stay" width="300" /></a>
 </p>
 
-The left image shows a desktop place detail and a shade-aware route; the right image shows the mobile map. The service works in a browser and can also be installed as a PWA or Android app. More screens are in the [architecture document](./docs/architecture.md#데모).
+On mobile, the map and bottom sheet support nearby discovery, while scenario recommendations help users choose a place quickly. The service works in a browser and can also be installed as a PWA or Android app. More screens are in the [architecture document](./docs/architecture.md#데모).
 
 ---
 
