@@ -60,5 +60,17 @@ KAKAO_REST_API_KEY=<카카오 REST 키> ./infra/scripts/prod-ingest.sh public_to
 ```
 멱등(ON CONFLICT upsert)이므로 재실행·데이터 갱신 모두 같은 명령이다. 도서관(오픈API 전량 수집)은 EventBridge Scheduler가 월 1회 무인 동기화한다(ADR-0011).
 
+### 데이터 갱신 기준
+
+| 데이터 | 반영 방식 | 현재 운영 기준 |
+|---|---|---|
+| 도서관 | data.go.kr API → ECS one-off task | 자동. EventBridge Scheduler가 매월 2일 KST 04:00에 전체 수집·soft-delete 동기화 |
+| 날씨 | 기상청 API → Redis | 자동. 요청 시 조회하고 30분 TTL이 지나면 다음 요청에서 새 데이터로 갱신 |
+| 사용자 제보 | 서비스 API → RDS | 자동. 등록 즉시 반영하며 급증 알림은 SSE로 전달 |
+| 무더위쉼터·공중화장실 | GitHub Release CSV → ECS one-off task | 수동. 새 스냅샷을 릴리즈에 올린 뒤 `prod-ingest.sh` 실행 |
+| 카페·스터디카페 | 상권정보 API → ECS one-off task | 수동. API 이용 조건과 수집 범위를 확인한 뒤 `prod-ingest-stores.sh` 실행 |
+
+즉, 원본 API가 계속 바뀌는 도서관·날씨와 서비스 안에서 생기는 제보는 자동 반영한다. 고정 CSV 스냅샷이나 이용 조건을 확인해야 하는 상권 데이터는 원본을 검토한 뒤 수동으로 갱신한다. 이 구분은 무의미한 재적재와 외부 API 호출 비용을 피하기 위한 운영 정책이다.
+
 ## HTTPS/도메인
 공개 진입점은 **CloudFront 기본 도메인(무료 HTTPS)** — ALB(http)는 오리진으로만 쓴다(ADR-0015). 커스텀 도메인이 생기면 CloudFront에 CNAME+ACM(us-east-1)을 붙이거나 ALB 443 리스너로 전환한다.

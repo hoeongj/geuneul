@@ -40,7 +40,7 @@ resource "aws_cloudfront_distribution" "app" {
 
   default_cache_behavior {
     target_origin_id       = "alb"
-    viewer_protocol_policy = "redirect-to-https" # http로 와도 https로 리다이렉트
+    viewer_protocol_policy = "redirect-to-https"                                          # http로 와도 https로 리다이렉트
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"] # 제보/후기 POST 등
     cached_methods         = ["GET", "HEAD"]
 
