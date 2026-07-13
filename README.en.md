@@ -63,12 +63,6 @@ On mobile, the map and bottom sheet support nearby discovery, while scenario rec
 
 ## Architecture
 
-![Service architecture at a glance](./docs/media/architecture-overview.svg)
-
-Requests flow from the browser through the same-origin BFF to the AWS API, while PostGIS handles spatial search and status aggregation. Deployment and the monthly library sync are separate operational paths.
-
-### Detailed architecture
-
 ![Architecture diagram](./docs/media/architecture.svg)
 
 The browser calls only a same-origin `/api/*` server proxy (BFF). This avoids the ALB HTTP and CORS constraints. Spatial search and geo-temporal aggregation run through GiST indexes and SQL views in the database ([ADR-0004](./docs/adr/0004-frontend-same-origin-proxy.md)).
