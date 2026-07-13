@@ -8,9 +8,9 @@ export function SplashScreen() {
   const [phase, setPhase] = useState<"show" | "fade" | "gone">("show");
 
   useEffect(() => {
-    // 최소 노출(브랜딩) 후 페이드아웃 → 언마운트. 회전 모션은 CSS라 JS 없이도 동작.
-    const fade = setTimeout(() => setPhase("fade"), 1000);
-    const gone = setTimeout(() => setPhase("gone"), 1420);
+    // 첫 화면의 검색·필터 조작을 막지 않도록 짧게만 노출한다.
+    const fade = setTimeout(() => setPhase("fade"), 320);
+    const gone = setTimeout(() => setPhase("gone"), 520);
     return () => {
       clearTimeout(fade);
       clearTimeout(gone);
@@ -26,7 +26,7 @@ export function SplashScreen() {
       style={{
         background: "#FFFBEB", // 캐릭터 에셋 배경과 동일 크림 → 이음새 없음
         opacity: phase === "fade" ? 0 : 1,
-        pointerEvents: phase === "fade" ? "none" : "auto",
+        pointerEvents: "none",
       }}
     >
       <div className="relative w-[min(56vw,240px)]">

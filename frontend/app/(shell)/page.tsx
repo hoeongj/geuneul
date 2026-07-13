@@ -72,15 +72,15 @@ export default function MapPage() {
     show(`반경 ${(WIDENED_RADIUS / 1000).toFixed(1)}km로 넓혔어요`);
   };
 
-  const recenter = () => {
-    geo.locate();
-    if (geo.isFallback) {
-      // 아직 실제 위치가 없음(권한 미허용/실패) → 지도를 폴백(동작구)으로 튕기지 않는다.
-      // 권한이 잡히면 위 grantedRef 이펙트가 recenterKey를 올려 실제 위치로 이동한다.
-      show("현재 위치를 확인하는 중… 권한을 허용해 주세요");
-    } else {
+  const recenter = async () => {
+    show("현재 위치를 확인하는 중…");
+    // 위치 콜백이 끝난 뒤 키를 올려야 이전 좌표로 지도만 이동하는 경쟁 상태가 없다.
+    const located = await geo.locate();
+    if (located) {
       setRecenterKey((k) => k + 1);
       show("현재 위치로 이동했어요");
+    } else {
+      show("현재 위치를 가져오지 못했어요. 브라우저 위치 권한을 확인해 주세요");
     }
   };
 
