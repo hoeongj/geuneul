@@ -41,4 +41,4 @@ ACM 인증서 + 도메인 + 443 리스너(ALB HTTPS)는 도메인 구매·인프
 
 - MDN Mixed Content — https 문서의 http 하위요청 차단
 - Next.js Route Handlers (App Router) — 서버 전용 env·프록시 패턴 (2026 표준 BFF 관례)
-- TROUBLESHOOTING TS-006/TS-007, WORKLOG 2026-07-03 항목
+- Next.js Route Handler와 브라우저 mixed-content 정책을 기준으로 한 구현 검증

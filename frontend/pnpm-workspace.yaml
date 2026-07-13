@@ -4,3 +4,8 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - "@tailwindcss/oxide"
+
+# Next.js 16.2.10이 고정하는 PostCSS 8.4.31의 보안 패치.
+# PostCSS 8 API 호환 버전으로 해석해 GHSA-qx2v-qp2m-jg93을 제거한다.
+overrides:
+  postcss: 8.5.16
