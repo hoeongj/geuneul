@@ -63,12 +63,6 @@
 
 ## 아키텍처
 
-![서비스 구조 한눈에 보기](./docs/media/architecture-overview.svg)
-
-요청은 브라우저에서 동일 오리진 BFF를 거쳐 AWS API로 흐르고, 공간 검색·상태 집계는 PostGIS에서 처리합니다. 배포와 월간 도서관 동기화는 운영 경로로 분리했습니다.
-
-### 상세 구조
-
 ![아키텍처 다이어그램](./docs/media/architecture.svg)
 
 브라우저는 동일 오리진 `/api/*` 서버 프록시(BFF)만 호출합니다. 이 경로로 ALB의 HTTP·CORS 제약을 피하고, 공간 검색과 시공간 집계는 DB의 GiST 인덱스와 SQL 뷰에서 처리합니다([ADR-0004](./docs/adr/0004-frontend-same-origin-proxy.md)).
