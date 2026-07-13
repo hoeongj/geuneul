@@ -153,7 +153,7 @@ export function SearchBar({
           aria-activedescendant={hasOptions && active >= 0 ? optionId(active) : undefined}
           aria-autocomplete="list"
           enterKeyHint="search"
-          className="min-w-0 flex-1 bg-transparent text-[14px] text-ink placeholder:text-muted-2 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-ink placeholder:text-muted-2 focus:outline-none lg:text-[14px]"
         />
         {query && (
           <button
