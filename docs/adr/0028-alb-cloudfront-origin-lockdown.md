@@ -4,6 +4,8 @@
 - 날짜: 2026-07-12
 - 관련: ADR-0004(동일 오리진 BFF), ADR-0015(CloudFront 무료 HTTPS)
 
+> **후속 상태(2026-07-12):** 아래 "남겨 둔 보안 트레이드오프"의 RDS 저장 암호화·백업·삭제보호는 [ADR-0029](./0029-rds-encryption-backup-snapshot-restore.md)에서 스냅샷 복원 방식으로 해결됐다. 해당 절은 이 결정 당시의 제약 기록이다.
+
 ## 문제(Context)
 
 무료 HTTPS를 위해 CloudFront 기본 도메인을 앞에 뒀지만(ADR-0015), ALB 보안 그룹은 여전히 `80/tcp`를

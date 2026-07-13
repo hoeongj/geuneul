@@ -66,4 +66,4 @@
 - **좋음**: 새 인프라 0(급증 LISTEN/NOTIFY·bookmarks·공간쿼리 재사용). 멀티 인스턴스에서 정확히 1회. Web Push는
   나중에 이 발송 이력 위에 additive(service worker + VAPID만). §6 순화 유지.
 - **비용**: 리스너 handle()에 규칙 평가 쿼리 1~2개 추가(급증은 저빈도라 무해). 알림 센터는 폴링(가벼움).
-- **한계(follow-up)**: HEAT_ESCAPE 평가 미구현(타입만 정의). Web Push 미구현(stretch). 폴링 간격은 프론트가 조정.
+- **당시 한계(follow-up):** HEAT_ESCAPE 평가와 Web Push는 뒤 ADR에서 분리했다. 현재 HEAT_ESCAPE는 ADR-0020, Web Push는 ADR-0022를 따른다. 폴링 간격은 프론트가 조정한다.

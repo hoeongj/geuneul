@@ -1,6 +1,6 @@
 # ADR-0006. 공부 가능 공간(공공 + 카페) 데이터 커버리지 확장 — "여름 실내 오래 버티기" survival 레이어
 
-- 상태: **Accepted(구현 반영)** — 카테고리(CAFE/STUDY_CAFE)·스키마(is_commercial/deleted_at)·파서·인제스천 코드 완료(2026-07-09). **상권정보(STUDY_CAFE/CAFE) 오픈API 계약 검증 완료(2026-07-10)** — 활용신청 승인 확인(resultCode 00) 후 실호출로 응답 계약·업종코드 확정(아래 "구현 정정(2026-07-10)"·TS-026). 프로덕션 실적재는 머지→배포 후 `infra/scripts/prod-ingest-stores.sh`로 실행.
+- 상태: **Accepted(구현·운영 반영)** — 카테고리(CAFE/STUDY_CAFE)·스키마(is_commercial/deleted_at)·파서·인제스천 코드 완료(2026-07-09). **상권정보(STUDY_CAFE/CAFE) 오픈API 계약 검증 완료(2026-07-10)** — 활용신청 승인 확인(resultCode 00) 후 실호출로 응답 계약·업종코드 확정(아래 "구현 정정(2026-07-10)"·TS-026). 프로덕션 적재 결과는 루트 README의 데이터 커버리지 수치를 기준으로 한다.
 - 관련: `PlaceCategory`, `place_features`, `SourceSpec`/`IngestionService`(idempotent ETL), `domain.ingest.openapi`(도서관)·`domain.ingest.storeapi`(상권정보) 신설, Flyway V5, ADR-0002(멱등)·ADR-0003(지오코딩), SPEC.md §3(커버리지 원칙)·§9(간판 vs 살)
 - 근거 조사: 다중 에이전트 리서치(공공 공부공간 데이터셋·노들서가류·카페 데이터·모델링) — wf_e524daf8. 구현 단계에서 도서관 오픈API 실호출로 원안의 핵심 가정 하나를 정정함(아래).
 
@@ -17,7 +17,7 @@
 - **카테고리**: `PlaceCategory`에 `CAFE`·`STUDY_CAFE` 추가 + `commercial()` 판별 메서드.
 - **소스**:
   - LIBRARY → `domain.ingest.openapi.PublicLibraryIngestionService`(JSON 오픈API, CLI `--ingest.source=library`, 파일 불필요). seatCo>0 조건부 study_ok/quiet 백필.
-  - STUDY_CAFE/CAFE → `domain.ingest.storeapi.StoreIngestionService`(JSON 오픈API, CLI `--ingest.source=study_cafe|cafe --ingest.lat= --ingest.lng= --ingest.radius=`). ⚠️계약 미검증. `StoreCategoryMapper`가 업종소분류명 텍스트로 분류(코드 매핑표 15067631 실측 전까지 임시).
+- STUDY_CAFE/CAFE → `domain.ingest.storeapi.StoreIngestionService`(JSON 오픈API, CLI `--ingest.source=study_cafe|cafe --ingest.lat= --ingest.lng= --ingest.radius=`). 계약 검증 뒤 업종소분류 코드(`I21201`/`R10202`) 기반 분류로 확정됐다.
 - **멱등·soft-delete**: `PlaceBulkUpsertRepository.deactivateStale()`(opt-in, 기본 false — 부분 스냅샷 재실행 사고 방지) + `backfillFeatures()`(ON CONFLICT DO NOTHING, UGC 값 보존). CSV 파이프라인(`IngestionService`)·도서관 오픈API 둘 다 재사용. 상권정보는 반경 단위 부분 스냅샷이라 soft-delete 의도적 미지원(전국 커버리지 완성 후 P3 무인화에서 다룸).
 - **테스트**: 파서/클라이언트/서비스 단위 25건(신규) + 실 PostGIS IT 4건(`StudySpaceCoverageIT`, CI에서 검증 — 로컬 colima 이슈로 skip, TS-009 선례). JaCoCo 로컬 LINE 65.7%(신규 순수 단위테스트 다수) → floor 0.35→0.60 상향(측정치 바로 아래, 회귀만 차단).
 

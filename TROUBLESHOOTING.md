@@ -2,9 +2,10 @@
 
 > **목적:** 문제를 어떻게 진단하고 해결했는지 기록하는 문서. 어떤 문제를, 왜 생겼고, 어떻게 구체적으로 해결했는지 + **핵심 학습 포인트**를 남긴다.
 > 원인을 좁혀 간 과정이 드러나게 쓰는 것이 목표.
+> **문서 상태:** 프로젝트 마감 아카이브. 아래 기록은 해결 당시의 환경과 판단을 보존하며, 현재 운영 상태는 [README](./README.md)와 [DEPLOY](./DEPLOY.md)를 기준으로 한다.
 
 ## 작성 규칙
-- **문제를 해결할 때마다 맨 아래에 append.** 누적. 사소해 보여도 배운 게 있으면 남긴다.
+- 마감 전에는 문제를 해결할 때마다 맨 아래에 append했다. 현재는 확장 작업을 재개할 때만 같은 형식으로 후속 기록을 남긴다.
 - 반드시 포함: **상황(증상) → 원인 분석 → 해결 과정(매우 구체적, 재현 가능하게) → 결과 → 핵심 학습 포인트.**
 - 추측이 아니라 **어떻게 원인을 좁혔는지(로그/실험/이분탐색)** 를 적는다. 그게 실력의 증거다.
 - 코드/설정/명령어는 그대로 인용. 커밋 해시 연결.
@@ -450,7 +451,7 @@ null 바디는 합법이라 throw 없음. 4개 프록시 헬퍼(proxyPost/proxyA
 ② "백엔드는 성공인데 프론트만 실패"는 **응답 파이프라인(프록시·직렬화)** 을 의심하라(비즈니스 로직이 아니라).
 ③ TS-029에서 "동기→비동기"만 보고 204 재구성 함정은 못 봤다 — 같은 증상(배너는 옴/프론트 실패)이 원인이 둘이었다.
 
-## TS-033 — Bubblewrap(TWA) 서명 APK를 비대화형 환경에서 빌드: node24 위저드 크래시 + 구 SDK 레이아웃 + 빈 Groovy 값
+### TS-033 · 2026-07-11 — Bubblewrap(TWA) 서명 APK를 비대화형 환경에서 빌드: node24 위저드 크래시 + 구 SDK 레이아웃 + 빈 Groovy 값
 **상황**: D2 후속으로 다운로드 설치용 **서명 TWA APK**를 Bubblewrap 1.24.1로 빌드하려는데, 대화형 없는(비-TTY)
 셸에서 3연속 벽에 막혔다. ① 첫 실행이 "Do you want Bubblewrap to install the JDK?" 프롬프트에서 즉시
 `Error [ERR_USE_AFTER_CLOSE]: readline was closed`로 죽음(node 24). ② JDK/SDK를 직접 물려주자 `ERROR The
@@ -486,7 +487,7 @@ provided androidSdk isn't correct.` ③ 그다음엔 Gradle이 `build file 'app/
 분실 = APK 업데이트 영구 불가 → keystore·비번은 `.local`(§D)에 두고 백업(assetlinks 지문도 이 키에 묶임).
 **관련**: `frontend/public/geuneul.apk`, `frontend/public/.well-known/assetlinks.json`, WORKLOG 2026-07-11 D2 후속. 계열: TS-009(도구 하네스가 죽어도 목표를 직접 공략)·TS-020(생성 입력 형식 정확성).
 
-## TS-034 — 문서 정리용 일괄 치환이 적용된 Flyway 마이그레이션 주석까지 건드려 프로덕션 배포 롤백
+### TS-034 · 2026-07-12 — 문서 정리용 일괄 치환이 적용된 Flyway 마이그레이션 주석까지 건드려 프로덕션 배포 롤백
 
 - **문제 상황:** 문서 재구성(#111)에서 소스 전반의 `CLAUDE.md` 참조를 `docs/SPEC.md`로 일괄 치환했는데, 배포가 ECS 서킷브레이커로 롤백됐다. CI(신규 DB에 V1부터 전부 적용)는 green이었고 **프로덕션에서만** 실패.
 - **원인 분석:** 치환 스크립트가 `--include='*.sql'`로 **이미 적용된 Flyway 마이그레이션(V4~V17)의 주석**까지 수정했다. Flyway는 파일 바이트의 체크섬을 스키마 히스토리와 대조하므로, 주석 한 글자만 바뀌어도 `Migration checksum mismatch`로 validate가 실패하고 앱이 부팅하지 못한다. CI는 히스토리가 없는 새 DB라 비교 대상이 없어 통과 — **"적용된 마이그레이션은 불변"이라는 계약은 히스토리가 있는 환경에서만 드러난다.**
@@ -494,7 +495,7 @@ provided androidSdk isn't correct.` ③ 그다음엔 Gradle이 `build file 'app/
 - **핵심 학습 포인트:** ① **적용된 마이그레이션 파일은 주석·공백 포함 불변이다** — 리네임·리포맷·참조 정리류 일괄 치환에서 `db/migration`은 반드시 제외. ② 이 실패는 CI가 못 잡는다(새 DB엔 비교할 히스토리가 없음) — 마이그레이션 파일 diff가 있는 PR은 "신규 버전 추가인가, 기존 파일 수정인가"를 사람이 확인해야 한다. ③ 서킷브레이커 + 롤백 덕에 다운타임 0(구 리비전이 계속 서빙) — 배포 안전장치가 설계대로 동작했다.
 - **관련:** PR #111(원인)·#112(수정), V19__integrity_indexes.sql. 계열: TS-016(실 환경에서만 드러나는 계약)·TS-025(게이트가 못 보는 영역).
 
-## TS-035 — 라이브 RDS를 무손실 암호화: 스냅샷 복원 + 프리티어 백업 상한
+### TS-035 · 2026-07-12 — 라이브 RDS를 무손실 암호화: 스냅샷 복원 + 프리티어 백업 상한
 
 - **문제 상황:** 프로덕션 RDS가 미암호화·자동백업 0으로 돌고 있었다. `storage_encrypted`는 기존 인스턴스에서 바꿀 수 없어(immutable) 그냥 `true`로 두고 apply하면 terraform이 데이터 손실 replace를 시도한다.
 - **원인/접근:** RDS 저장 암호화는 **생성 시에만** 지정 가능 → 기존 데이터를 살리려면 **스냅샷을 KMS로 암호화 복사한 뒤 그 스냅샷에서 복원**하는 게 유일한 무손실 경로다. ① `create-db-snapshot`(원본 안전망) → ② `copy-db-snapshot --kms-key-id alias/aws/rds`(암호화본) → ③ `rds.tf`에 `snapshot_identifier`+`storage_encrypted=true` → `terraform apply`(replace, 암호화 스냅샷에서 복원).
@@ -504,3 +505,12 @@ provided androidSdk isn't correct.` ③ 그다음엔 Gradle이 `build file 'app/
   - **중단된 apply가 반복 replace를 유발** — 첫 apply가 backup 에러로 실패하며 `snapshot_identifier`가 state에 기록되지 못했다. `lifecycle.ignore_changes`는 "이미 state에 있는 값의 변경"만 무시하지 신규 추가는 못 막으므로, 두 번째 apply가 snapshot_identifier를 새 값(ForceNew)으로 보고 **또 replace**했다(DB가 두 번 재복원). apply를 끝까지 완주시켜 state에 기록되자 그제서야 `terraform plan`이 `No changes`로 안정됐다. → **파괴적 replace를 만드는 apply는 반드시 완주 확인**(중단되면 state가 부분 기록돼 다음 apply가 예측 불가). 데이터는 스냅샷 복원이라 매번 무손실이었다.
 - **핵심 학습 포인트:** ① **RDS 암호화는 in-place 불가 — 스냅샷 복원이 유일한 무손실 마이그레이션.** ② **replace해도 엔드포인트는 identifier 기반이라 유지**된다(`geuneul-db.<...>.rds.amazonaws.com`) → 앱 `DB_HOST` 재배선 불필요. 이게 replace를 안전하게 만든 결정적 사실(health UP·데이터 복원 즉시 확인). ③ 파괴적 인프라 작업 전 **수동 스냅샷 이중 안전망**(원본+암호화본)을 먼저 만든다. ④ 프리티어 제약은 문서가 아니라 실측으로 확정(7 거부·1 허용).
 - **관련:** ADR-0029, rds.tf, `geuneul-db-encrypted`/`geuneul-db-pre-encrypt-v1` 스냅샷. 계열: TS-034(인프라 변경이 CI 아닌 프로덕션에서만 드러남)·TS-025(게이트 밖 영역).
+
+### TS-036 · 2026-07-14 — 현재 위치 버튼은 성공 토스트만 보이고 지도는 재중심하지 않음
+
+- **상황/증상:** 사용자가 지도를 다른 지역으로 드래그한 뒤 현재 위치 버튼을 누르면 "현재 위치로 이동했어요" 토스트는 보이지만 지도 중심은 바뀌지 않았다. 위치 권한과 좌표 취득은 정상이어서 위치 API 실패처럼 보이지 않는 문제가 됐다.
+- **원인 분석:** `react-kakao-maps-sdk`의 `Map`은 전달받은 `center.lat/lng`가 이전 props와 같으면 내부 `panTo`를 생략한다. 지도 드래그는 SDK 내부 중심만 바꾸고 React의 `mapCenter` 값은 기존 현재 좌표로 남는다. 따라서 다시 같은 현재 좌표를 state에 넣어도 SDK에는 값 변경이 없어 재중심 명령이 발생하지 않았다. 토스트는 좌표 취득 성공만 기준으로 먼저 표시돼 증상을 가렸다.
+- **해결 과정:** `KakaoMapLive`에서 지도 인스턴스 ref를 보관하고, 현재 위치 요청이 성공해 `recenterKey`가 바뀌면 `map.panTo(new kakao.maps.LatLng(...))`를 직접 호출하도록 변경했다. SDK 생성 전 요청만 기존 중심 state 갱신으로 폴백한다. 위치 권한 흐름은 이미 허용된 경우에만 자동 갱신하고, 그 외에는 사용자의 버튼 동작에서 요청하도록 유지했다.
+- **결과:** 사용자가 지도 뷰포트를 어디로 옮겼는지와 무관하게 현재 위치 버튼은 SDK에 실제 이동 명령을 전달한다. `pnpm typecheck`, `pnpm lint`, `pnpm build`와 GitHub Frontend CI를 통과했고 Vercel 배포까지 확인했다.
+- **핵심 학습 포인트:** 지도처럼 내부 상태를 가진 UI SDK는 React props의 값 비교와 사용자의 SDK 내부 조작이 분리될 수 있다. "데이터를 다시 설정"하는 것과 "명령을 실행"하는 것을 구분하고, 재중심 같은 명령형 동작은 인스턴스 API로 명시해야 한다.
+- **관련:** `frontend/components/map/KakaoMapLive.tsx`, `frontend/app/(shell)/page.tsx`, 커밋 `71c2a46`.
