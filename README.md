@@ -23,12 +23,28 @@
 [![Frontend CI](https://github.com/ghdtjdwn/geuneul/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/frontend-ci.yml)
 [![Deploy (AWS ECS)](https://github.com/ghdtjdwn/geuneul/actions/workflows/deploy.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/deploy.yml)
 
-<p align="center">
-  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-shade-route.png" alt="데스크톱 웹 — 그늘 경유 경로와 장소 상세" width="700" /></a>
-  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="모바일 PWA — 지도와 바텀시트" width="220" /></a>
+## 서비스 화면
+
+### 지도 검색과 장소 탐색
+
+<a href="https://geuneul.vercel.app"><img src="./docs/media/demo-desktop-3pane.png" alt="데스크톱 웹 — 검색, 주변 장소 목록, 지도를 함께 보여 주는 3분할 화면" /></a>
+
+지도에서 현재 위치 주변의 쉼터·화장실·카페를 찾고, 목록과 마커를 함께 보며 장소를 고를 수 있습니다.
+
+### 그늘 경유와 장소 상세
+
+<a href="https://geuneul.vercel.app"><img src="./docs/media/demo-shade-route.png" alt="데스크톱 웹 — 장소 상세와 그늘 경유 경로" /></a>
+
+선택한 장소의 상태·시설·최근 제보를 확인하고, 출발지와 목적지 사이에 그늘 또는 화장실을 경유하는 경로를 찾습니다.
+
+### 모바일 PWA
+
+<p>
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="모바일 지도 — 검색과 주변 장소 바텀시트" width="300" /></a>
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-scenarios.png" alt="모바일 긴급 추천 — 화장실, 휴식, 비 피하기, 공부, 장시간 머무르기" width="300" /></a>
 </p>
 
-왼쪽은 데스크톱의 장소 상세와 그늘 경유 경로이고, 오른쪽은 모바일 지도 화면입니다. 브라우저로 바로 열거나 PWA와 Android 앱으로 설치해 사용할 수 있습니다. 다른 화면은 [아키텍처 문서](./docs/architecture.md#데모)에 정리했습니다.
+모바일에서는 지도와 바텀시트로 주변 장소를 탐색하고, 상황별 추천으로 바로 갈 곳을 찾습니다. 브라우저로 바로 열거나 PWA와 Android 앱으로 설치해 사용할 수 있습니다. 다른 화면은 [아키텍처 문서](./docs/architecture.md#데모)에 정리했습니다.
 
 ---
 
