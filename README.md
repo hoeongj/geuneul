@@ -40,8 +40,7 @@
 ### 모바일 PWA
 
 <p align="center">
-  <a href="https://geuneul.vercel.app"><img src="<img width="1170" height="2532" alt="image" src="https://github.com/user-attachments/assets/d437d24f-d1f0-4250-a3bf-0762ae36b612" />
-" alt="모바일 지도 — 검색과 주변 장소 바텀시트" width="240" /></a>
+  <a href="https://geuneul.vercel.app"><img src="https://github.com/user-attachments/assets/d437d24f-d1f0-4250-a3bf-0762ae36b612" alt="모바일 지도 — 검색과 주변 장소 바텀시트" width="260" /></a>
 </p>
 
 모바일에서는 지도와 바텀시트로 주변 장소를 탐색하고, 상황별 추천으로 바로 갈 곳을 찾습니다. 브라우저로 바로 열거나 PWA와 Android 앱으로 설치해 사용할 수 있습니다. 시나리오 추천을 포함한 다른 화면은 [아키텍처 문서](./docs/architecture.md#데모)에 정리했습니다.
