@@ -7,6 +7,7 @@ import { markerImage } from "@/lib/marker";
 import { gradeOf } from "@/lib/survival";
 import type { IconName } from "@/lib/icon-paths";
 import type { MapBounds, Place, SurvivalGrade } from "@/types/place";
+import { Icon } from "@/components/ui/Icon";
 import { MapPlaceholder } from "./MapPlaceholder";
 
 const markerImageCache = new globalThis.Map<string, ReturnType<typeof markerImage>>();
@@ -124,17 +125,16 @@ export default function KakaoMapLive({
         </CustomOverlayMap>
       )}
 
-      {/* 현재 위치: 파란 점 + 정확도 펄스링. 폴백(권한 거부)일 땐 살짝 흐리게. */}
+      {/* 현재 위치: 작은 점만으로는 넓은 데스크톱 지도에서 놓치기 쉬워, 타깃 아이콘과 펄스링을 함께 쓴다. */}
       <CustomOverlayMap position={{ lat: current.lat, lng: current.lng }} xAnchor={0.5} yAnchor={0.5}>
         <div className="relative flex items-center justify-center" style={{ opacity: current.isFallback ? 0.65 : 1 }}>
           <span
-            className="gn-pulse-ring absolute h-4 w-4 rounded-full"
+            className="gn-pulse-ring absolute h-8 w-8 rounded-full"
             style={{ background: "rgba(43,111,246,.35)" }}
           />
-          <span
-            className="h-3.5 w-3.5 rounded-full border-2 border-white"
-            style={{ background: "var(--color-locate)", boxShadow: "0 1px 4px rgba(0,0,0,.3)" }}
-          />
+          <span className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-white text-[var(--color-locate)] shadow-[0_1px_5px_rgba(0,0,0,.35)]">
+            <Icon name="locate" size={19} strokeWidth={2.4} />
+          </span>
         </div>
       </CustomOverlayMap>
     </Map>
