@@ -52,14 +52,11 @@ export default function KakaoMapLive({
   // 제어 center: 최초 + FAB 시에만 갱신(사용자 팬과 싸우지 않도록).
   const [mapCenter, setMapCenter] = useState(center);
   const mapRef = useRef<kakao.maps.Map | null>(null);
-  const firstRecenter = useRef(true);
   useEffect(() => {
-    if (firstRecenter.current) {
-      firstRecenter.current = false;
-      return;
-    }
     // Map 컴포넌트는 center의 위·경도가 이전 props와 같으면(사용자가 지도만 드래그한 경우)
     // 내부 panTo를 생략한다. 현재 위치 버튼은 그 경우에도 반드시 이동해야 하므로 인스턴스에 직접 팬한다.
+    // 권한 확인이 지도 마운트보다 먼저 끝나도 첫 위치 갱신을 건너뛰면 안 된다. 이 경우에도 panTo를 실행해야
+    // 현재 위치 아이콘이 데스크톱 지도 중심에서 보인다.
     const map = mapRef.current;
     if (map) {
       map.panTo(new kakao.maps.LatLng(current.lat, current.lng));
