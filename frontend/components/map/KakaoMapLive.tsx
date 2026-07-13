@@ -50,12 +50,21 @@ export default function KakaoMapLive({
 
   // 제어 center: 최초 + FAB 시에만 갱신(사용자 팬과 싸우지 않도록).
   const [mapCenter, setMapCenter] = useState(center);
+  const mapRef = useRef<kakao.maps.Map | null>(null);
   const firstRecenter = useRef(true);
   useEffect(() => {
     if (firstRecenter.current) {
       firstRecenter.current = false;
       return;
     }
+    // Map 컴포넌트는 center의 위·경도가 이전 props와 같으면(사용자가 지도만 드래그한 경우)
+    // 내부 panTo를 생략한다. 현재 위치 버튼은 그 경우에도 반드시 이동해야 하므로 인스턴스에 직접 팬한다.
+    const map = mapRef.current;
+    if (map) {
+      map.panTo(new kakao.maps.LatLng(current.lat, current.lng));
+      return;
+    }
+    // SDK가 아직 만들어지기 전 버튼을 누른 경우에는 초기 중심값으로 남겨, 생성 직후 올바른 위치에서 시작한다.
     setMapCenter({ lat: current.lat, lng: current.lng });
   }, [recenterKey, current.lat, current.lng]);
 
@@ -75,6 +84,7 @@ export default function KakaoMapLive({
 
   return (
     <Map
+      ref={mapRef}
       center={mapCenter}
       isPanto
       level={5}
