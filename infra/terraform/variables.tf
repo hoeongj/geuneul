@@ -99,7 +99,7 @@ variable "container_image" {
 variable "github_repo" {
   description = "OIDC 신뢰 대상 (owner/repo)"
   type        = string
-  default     = "hoeongj/geuneul"
+  default     = "ghdtjdwn/geuneul"
 }
 
 variable "task_cpu" {

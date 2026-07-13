@@ -13,4 +13,4 @@ jwt_secret           = "CHANGE-ME-openssl-rand-hex-64"
 datago_service_key   = "CHANGE-ME"                     # 공공데이터포털 serviceKey(도서관·상권)
 ai_summary_api_key   = "CHANGE-ME"                     # OpenAI 호환 프로바이더 키(AI 한줄요약)
 
-# github_repo = "hoeongj/geuneul"   # 기본값과 같으면 생략 가능
+# github_repo = "ghdtjdwn/geuneul"   # 기본값과 같으면 생략 가능

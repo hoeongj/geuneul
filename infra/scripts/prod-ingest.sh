@@ -6,7 +6,7 @@
 #
 # 사용법:
 #   ./prod-ingest.sh <source> <csv-url> [charset]
-#   ./prod-ingest.sh public_toilet  https://github.com/hoeongj/geuneul/releases/download/data-v1/toilets.csv MS949
+#   ./prod-ingest.sh public_toilet  https://github.com/ghdtjdwn/geuneul/releases/download/data-v1/toilets.csv MS949
 #   ./prod-ingest.sh cooling_shelter https://.../shelters.csv UTF-8
 set -euo pipefail
 

@@ -19,9 +19,9 @@
 [![ADR](https://img.shields.io/badge/ADR-29-informational)](./docs/adr/README.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
 
-[![CI](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml)
-[![Frontend CI](https://github.com/hoeongj/geuneul/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/frontend-ci.yml)
-[![Deploy (AWS ECS)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml)
+[![CI](https://github.com/ghdtjdwn/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/ci.yml)
+[![Frontend CI](https://github.com/ghdtjdwn/geuneul/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/frontend-ci.yml)
+[![Deploy (AWS ECS)](https://github.com/ghdtjdwn/geuneul/actions/workflows/deploy.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/deploy.yml)
 
 ## 서비스 화면
 
