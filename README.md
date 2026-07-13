@@ -1,5 +1,7 @@
 # 그늘 (Geuneul) — 여름 생존 지도
 
+[English](./README.en.md)
+
 > 폭염이나 비 오는 날 가까운 쉼터와 편의시설을 찾는 지도 서비스입니다. 전국 공공데이터 15만여 곳을 PostGIS로 검색하고, 최근 제보를 반영한 survival_score로 현재 상태를 함께 보여줍니다.
 
 <p>
@@ -15,7 +17,6 @@
 [![Radius p95](https://img.shields.io/badge/반경검색_p95-~1.4s-17957e)](./docs/adr/0012-k6-load-explain-index-tuning.md)
 [![Coverage](https://img.shields.io/badge/JaCoCo-71%25-17957e)](#기술-스택)
 [![ADR](https://img.shields.io/badge/ADR-29-informational)](./docs/adr/README.md)
-[![Troubleshooting](https://img.shields.io/badge/Troubleshooting-36건-informational)](./TROUBLESHOOTING.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
 
 [![CI](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml)
@@ -133,7 +134,7 @@ GET /alerts/stream            # text/event-stream (SSE)
 
 - 프로젝트 스펙(목표·범위·ERD·API): [`docs/SPEC.md`](./docs/SPEC.md)
 - 아키텍처·데모: [`docs/architecture.md`](./docs/architecture.md) · 의사결정 기록(ADR): [`docs/adr/`](./docs/adr) (0001–0029, [색인](./docs/adr/README.md))
-- 배포(AWS): [`DEPLOY.md`](./DEPLOY.md) · 개발 일지: [`WORKLOG.md`](./WORKLOG.md) · 트러블슈팅: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
+- 배포(AWS): [`DEPLOY.md`](./DEPLOY.md)
 - 디자인·API 계약 레퍼런스: [`docs/design-brief.md`](./docs/design-brief.md) · 프론트엔드: [`frontend/README.md`](./frontend/README.md)
 
 <details>

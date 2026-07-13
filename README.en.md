@@ -1,0 +1,159 @@
+# Geuneul — Summer Survival Map
+
+[한국어](./README.md)
+
+> A map service for finding nearby shelters and essential amenities during heat waves or rain. It searches more than 150,000 public-data locations with PostGIS and shows their current condition through a report-aware `survival_score`.
+
+<p>
+  <a href="https://geuneul.vercel.app"><img src="https://img.shields.io/badge/Open_on_the_web-Geuneul-163c2f?logo=vercel&logoColor=white" alt="Open Geuneul on the web" /></a>
+  <a href="https://geuneul.vercel.app/install"><img src="https://img.shields.io/badge/Install-PWA-17957e?logo=pwa&logoColor=white" alt="PWA installation guide" /></a>
+  <a href="https://geuneul.vercel.app/geuneul.apk"><img src="https://img.shields.io/badge/Android_APK-Download-3DDC84?logo=android&logoColor=white" alt="Download Android APK" /></a>
+</p>
+
+[![API](https://img.shields.io/badge/API-live_health-17957e)](https://d2pedv974beobb.cloudfront.net/actuator/health)
+[![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger&logoColor=black)](https://d2pedv974beobb.cloudfront.net/swagger-ui.html)
+
+[![Public Data](https://img.shields.io/badge/Public_data-150k%2B_POI-2f9e44)](#data-etl)
+[![Radius p95](https://img.shields.io/badge/Radius_query_p95-~1.4s-17957e)](./docs/adr/0012-k6-load-explain-index-tuning.md)
+[![Coverage](https://img.shields.io/badge/JaCoCo-71%25-17957e)](#technology)
+[![ADR](https://img.shields.io/badge/ADR-29-informational)](./docs/adr/README.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
+
+[![CI](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/ci.yml)
+[![Frontend CI](https://github.com/hoeongj/geuneul/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/frontend-ci.yml)
+[![Deploy (AWS ECS)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml/badge.svg)](https://github.com/hoeongj/geuneul/actions/workflows/deploy.yml)
+
+<p align="center">
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-shade-route.png" alt="Desktop web: place detail and shade-aware route" width="700" /></a>
+  <a href="https://geuneul.vercel.app"><img src="./docs/media/demo-mobile-map.png" alt="Mobile PWA: map and bottom sheet" width="220" /></a>
+</p>
+
+The left image shows a desktop place detail and a shade-aware route; the right image shows the mobile map. The service works in a browser and can also be installed as a PWA or Android app. More screens are in the [architecture document](./docs/architecture.md#데모).
+
+---
+
+## Design highlights
+
+- Spatial queries stay in the database. Radius search uses `ST_DWithin`, nearest-neighbor search uses kNN `<->`, and viewport search uses GiST indexes. `EXPLAIN` verified index use, while k6 tuning reduced radius-search p95 from 2.68s to about 1.4s. The measured bottleneck was CPU rather than GiST ([ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)).
+- Idempotent ETL and geocoding use the `source + source_external_id` natural key, so a batch can be run again without duplicates. The service stores 60,297 cooling shelters, 52,334 public toilets, 3,551 libraries, and commercial café/study-space data. Missing WGS84 coordinates are completed with Kakao geocoding and cached to avoid repeated requests.
+- Real-time, geo-temporal UGC scoring combines expiring reports and durable reviews with trust weighting in `survival_score`. Report surges flow from PostgreSQL `LISTEN/NOTIFY` through multi-instance fan-out to SSE. Saved-place notifications use `INSERT … RETURNING` to send exactly once ([ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md), [ADR-0026](./docs/adr/0026-bookmark-status-change-notification.md)).
+
+> Stack: Spring Boot 4 · Java 21 · PostgreSQL + PostGIS · Redis · AWS ECS Fargate · Terraform · Next.js PWA
+
+## Using the service
+
+- Web: the same URL supports desktop and mobile browsers. Desktop uses a map-and-list layout; mobile centers on the map and bottom sheet.
+- Installation: the application is a PWA using a service worker and Web App Manifest. Android supports browser installation and a [signed APK](https://geuneul.vercel.app/geuneul.apk); iOS supports Add to Home Screen.
+- Implementation: the web and installed app share the same Next.js client and BFF. Only responsive UI, service worker behavior, and the TWA package vary by environment.
+
+## Architecture
+
+![Architecture diagram](./docs/media/architecture.svg)
+
+The browser calls only a same-origin `/api/*` server proxy (BFF). This avoids the ALB HTTP and CORS constraints. Spatial search and geo-temporal aggregation run through GiST indexes and SQL views in the database ([ADR-0004](./docs/adr/0004-frontend-same-origin-proxy.md)).
+
+For runtime, ETL, CI/CD diagrams, and more screenshots, see [docs/architecture.md](./docs/architecture.md). AWS, OIDC, and Terraform deployment instructions are in [DEPLOY.md](./DEPLOY.md).
+
+## `survival_score`
+
+`survival_score` expresses the current condition of a place as a score from 0 to 100 and one of three marker states: green (good), yellow (fair), or gray (insufficient information).
+
+```
+survival_score = 0.25·distance + 0.20·comfort + 0.20·freshness − 0.15·risk   (+ open_now when data is available)
+freshness: 0–1h=1.0 | 1–3h=0.8 | today=0.6 | this week=0.3 | older=0.1
+```
+
+- The SQL view `place_report_signals` performs geo-temporal aggregation. A pure Java function assembles weights and marker state, keeping heavy aggregation in the database and policy tuning testable ([ADR-0007](./docs/adr/0007-survival-score-sql-signals-java-compose.md)).
+- Reports are trust-weighted and expire by type. Reviews remain as durable reputation data and are scored separately.
+- Missing components such as `open_now` are not fabricated; weights are renormalized until the source data becomes available.
+- Scenario recommendations reuse the same function with scenario-specific weights ([ADR-0008](./docs/adr/0008-recommendations-scenario-weighted-ranking.md)).
+
+## Data and ETL
+
+Public standard datasets are loaded idempotently: repeating the same source performs an upsert on `source + source_external_id`, and records absent from a new snapshot are soft-deactivated. Since public-toilet data stopped providing WGS84 coordinates after February 2025, the ingestion flow converts addresses to coordinates with the Kakao Local API and saves results for idempotency and rate-limit safety. See [the ETL flow](./docs/architecture.md#데이터--etl).
+
+| Data | Refresh policy |
+|---|---|
+| Libraries | Automatic. EventBridge runs a full API ingestion and soft-delete sync on the 2nd of each month at 04:00 KST. |
+| Weather | Automatic on demand. Data is refreshed after the 30-minute Redis TTL expires. |
+| User reports | Immediate on submission; surges are delivered by SSE. |
+| Cooling shelters and public toilets | Manual. Publish a new CSV snapshot, then run the ECS ingestion task. |
+| Cafés and study cafés | Manual after confirming source availability and collection scope. |
+
+## Quick start
+
+```bash
+# 1) Infrastructure — PostGIS + Redis
+docker compose up -d
+
+# 2) Backend — http://localhost:8080/swagger-ui.html
+cd backend && ./gradlew bootRun
+
+# 3) Frontend — http://localhost:3000
+# Without a Kakao JavaScript key, the map is a placeholder but API data still works.
+cd frontend && pnpm install && pnpm dev
+```
+
+Public-data ingestion is idempotent and safe to rerun:
+
+```bash
+cd backend
+./gradlew bootRun --args='--ingest.source=cooling_shelter --ingest.file=/path/to/cooling-shelters.csv --ingest.charset=MS949'
+```
+
+## API examples
+
+```bash
+# Radius search — nearest first, distance in meters, and survival badge
+GET /places?lat=37.4963&lng=126.9575&radius=1000
+
+# Viewport markers — cooling shelters
+GET /places?bounds=126.93,37.49,126.97,37.52&category=COOLING_SHELTER
+
+# Nearest-neighbor search — works anywhere in Korea (example: Busan)
+GET /places/nearest?lat=35.2133&lng=129.0157&category=COOLING_SHELTER&limit=3
+
+# Scenario recommendation — rest30|restroom|rain|focus|longstay
+GET /recommendations?lat=37.4963&lng=126.9575&scenario=restroom
+
+# Expiring report. Sending lat/lng verifies a visit when within 100 m of the place.
+POST /reports {"placeId":1,"reportType":"COOL","comment":"Strong air conditioning","lat":37.4963,"lng":126.9575}
+GET  /places/1/reports
+
+# Shade or restroom waypoint route
+GET /routes/shade?fromLat=37.50&fromLng=126.95&toLat=37.51&toLng=126.96
+
+# Report-surge snapshot and SSE stream
+GET /alerts/surge?bounds=126.93,37.49,126.97,37.52
+GET /alerts/stream
+```
+
+## Technology
+
+| Area | Stack |
+|---|---|
+| Backend | Spring Boot 4 · Java 21 · PostgreSQL + PostGIS (Hibernate Spatial + JTS) · Flyway · Redis |
+| Frontend | Next.js 16 App Router · TypeScript · Tailwind v4 · TanStack Query · Kakao Maps · Serwist PWA ([frontend README](./frontend/README.md)) |
+| Infrastructure | AWS ECS Fargate · RDS · Terraform · GitHub Actions with OIDC · ECR · ALB · Vercel |
+| Quality and operations | Testcontainers with real PostGIS · JaCoCo 71% line coverage with a 70% gate · k6 · gitleaks · Swagger |
+
+## Documentation
+
+- Product scope, ERD, and API contract: [docs/SPEC.md](./docs/SPEC.md)
+- Architecture and screenshots: [docs/architecture.md](./docs/architecture.md)
+- Technical decision records: [docs/adr/](./docs/adr) ([index](./docs/adr/README.md), 0001–0029)
+- AWS deployment: [DEPLOY.md](./DEPLOY.md)
+- Design and API reference: [docs/design-brief.md](./docs/design-brief.md)
+
+## Delivered capabilities
+
+- Geospatial search: radius, nearest-neighbor, and viewport queries backed by PostGIS and GiST.
+- Public-data ingestion, idempotent upserts, soft-deactivation, and Kakao geocoding for missing coordinates.
+- Weather-aware scoring, scenario recommendations, and provider-neutral AI summaries with graceful degradation.
+- Reports, reviews, photos, social login, trust weighting, moderation, bookmarks, following, notifications, SSE, and Web Push.
+- Shade and restroom waypoint routes, road polylines, popular-times heatmaps, and responsive desktop/mobile map experiences.
+- PWA installation, Android TWA/APK distribution, iOS Add to Home Screen, CI checks, OIDC deployment, infrastructure as code, autoscaling, and observability.
+
+## License
+
+[MIT](./LICENSE) © 2026 hoengj
