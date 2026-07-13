@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "backend" {
-  name                 = var.project
+  name = var.project
   # 배포는 커밋 SHA 태그만 쓰므로(deploy.yml) 태그 덮어쓰기를 금지 — 태그 하이재킹/우발적 재푸시 방어.
   image_tag_mutability = "IMMUTABLE"
   image_scanning_configuration {

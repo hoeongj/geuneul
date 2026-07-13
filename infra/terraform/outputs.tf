@@ -46,7 +46,7 @@ output "ingest_schedule_name" {
 }
 
 output "ingest_schedule_state" {
-  description = "현재 ENABLED/DISABLED. var.ingest_schedule_enabled=true로 재적용해야 ENABLED(운영 안전장치)."
+  description = "현재 ENABLED/DISABLED. 기본값은 ENABLED이며, 중지하려면 -var ingest_schedule_enabled=false로 적용한다."
   value       = aws_scheduler_schedule.public_data_sync.state
 }
 

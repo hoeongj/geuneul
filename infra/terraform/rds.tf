@@ -8,13 +8,13 @@ resource "aws_db_subnet_group" "db" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier             = "${var.project}-db"
-  engine                 = "postgres"
-  engine_version         = "16"
-  instance_class         = "db.t3.micro" # 프리티어 대상
-  allocated_storage      = 20
-  storage_type           = "gp3"
-  storage_encrypted      = true # 저장 암호화(KMS). 라이브 DB는 암호화 스냅샷에서 복원해 적용(아래 snapshot_identifier·TS-035).
+  identifier        = "${var.project}-db"
+  engine            = "postgres"
+  engine_version    = "16"
+  instance_class    = "db.t3.micro" # 프리티어 대상
+  allocated_storage = 20
+  storage_type      = "gp3"
+  storage_encrypted = true # 저장 암호화(KMS). 라이브 DB는 암호화 스냅샷에서 복원해 적용(아래 snapshot_identifier·TS-035).
   # 기존 데이터를 무손실로 암호화하기 위해, 미암호화 인스턴스의 스냅샷을 KMS로 암호화 복사한 뒤
   # 그 스냅샷에서 복원한다(수동: create-db-snapshot → copy-db-snapshot --kms-key-id → 이 값 참조).
   snapshot_identifier    = "geuneul-db-encrypted"
