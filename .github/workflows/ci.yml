@@ -27,7 +27,7 @@ jobs:
       - name: Test + coverage
         # Testcontainers(PostGIS)는 ubuntu-latest의 Docker 데몬 위에서 실행된다.
         # Docker 없는 로컬에서는 self-skip(disabledWithoutDocker). 커버리지 floor 값의 단일 출처는
-        # build.gradle의 jacocoTestCoverageVerification(현재 0.35) — 그 아래로 떨어지면 빌드 실패.
+        # build.gradle의 jacocoTestCoverageVerification(현재 0.70) — 그 아래로 떨어지면 빌드 실패.
         run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification
       - name: Upload test report on failure
         if: failure()

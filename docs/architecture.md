@@ -34,7 +34,7 @@ flowchart LR
   subgraph ext["외부 API"]
     KAKAO["Kakao 지오코딩 · 도로 경로"]
     KMA["기상청 초단기실황"]
-    AI["Claude / Mistral<br/>한 줄 요약"]
+    AI["Mistral 호환 Chat Completions<br/>한 줄 요약"]
   end
 
   UI -->|동일 오리진| BFF

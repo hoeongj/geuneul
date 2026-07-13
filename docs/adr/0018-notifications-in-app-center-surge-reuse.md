@@ -1,5 +1,7 @@
 # ADR-0018. 알림(Notifications) — 인앱 센터 MVP + 급증 이벤트 재사용, Web Push는 stretch
 
+> **후속 상태(2026-07):** 당시 stretch로 분리했던 Web Push는 [ADR-0022](./0022-web-push-zerodep-vapid-feature-gated.md)에서 기능 플래그 방식으로 구현됐다. 아래 본문은 인앱 센터 우선 결정을 내린 당시의 근거를 보존한다.
+
 - 상태: 승인(구현 반영, 2026-07-10)
 - 관련: `V15__notifications.sql`(신규), `domain.notification`(신규), `domain.alert`(급증 LISTEN/NOTIFY 재사용,
   ADR-0016), `bookmarks`(A7·V14), `domain.weather`(폭염 트리거 — stretch), SPEC.md §3(알림)·§6(공포 조장 금지)·§9
