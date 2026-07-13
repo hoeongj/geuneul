@@ -41,7 +41,7 @@
 |---|---|---|---|---|---|
 | 1 | **전국도서관표준데이터**(15013109) | LIBRARY | WGS84 내장 | S | `StandardCsvParser` 그대로. 지오코딩 0. 작은도서관 포함. 열람좌석>0 → `study_ok`/`quiet` 백필 |
 | 2 | **상권정보 독서실/스터디카페**(15083033) | STUDY_CAFE | WGS84 | M | 규모 1만대 — 전용 파서·업종필터·defaultFeatures 검증용. `study_ok` 자동부여 |
-| 3 | **상권정보 커피전문점**(15083033) | CAFE | WGS84 | M | 약 9만. 지오코딩 0(WGS84라 화장실 6만 적재 규모 내). `study_ok`는 **UGC로만** |
+| 3 | **상권정보 커피전문점**(15083033) | CAFE | WGS84 | M | 원본은 대규모 전국 데이터. 현재 적재 범위와 수량은 루트 README의 데이터 커버리지를 기준으로 하며, `study_ok`는 **UGC로만** |
 | 4 | **전국공공시설개방정보표준데이터**(15013117) | CIVIC | 있음 | M | 개방 회의실·세미나실·열람실. 시설유형 화이트리스트 필터 |
 | 5 | **명소 시드**(노들서가·서울책보고·무중력지대·SeSAC) | CIVIC/LIBRARY | 주소만 | S | 데이터셋 없음 → 수동 시드 CSV + 카카오 지오코딩(ADR-0003). 수동 feature 태깅 |
 | — | ~~LOCALDATA 지방행정인허가~~ | 보조 | **EPSG:5174** | L | 좌표 비-WGS84라 재투영/지오코딩 부담 → 1순위 배제, 폐업 교차검증 보조만 |
@@ -68,21 +68,20 @@
 
 ## 결과(Consequences)
 
-- `places` 볼륨: 화장실 6만 + 카페 9만 + 도서관 1.5만 = **15만+** → PostGIS 반경/kNN 성능·k6 부하테스트(P4)의 실전 소재.
-- **블로커**: 대량 적재는 **공공데이터포털 오픈API serviceKey(무료)** 또는 다운로드한 CSV가 필요. serviceKey면 P3 무인화(EventBridge→ECS RunTask 주기 동기화 + soft-delete diff)까지 한 번에 연결됨.
-- 착수 전 소규모 결정(enum·필터·명소 시드·soft-delete)은 WORKLOG에 why/대안 기록(SPEC.md §C).
-- **미확정(실제 파일 필요)**: 각 CSV의 정확한 컬럼 헤더·charset, 상권정보 업종 소분류 코드값(2023 개편 — 하드코딩 금지, 업종코드 매핑표 15067631로 실측 확정).
+- 현재 운영 데이터 커버리지는 루트 README의 수치를 기준으로 한다. 15만+ 규모에서 PostGIS 반경·kNN 성능과 k6 부하테스트를 검증한다.
+- 대량 적재에는 공공데이터포털 오픈API serviceKey 또는 다운로드한 CSV가 필요하다. 도서관 source는 serviceKey를 ECS 시크릿으로 배선해 EventBridge→ECS RunTask 주기 동기화까지 운영 중이다.
+- 상권정보 업종 소분류 코드는 실호출로 카페 `I21201`, 독서실·스터디카페 `R10202`를 확정했다. CSV 헤더·문자셋은 새 스냅샷을 받을 때 적재 명령에서 명시한다.
 
 ## 착수 순서(Recommended Order) — 진행 상황(2026-07-09)
 
-0. **골격**: `PlaceCategory` += CAFE/STUDY_CAFE. — ✅ **완료**(프론트 categories 동기는 미착수, 백엔드만 이번 범위).
+0. **골격**: `PlaceCategory` += CAFE/STUDY_CAFE. — ✅ **완료**(프론트 필터·마커·목록까지 동기화).
 1. 업종코드 매핑표로 커피점·독서실/스터디카페 소분류 코드 실측 확정. — ✅ **완료(2026-07-10)**: 승인 후 실호출로 **카페 `I21201`, 독서실/스터디카페 `R10202`** 확정. `StoreCategoryMapper`를 코드맵 authority로 승격(`targetCodes()`/`classifyByCode`), 분류명 매칭은 방어적 폴백으로 강등. 서버측 `indsSclsCd` 필터로 승격(TS-026).
 2. 스키마: `places` += `is_commercial`·`deleted_at`(V5). `IngestionService`/`PlaceBulkUpsertRepository` += set-based feature 백필 + 스냅샷 diff soft-delete(opt-in). — ✅ **완료**.
-3. 전국도서관표준데이터(LIBRARY) 적재 코드 — ✅ **완료**(CSV가 아니라 JSON 오픈API로 경로 정정, 위 "구현 정정" 참고). **프로덕션 실적재는 미실행**(사용자 통제).
-4. 상권정보 STUDY_CAFE → CAFE 적재 코드 — ✅ **코드 완료, ⚠️계약 미검증**(활용신청 미승인 403). 승인 후 재검증 필요.
+3. 전국도서관표준데이터(LIBRARY) 적재 코드 — ✅ **완료·운영 반영**(CSV가 아니라 JSON 오픈API로 경로 정정, 위 "구현 정정" 참고). EventBridge Scheduler가 매월 전체 적재와 soft-delete 동기화를 실행한다.
+4. 상권정보 STUDY_CAFE → CAFE 적재 코드 — ✅ **완료·계약 검증 완료**. 승인 후 실호출로 응답 구조와 업종 코드를 확정했고, 갱신은 수집 범위를 검토한 뒤 수동 ECS task로 실행한다.
 5. 공공시설개방(CIVIC) 화이트리스트 필터 적재. — ❌ **미착수**(이번 범위 밖, 후속 확장).
 6. 명소 시드(노들서가 등) 개별 등록 + 지오코딩. — ❌ **미착수**(이번 범위 밖, 후속 확장).
-7. P3 무인화(serviceKey 오픈API 주기 동기화 + 여러 반경 호출을 합친 전국 soft-delete diff). — 🟡 **library 소스는 스캐폴드 완료**([ADR-0011](./0011-scheduled-public-data-sync.md), EventBridge Scheduler→ECS RunTask + `IngestBatchLock` 동시 실행 방지, 기본 DISABLED·미활성). 상권정보(STUDY_CAFE/CAFE)는 계약 미검증 상태라 여전히 스코프 밖.
+7. P3 무인화(serviceKey 오픈API 주기 동기화 + 여러 반경 호출을 합친 전국 soft-delete diff). — ✅ **library 소스 운영 활성**([ADR-0011](./0011-scheduled-public-data-sync.md), EventBridge Scheduler→ECS RunTask + `IngestBatchLock` 동시 실행 방지, 기본 ENABLED). 상권정보(STUDY_CAFE/CAFE)는 반경 단위 수집 특성상 수집 범위를 검토한 뒤 수동으로 갱신한다.
 
 ## 근거(References)
 - 리서치: 전국도서관표준데이터(15013109)·전국공공시설개방정보표준데이터(15013117)·소상공인 상가(상권)정보(15083033/15012005)·노들섬 노들서가(nodeul.org)·서울열린데이터(OA-15480/OA-21062)
