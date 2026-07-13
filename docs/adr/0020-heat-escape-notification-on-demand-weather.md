@@ -1,5 +1,7 @@
 # ADR-0020. HEAT_ESCAPE 알림 — 온디맨드(pull) 날씨 평가, 새 스케줄러 없이
 
+> **후속 상태(2026-07):** 본문에서 전제한 "푸시 미배선"은 당시 상태다. Web Push는 이후 [ADR-0022](./0022-web-push-zerodep-vapid-feature-gated.md)에서 선택형 기능으로 구현됐으며, 이 ADR의 온디맨드 평가 결정은 그대로 유지된다.
+
 - 상태: 승인(구현 반영, 2026-07-10)
 - 관련: `domain.notification`(B1, ADR-0018 확장), `domain.weather`(`HeatComfort`·`WeatherService`, ADR-0009),
   `domain.place`(kNN `findNearest`, 간판 공간쿼리), `notification_deliveries`(V15, dedup 재사용),

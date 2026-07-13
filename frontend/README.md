@@ -1,97 +1,64 @@
-# 그늘 프론트엔드 (MVP 4화면)
+# 그늘 프론트엔드
 
-🟢 **Live: https://geuneul.vercel.app**
+> **Live:** https://geuneul.vercel.app
+> 루트 README에는 제품·백엔드·인프라 전체 개요를, 이 문서에는 Next.js 클라이언트의 실행과 구조만 남긴다.
 
-여름 생존 지도의 모바일 웹(PWA). **홈 지도 · 장소 상세 · 지금 급해요 · 제보하기** 4화면을
-라이브 백엔드(PostGIS 공간검색 API)에 연결한다. 디자인은 하이파이 핸드오프를 대상 스택으로 픽셀에 가깝게 재현.
-장소 상세의 미니맵도 실지도(비대화형 Kakao 미니뷰)이고, **휘발성 제보는 실제 POST**로 전송돼 상세의 "최근 제보"에 실시간 반영된다(P2 착수).
+Next.js 16 App Router 기반 PWA입니다. 브라우저는 같은 오리진의 `/api/*` Route Handler만 호출하고, 서버 측 BFF가 CloudFront를 거쳐 Spring Boot API에 연결합니다. 백엔드 주소와 인증 비밀은 브라우저 번들에 포함하지 않습니다.
 
-## 스택 (2026 기준)
+## 제공 기능
 
-| 영역 | 선택 | 이유 |
-|---|---|---|
-| 프레임워크 | **Next.js 16 (App Router) + React 19 + TypeScript** | 브리프 지정. 공유 링크·SEO·PWA에 유리 |
-| 스타일 | **Tailwind CSS v4** (`@theme` 토큰) | 디자인 토큰을 테마로 매핑, 픽셀 재현 |
-| 데이터 패칭 | **TanStack Query v5** | `queryKey=bounds` 캐싱으로 뷰포트 과호출 방지, P2 mutation 대비 |
-| 지도 | **react-kakao-maps-sdk** (`clusterer`) | `useKakaoLoader` + `MarkerClusterer`. 마커는 SVG data-URI |
-| PWA | **Serwist** (`@serwist/next`) | next-pwa 후계(공식 문서 권장). 매니페스트·SW·오프라인 셸 |
-| 아이콘 | 자체 `<Icon>` (프로토타입 `svgIcon` 재현) | 마커 data-URI와 UI가 동일 아이콘 시스템 공유 |
-| 폰트 | Pretendard Variable self-host (`next/font/local`) | 오프라인 셸·CSP 안정성 |
-
-> **빌드는 webpack 고정**(`next build --webpack`). Serwist가 webpack 플러그인 기반이라 Next 16 기본
-> Turbopack 과 함께 쓸 수 없다(2026 기준 Serwist+Turbopack 은 실험 단계). 상세는 `../TROUBLESHOOTING.md`.
-
-## 화면 ↔ API 매핑
-
-| 화면 | 데이터 | 프록시 |
-|---|---|---|
-| 홈 지도 마커 | 뷰포트 `bounds` 조회 | `GET /api/places?bounds=…` |
-| 바텀시트 리스트 | 현재 위치 `radius` 조회(distanceM 포함) | `GET /api/places?lat=&lng=&radius=` |
-| 지금 급해요 | 백엔드 `/recommendations`(survival_score 시나리오 가중·2단 랭킹, ADR-0008) 프록시 — matchScore·reason 접합 | `GET /api/urgent?scenario=&lat=&lng=` |
-| 장소 상세 | 단건 + 최근 제보 | `GET /api/places/{id}` · `GET /api/places/{id}/reports` |
-| 제보하기 | 휘발성 제보 쓰기(원 클라 IP를 x-client-ip로 보존 → 백엔드 per-client 레이트리밋) | `POST /api/reports` |
-
-- `distanceM` 은 radius/nearest 응답에만 존재 → 있으면 `364m`, 없으면 거리 숨김(상세는 현재 위치 기준 직선거리로 근사).
-- 도보 예상 = `max(1, round(distanceM / 67))`분.
-- 마커 링·상태 배지는 **survival_score 등급 3색**(초록 지금 좋음 / 노랑 보통 / 회색 정보 부족) — 응답 `survival.grade` 기준, 단일 원천 `lib/survival.ts` (P3, ADR-0007). 유효 제보 없는 장소가 회색.
-
-## 서버 프록시 (핵심 제약)
-
-백엔드 ALB 는 `http`(TLS 없음)이고 CORS 미설정이라 **브라우저가 직접 호출하면 mixed-content/CORS 로 차단**된다.
-→ 브라우저는 항상 **동일 오리진 `/api/*`** 만 호출하고, Next Route Handler(`app/api/**`)가 서버에서 ALB 로
-프록시한다. 백엔드 주소는 **서버 전용 env `GEUNEUL_API_BASE`**(NEXT_PUBLIC 아님)라 클라이언트 번들에 노출되지 않는다.
-
-## 환경변수 (`.env.local`, 커밋 금지)
-
-```bash
-GEUNEUL_API_BASE=http://<alb-host>            # 서버 전용. 브라우저 미노출.
-NEXT_PUBLIC_KAKAO_MAP_JS_KEY=<js-key>         # Kakao "JavaScript 키"(REST 키와 다름)
-GEUNEUL_PROXY_SECRET=<shared-secret>          # 서버 전용·선택. 백엔드와 동일 값이면 제보 레이트리밋이
-                                              # x-client-ip(실 클라 IP)를 신뢰해 XFF 위조 우회 차단. 미설정=최좌측 XFF 폴백.
-```
-
-- **Kakao JS 키**: 지오코딩용 REST 키와 다른 키. Kakao 콘솔 **앱 > 플랫폼 > Web** 에
-  `http://localhost:3000`(+ 배포 도메인) 등록 필요. JS SDK 특성상 브라우저 노출이 정상이며,
-  보안은 도메인 허용목록으로 건다.
-- 키가 없으면 **지도는 placeholder** 로 뜨고 리스트·급해요 등 데이터는 정상 동작한다. 키를 넣으면 실지도가 뜬다.
-
-## 개발
-
-```bash
-pnpm install
-pnpm dev          # http://localhost:3000 (webpack)
-pnpm typecheck    # tsc --noEmit
-pnpm lint         # eslint
-pnpm build        # 프로덕션 빌드(Serwist SW 번들)
-```
-
-## 배포 (Vercel — 자동)
-
-- **`main` push → Vercel 자동배포.** 프로젝트 `geuneul`(rootDirectory=`frontend`)이 GitHub 레포에 git-connected.
-  PR을 열면 Preview 배포도 자동으로 붙는다.
-- 빌드 설정은 `vercel.json`이 고정: `installCommand`(--ignore-scripts)·`buildCommand`(webpack) — 이유는 TS-006/TS-007.
-- env는 Vercel Production에 저장: `GEUNEUL_API_BASE`(서버 전용)·`NEXT_PUBLIC_KAKAO_MAP_JS_KEY`·`GEUNEUL_PROXY_SECRET`(서버 전용).
-- **Kakao 지도 도메인**: 콘솔 **[앱 키 > JavaScript 키 > JavaScript SDK 도메인]** 에 `https://geuneul.vercel.app` 등록됨.
-  ("제품 링크 관리 > 웹 도메인"은 카카오톡 공유용 — 지도와 무관하니 혼동 주의.)
-  등록 상태는 브라우저 없이 검증 가능: `curl -H "Referer: https://geuneul.vercel.app/" "https://dapi.kakao.com/v2/maps/sdk.js?appkey=<JS키>&autoload=false"` → SDK JS가 오면 정상, `AccessDeniedError`면 미등록.
+- Kakao 지도, 현재 위치, 장소·지역 검색, 카테고리 필터, 모바일 바텀시트와 데스크톱 3분할 지도
+- PostGIS 기반 주변 장소·시나리오 추천, 장소 상세, 화장실·그늘 경유 경로
+- 제보·후기·사진 업로드·반응·신고·관리자 검수
+- 카카오·구글 로그인, 프로필·팔로우·북마크·알림 센터
+- SSE 급증 알림, 선택형 Web Push, 오프라인 셸·설치 화면·TWA APK 배포
 
 ## 구조
 
-```
+```text
 app/
-  (shell)/          # 하단 3탭 셸 + 장소상세 오버레이 슬롯
-    page.tsx        # ① 홈 지도
-    urgent/         # ③ 지금 급해요
-    report/         # ④ 제보하기(POST 라이브, 사진 첨부만 P2)
-  api/              # 서버 프록시(places·nearest·[id]·[id]/reports·urgent·reports 쓰기)
-  manifest.ts       # PWA 매니페스트
-  sw.ts             # Serwist 서비스워커
-  ~offline/         # 오프라인 셸
-components/  map · place · urgent · shell · ui
-lib/         backend(서버) · api·queries(클라) · categories · geo · marker · kakao · context
+  (shell)/       지도, 급해요, 제보, 마이페이지와 오버레이 슬롯
+  api/           동일 오리진 BFF(Route Handlers)
+  install/       PWA·APK 설치 안내
+  sw.ts          Serwist 서비스 워커
+components/      map · place · urgent · notification · mypage · shell · ui
+lib/             API 클라이언트, React Query, 위치·선택 상태, 지도·PWA·push 유틸리티
+types/           API 경계 타입
 ```
 
-## 범위 (핸드오프 준수)
+지도 SDK는 브라우저 전용이므로 `MapCanvas`에서 SSR을 끕니다. 위치 권한은 이미 허용된 경우에만 자동 갱신하고, 그 외에는 최근 위치를 복원한 뒤 사용자가 현재 위치 버튼을 눌렀을 때 요청합니다.
 
-MVP = 4화면 레이아웃·인터랙션 + 라이브 조회 API 연동 + **휘발성 제보 실전송(P2 착수분)** + **survival_score 마커 3색·상태 배지(P3, ADR-0007)**.
-**나머지 P2/P3(후기·로그인·사진 첨부·AI 요약)은 자리만** 두고 구현하지 않는다.
+## 환경 변수
+
+`.env.local`에만 저장하며 커밋하지 않습니다.
+
+```bash
+# 서버 전용: CloudFront HTTPS 오리진
+GEUNEUL_API_BASE=https://<cloudfront-domain>
+
+# 브라우저 공개값: Kakao JavaScript SDK 도메인 허용목록으로 보호
+NEXT_PUBLIC_KAKAO_MAP_JS_KEY=<kakao-javascript-key>
+
+# 서버 전용: BFF → 백엔드 신뢰 헤더(선택)
+GEUNEUL_PROXY_SECRET=<shared-secret>
+```
+
+Kakao 콘솔의 **JavaScript SDK 도메인**에는 `http://localhost:3000`과 `https://geuneul.vercel.app`을 등록해야 합니다. 키가 없으면 지도만 안내 화면으로 대체되고, 빌드 자체는 정상 동작합니다.
+
+## 개발 및 검증
+
+```bash
+pnpm install
+pnpm dev          # http://localhost:3000, webpack
+pnpm typecheck
+pnpm lint
+pnpm build         # Serwist 서비스 워커까지 포함한 프로덕션 빌드
+```
+
+Serwist가 webpack 플러그인을 사용하므로 개발·빌드는 `--webpack`으로 고정돼 있습니다.
+
+## 배포
+
+`main` push는 Vercel Production 배포를 자동으로 시작합니다. GitHub Actions의 Frontend CI는 `typecheck → lint → build`를 별도로 검증합니다. Vercel에는 위 세 환경 변수를 Production 값으로 등록합니다.
+
+인증, API 계약, AWS 배포와 성능 근거는 각각 [루트 README](../README.md), [아키텍처](../docs/architecture.md), [배포 문서](../DEPLOY.md)를 기준으로 합니다.
