@@ -1,0 +1,102 @@
+{
+  "id": null,
+  "uid": "geuneul-ingestion",
+  "title": "그늘(Geuneul) — 인제스천 운영",
+  "description": "V20 실행 원장 기반 freshness, retry/dead-letter/backfill 가시성. 로컬 Prometheus/Grafana 전용(ADR-0030).",
+  "tags": ["geuneul", "ingestion", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-45d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "운영 원장 조회 가능",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "UNREADABLE", "color": "red" }, "1": { "text": "READABLE", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "geuneul_ingest_ledger_readable", "legendFormat": "ledger", "instant": true }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "소스별 최신 실행 상태",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "textMode": "name", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "targets": [
+        { "expr": "geuneul_ingest_last_run_status == 1", "legendFormat": "{{source}} · {{status}}", "instant": true }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "마지막 완전 성공 freshness",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "geuneul_ingest_last_success_age_seconds", "legendFormat": "{{source}}" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "미해결 집계형 dead-letter 레코드",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "targets": [
+        { "expr": "geuneul_ingest_open_dead_letter_records", "legendFormat": "{{source}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "최신 실행 적재/백필 건수",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "targets": [
+        { "expr": "geuneul_ingest_last_upserted_records", "legendFormat": "upsert · {{source}}" },
+        { "expr": "geuneul_ingest_last_backfilled_records", "legendFormat": "backfill · {{source}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "최신 실행 시간 / 누적 retry 실행",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": { "min": 0 }, "overrides": [] },
+      "targets": [
+        { "expr": "geuneul_ingest_last_duration_seconds", "legendFormat": "duration(s) · {{source}}" },
+        { "expr": "geuneul_ingest_retry_runs", "legendFormat": "retry runs · {{source}}" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "현재 firing 인제스천 경보 (로컬 Prometheus)",
+      "type": "table",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "geuneul-prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "targets": [
+        { "expr": "ALERTS{alertname=~\"GeuneulIngest.*|GeuneulScheduledLibraryIngestStale\",alertstate=\"firing\"}", "legendFormat": "{{alertname}} · {{source}}", "instant": true, "format": "table" }
+      ]
+    }
+  ]
+}

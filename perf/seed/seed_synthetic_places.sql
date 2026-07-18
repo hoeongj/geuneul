@@ -12,20 +12,49 @@
 -- 국지성을 재현한다.
 --
 -- 재현: docker exec -i <postgres-container> psql -U geuneul -d geuneul -v n=300000 -f - < seed_synthetic_places.sql
--- (psql -v n=<개수>로 규모 조절. 기본값은 아래 \if 블록에서 300000.)
+-- (psql -v n=<개수> -v data_seed=0.20260718 로 규모/seed 조절. 기본값은 아래 \if 블록.)
 
 \if :{?n}
 \else
   \set n 300000
 \endif
+\if :{?data_seed}
+\else
+  \set data_seed 0.20260718
+\endif
 
-\echo 합성 places 생성 시작 — n = :n
+SELECT setseed(:data_seed);
+\echo 합성 places 생성 시작 — n = :n, data_seed = :data_seed
 
 -- 기존 합성 데이터는 재실행 시 정리(idempotent 재현을 위해 delete-then-insert).
 DELETE FROM places WHERE source = 'synthetic_loadtest';
 
--- 주의: 카테고리/좌표의 random()은 파생 서브쿼리(t)의 SELECT 목록에서 행마다 평가한다.
+-- 주의: random()은 generate_series를 직접 읽는 MATERIALIZED CTE에서 행마다 한 번 평가한다.
 -- (CROSS JOIN LATERAL로 감싸면 outer 참조가 없어 플래너가 한 번만 평가·캐시해 전 행이 같은 값이 된다 — 실측으로 확인된 함정.)
+-- 수도권 여부도 행당 한 번만 뽑아 경도/위도가 서로 다른 분포를 선택하는 혼합 좌표를 만들지 않는다.
+WITH generated AS MATERIALIZED (
+    SELECT
+        gs,
+        random() < 0.7 AS is_metropolitan,
+        (ARRAY['TOILET','TOILET','TOILET','WATER','PARK','LIBRARY','CIVIC','UNDERGROUND','COOLING_SHELTER','ETC'])
+            [1 + floor(random() * 10)::int] AS category,
+        random() AS lng_random,
+        random() AS lat_random
+    FROM generate_series(1, :n) AS gs
+), randomized AS (
+    SELECT
+        gs,
+        category,
+        CASE WHEN is_metropolitan
+             THEN 126.6 + lng_random * 0.7
+             ELSE 124.6 + lng_random * 6.4
+        END AS lng,
+        CASE WHEN is_metropolitan
+             THEN 37.2 + lat_random * 0.55
+             ELSE 33.1 + lat_random * 5.5
+        END AS lat
+    FROM generated
+)
 INSERT INTO places (name, category, address, geom, source, source_external_id, geocoded, is_commercial, created_at, updated_at)
 SELECT
     'synthetic-' || t.gs AS name,
@@ -38,25 +67,7 @@ SELECT
     t.category IN ('CAFE', 'STUDY_CAFE'),
     now(),
     now()
-FROM (
-    SELECT
-        gs,
-        -- TOILET을 프로덕션처럼 최다수 카테고리로(실제 46,897건이 무더위쉼터 100건보다 압도적으로 많음).
-        (ARRAY['TOILET','TOILET','TOILET','WATER','PARK','LIBRARY','CIVIC','UNDERGROUND','COOLING_SHELTER','ETC'])
-            [1 + floor(random() * 10)::int] AS category,
-        CASE WHEN random() < 0.7
-             -- 수도권 bbox (서울·경기·인천 근사): lng 126.6~127.3, lat 37.2~37.75
-             THEN 126.6 + random() * 0.7
-             -- 전국 bbox: lng 124.6~131.0
-             ELSE 124.6 + random() * 6.4
-        END AS lng,
-        CASE WHEN random() < 0.7
-             THEN 37.2 + random() * 0.55
-             -- 전국 bbox: lat 33.1~38.6
-             ELSE 33.1 + random() * 5.5
-        END AS lat
-    FROM generate_series(1, :n) AS gs
-) t;
+FROM randomized t;
 
 \echo 합성 places 완료
 SELECT count(*) AS synthetic_places FROM places WHERE source = 'synthetic_loadtest';
@@ -69,18 +80,39 @@ INSERT INTO reports (place_id, report_type, status_value, comment, is_anonymous,
 SELECT
     p.id,
     (ARRAY['COOL','HOT','BUG','ODOR','SMOKE','SEAT_OK','CROWDED','WATER_OK','RESTROOM_CLEAN'])
-        [1 + floor(random() * 9)::int] AS report_type,
+        [1 + (get_byte(decode(md5(p.source_external_id || ':' || :'data_seed' || ':type'), 'hex'), 0) % 9)]
+        AS report_type,
     NULL,
     'synthetic-loadtest-report',
     true,
-    now() - (random() * interval '2 hours'),   -- freshness 버킷(0~1h/1~3h)이 섞이게
+    now() - ((get_byte(decode(md5(p.source_external_id || ':' || :'data_seed' || ':age'), 'hex'), 0)
+              / 255.0) * interval '2 hours'), -- freshness 버킷(0~1h/1~3h)이 결정적으로 섞이게
     now() + interval '2 hours'                  -- 아직 유효(만료 전) — 뷰 집계에 실제로 잡힘
 FROM (
-    SELECT id FROM places WHERE source = 'synthetic_loadtest' ORDER BY random() LIMIT LEAST(:n / 30, 15000)
+    SELECT id, source_external_id
+      FROM places
+     WHERE source = 'synthetic_loadtest'
+     ORDER BY md5(source_external_id || ':' || :'data_seed' || ':selection')
+     LIMIT LEAST(:n / 30, 15000)
 ) p;
 
 \echo 합성 reports 완료
 SELECT count(*) AS synthetic_reports FROM reports WHERE comment = 'synthetic-loadtest-report';
+
+-- 시간값은 실행 시각에 따라 달라지므로 fingerprint에서는 제외한다. 좌표·카테고리와 제보 대상·타입은 같은
+-- PostgreSQL/PostGIS 버전과 data_seed에서 동일해야 한다. 두 값을 실행 기록의 DATA_FINGERPRINT로 결합한다.
+SELECT md5(string_agg(
+           p.source_external_id || ':' || p.category || ':' || ST_X(p.geom)::text || ':' || ST_Y(p.geom)::text,
+           '|' ORDER BY p.source_external_id)) AS synthetic_place_fingerprint
+  FROM places p
+ WHERE p.source = 'synthetic_loadtest';
+
+SELECT md5(string_agg(
+           p.source_external_id || ':' || r.report_type,
+           '|' ORDER BY p.source_external_id)) AS synthetic_report_fingerprint
+  FROM reports r
+  JOIN places p ON p.id = r.place_id
+ WHERE r.comment = 'synthetic-loadtest-report';
 
 ANALYZE places;
 ANALYZE reports;

@@ -83,10 +83,10 @@ public class KakaoGeocodingClient implements GeocodingClient {
                     sleep(500L * attempt); // rate limit 백오프
                     continue;
                 }
-                log.warn("[geocode] 실패({}): {}", e.getStatusCode(), address);
+                log.warn("[geocode] 호출 실패 status={}", e.getStatusCode().value());
                 return Optional.empty();
             } catch (Exception e) {
-                log.warn("[geocode] 오류: {} — {}", address, e.getMessage());
+                log.warn("[geocode] 호출 오류 type={}", e.getClass().getSimpleName());
                 return Optional.empty();
             }
         }

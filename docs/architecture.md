@@ -62,14 +62,18 @@ flowchart TB
   ING["멱등 ingestion<br/>source + source_external_id 자연키<br/>배치 upsert · 스냅샷 이탈 행 soft-delete"]
   GEO["카카오 지오코딩<br/>WGS84 결측 좌표 보완 · 결과 저장(멱등)"]
   PG[("places · place_features<br/>geom(Point,4326) + GiST")]
+  LEDGER[("ingest_runs · ingest_dead_letters<br/>실행 상태 · retry 계보 · 집계 건수")]
+  OBS["Micrometer → Prometheus/Grafana<br/>freshness · 실패 · backfill<br/>(로컬 관측 프로필)"]
   UGC["UGC 2단<br/>reports(휘발성·expires_at) → freshness<br/>reviews(영구 평판) → reputation"]
 
   SRC --> ING --> GEO --> PG
+  ING --> LEDGER --> OBS
   UGC --> PG
 ```
 
 - **멱등(idempotent)** — 같은 소스를 두 번 넣어도 중복이 안 생긴다(`source + source_external_id` 자연키 upsert). 스냅샷에서 사라진 행은 soft-delete로 비활성화한다(ADR-0002).
 - **지오코딩 보완** — 공중화장실은 2025-02 이후 WGS84 좌표 미제공 → 카카오 로컬 API로 주소→좌표를 보완하고 결과를 저장(멱등·rate limit 회피).
+- **운영 원장** — one-off 수집이 끝나도 V20 원장에 상태·카운터·동일 입력 digest retry 계보가 남는다. 실패 원본/주소 대신 집계형 dead letter만 저장하고, 상시 API가 이를 읽어 로컬 Prometheus/Grafana에 freshness와 backfill을 노출한다. API 전량 수집과 원격 CSV SHA-256을 DB mutation 전에 검증해 부분 snapshot의 거짓 성공을 차단한다([ADR-0030](./adr/0030-ingest-operational-ledger-deterministic-load.md)).
 - **UGC 2단** — 제보(휘발성 상태, `expires_at`)는 `survival_score`의 freshness를, 후기(영구 평판)는 커뮤니티 콘텐츠를 굴린다. 시공간 랭킹은 DB(PostGIS/SQL)에서.
 
 ## 배포 (CI/CD · IaC)

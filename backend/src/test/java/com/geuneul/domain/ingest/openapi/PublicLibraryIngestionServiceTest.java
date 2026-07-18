@@ -14,9 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -102,7 +105,9 @@ class PublicLibraryIngestionServiceTest {
     @Test
     @DisplayName("deactivateStale=false(기본)면 soft-delete를 호출하지 않는다")
     void deactivateStaleDefaultsToFalse() {
-        when(apiClient.fetchPage(1, 500)).thenReturn(LibraryPage.empty());
+        when(apiClient.fetchPage(1, 500)).thenReturn(new LibraryPage(List.of(
+                record("도서관A", "주소A", "37.5", "126.9", "10")
+        ), 1));
 
         service.ingestAll(false);
 
@@ -136,5 +141,55 @@ class PublicLibraryIngestionServiceTest {
         assertThat(summary.totalFetched()).isEqualTo(2);
         verify(apiClient, times(1)).fetchPage(1, 500);
         verify(apiClient, never()).fetchPage(2, 500);
+    }
+
+    @Test
+    @DisplayName("reportedTotal 전 짧은 페이지는 mutation 전에 실패해 stale 비활성화를 막는다")
+    void rejectsIncompleteSnapshotBeforeMutation() {
+        when(apiClient.fetchPage(1, 500)).thenReturn(new LibraryPage(List.of(
+                record("도서관A", "주소A", "37.5", "126.9", "10")
+        ), 2));
+
+        assertThatThrownBy(() -> service.ingestAll(true))
+                .isInstanceOf(LibraryApiException.class)
+                .hasMessageContaining("reportedTotal");
+
+        verify(upsertRepository, never()).upsertPlaces(any(), anyString(), any(), anyBoolean());
+        verify(upsertRepository, never()).deactivateStale(anyString(), any());
+        verify(upsertRepository, never()).backfillFeatures(anyString(), any(), any());
+    }
+
+    @Test
+    @DisplayName("이름 또는 좌표·주소가 없어 식별 불가능한 행이 있으면 partial로 남기고 stale 비활성화를 막는다")
+    void unidentifiableRowsMakeSnapshotPartial() {
+        when(apiClient.fetchPage(1, 500)).thenReturn(new LibraryPage(List.of(
+                record("정상 도서관", "주소A", "37.5", "126.9", "10"),
+                record("", "주소B", "37.5", "126.9", "10"),
+                record("주소도 좌표도 없는 도서관", "", "", "", "10")
+        ), 3));
+
+        var summary = service.ingestAll(true);
+
+        assertThat(summary.complete()).isFalse();
+        assertThat(summary.skipped()).isEqualTo(2);
+        verify(upsertRepository, never()).deactivateStale(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("중간 페이지 API 장애는 어떤 DB mutation도 하기 전에 전체 실행을 실패시킨다")
+    void middlePageFailureStopsBeforeMutation() {
+        List<PublicLibraryRecord> firstPage = IntStream.range(0, 500)
+                .mapToObj(i -> record("도서관" + i, "서울 " + i, "37.5", "126.9", "10"))
+                .toList();
+        when(apiClient.fetchPage(1, 500)).thenReturn(new LibraryPage(firstPage, 501));
+        when(apiClient.fetchPage(2, 500)).thenThrow(new LibraryApiException(2, "HTTP 또는 응답 파싱 오류"));
+
+        assertThatThrownBy(() -> service.ingestAll(true))
+                .isInstanceOf(LibraryApiException.class)
+                .hasMessageContaining("page=2");
+
+        verify(upsertRepository, never()).upsertPlaces(any(), anyString(), any(), anyBoolean());
+        verify(upsertRepository, never()).deactivateStale(anyString(), any());
+        verify(upsertRepository, never()).backfillFeatures(anyString(), any(), any());
     }
 }

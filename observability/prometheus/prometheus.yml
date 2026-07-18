@@ -4,6 +4,9 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+rule_files:
+  - /etc/prometheus/ingest-alerts.yml
+
 scrape_configs:
   # 백엔드는 docker-compose 서비스가 아니라 호스트에서 bootRun으로 뜬다(그늘 로컬 개발 관례,
   # docker-compose.yml 상단 주석 참고) — host.docker.internal로 호스트 루프백에 접근한다.

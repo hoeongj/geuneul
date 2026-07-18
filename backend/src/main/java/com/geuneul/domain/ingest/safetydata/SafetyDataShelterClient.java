@@ -13,8 +13,7 @@ import org.springframework.web.client.RestClient;
  * <p><b>계약 검증 완료(2026-07-10, TS-027)</b> — safetydata 전용 서비스키로 실호출 확정(전국 60,297건).
  * safetydata는 data.go.kr과 <b>별개 포털·별개 서비스키</b>(datago 키로는 resultCode 30). 키는
  * {@code ${safetydata.service-key}}(env {@code SAFETYDATA_SERVICE_KEY})로만 주입한다 — 규칙 D, 하드코딩 금지.
- * 오류/빈 페이지는 예외 없이 {@link ShelterPage#empty()}로 처리해 호출부가 페이지네이션 종료 신호로 쓴다
- * ({@link SafetyDataShelterClient}은 도서관 클라이언트와 동일한 관대한 종료 규약).
+ * HTTP·파싱·비정상 응답은 값 비노출 예외로 실패시켜 부분 snapshot을 정상 종료로 오인하지 않는다.
  */
 @Component
 public class SafetyDataShelterClient implements SafetyDataApiClient {
@@ -53,23 +52,39 @@ public class SafetyDataShelterClient implements SafetyDataApiClient {
                     .body(ShelterApiResponse.class);
 
             if (body == null) {
-                return ShelterPage.empty();
+                throw new ShelterApiException(pageNo, "응답 envelope 누락");
             }
             ShelterApiResponse.Header header = body.header();
-            if (header == null || !"00".equals(header.resultCode())) {
-                if (header != null) {
-                    log.warn("[shelter-api] 비정상 응답 page={} resultCode={} msg={}",
-                            pageNo, header.resultCode(), header.resultMsg());
-                }
+            String resultCode = safeResultCode(header == null ? null : header.resultCode());
+            if ("03".equals(resultCode)) {
                 return ShelterPage.empty();
+            }
+            if (!"00".equals(resultCode)) {
+                log.warn("[shelter-api] 비정상 응답 page={} resultCode={}", pageNo, resultCode);
+                throw new ShelterApiException(pageNo, "비정상 resultCode=" + resultCode);
             }
             if (body.body() == null) {
-                return ShelterPage.empty();
+                throw new ShelterApiException(pageNo, "응답 body 누락");
             }
-            return new ShelterPage(body.body(), body.totalCount() == null ? 0 : body.totalCount());
+            int totalCount = body.totalCount() == null ? -1 : body.totalCount();
+            if (totalCount < 0 || (totalCount == 0 && !body.body().isEmpty())) {
+                throw new ShelterApiException(pageNo, "유효하지 않은 totalCount");
+            }
+            return new ShelterPage(body.body(), totalCount);
+        } catch (ShelterApiException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("[shelter-api] 호출 실패 page={}: {}", pageNo, e.getMessage());
-            return ShelterPage.empty();
+            // RestClient 예외 URI에는 serviceKey가 포함될 수 있어 타입 외 값을 로그에 남기지 않는다.
+            log.warn("[shelter-api] 호출 실패 page={} type={}", pageNo, e.getClass().getSimpleName());
+            throw new ShelterApiException(pageNo, "HTTP 또는 응답 파싱 오류");
         }
+    }
+
+    private static String safeResultCode(String value) {
+        if (value == null || value.isBlank()) {
+            return "missing";
+        }
+        String trimmed = value.trim();
+        return trimmed.matches("[0-9]{2,4}") ? trimmed : "invalid";
     }
 }

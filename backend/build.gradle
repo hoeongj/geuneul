@@ -20,9 +20,9 @@ repositories {
 
 dependencyManagement {
     imports {
-        // Spring Boot 4 플랫폼은 standalone testcontainers 아티팩트 버전을 관리하지 않음
-        // → BOM으로 postgresql/junit-jupiter 버전을 고정한다(1.20.x 라인). (mp와 동일)
-        mavenBom 'org.testcontainers:testcontainers-bom:1.20.6'
+        // Spring Boot 4 플랫폼은 standalone Testcontainers 아티팩트 버전을 관리하지 않음.
+        // Docker Engine 29가 거부하는 API 1.32를 쓰는 1.x 대신 2.x BOM으로 모듈 버전을 고정한다(TS-009).
+        mavenBom 'org.testcontainers:testcontainers-bom:2.0.5'
         // AWS SDK v2 BOM — S3 presigned URL(사진 업로드, P2). Boot 4가 AWS SDK 버전을 관리하지 않아 직접 고정
         // (2026-07 시점 최신 안정 라인). spring-cloud-aws는 과설계(S3Presigner 하나만 필요) — 배제.
         mavenBom 'software.amazon.awssdk:bom:2.46.6'
@@ -88,8 +88,8 @@ dependencies {
     // 프로덕션 동등 백킹서비스(PostGIS/Redis)로 통합테스트 — H2가 놓치는 dialect/타입 drift 포착.
     // Docker 없으면 자동 skip(disabledWithoutDocker) → 로컬 오프라인 `./gradlew test`도 green.
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

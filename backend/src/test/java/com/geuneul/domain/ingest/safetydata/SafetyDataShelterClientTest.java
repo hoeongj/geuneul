@@ -68,12 +68,30 @@ class SafetyDataShelterClientTest {
     }
 
     @Test
-    @DisplayName("HTTP 오류·비정상 resultCode는 예외 없이 빈 페이지로 처리한다")
-    void errorResponseYieldsEmptyPage() {
+    @DisplayName("HTTP 오류는 서비스키를 노출하지 않는 예외로 전파한다")
+    void errorResponseFailsClosedWithoutLeakingKey() {
         server.expect(requestTo(containsString("DSSP-IF-10942")))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThat(client.fetchPage(1, 1000).items()).isEmpty();
+        assertThatThrownBy(() -> client.fetchPage(1, 1000))
+                .isInstanceOf(ShelterApiException.class)
+                .hasMessageContaining("page=1")
+                .hasMessageNotContaining("test-key");
+    }
+
+    @Test
+    @DisplayName("외부 resultCode와 메시지는 숫자 계약 밖 값을 로그·예외에 복제하지 않는다")
+    void sanitizesUnexpectedResultCode() {
+        server.expect(requestTo(containsString("DSSP-IF-10942")))
+                .andRespond(withSuccess(
+                        "{\"header\":{\"resultCode\":\"test-key\",\"resultMsg\":\"body-secret\"}}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.fetchPage(1, 1000))
+                .isInstanceOf(ShelterApiException.class)
+                .hasMessageContaining("resultCode=invalid")
+                .hasMessageNotContaining("test-key")
+                .hasMessageNotContaining("body-secret");
     }
 
     @Test

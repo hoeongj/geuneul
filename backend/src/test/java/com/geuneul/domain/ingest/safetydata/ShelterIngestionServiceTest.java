@@ -16,7 +16,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -88,14 +90,18 @@ class ShelterIngestionServiceTest {
     }
 
     @Test
-    @DisplayName("부분 수집(totalCount 미달)이면 deactivate-stale을 건너뛴다(사고 방지)")
-    void skipsDeactivateStaleWhenIncomplete() {
+    @DisplayName("부분 수집(totalCount 미달)은 mutation 전에 실패한다")
+    void rejectsIncompleteSnapshotBeforeMutation() {
         when(apiClient.fetchPage(1, 1000)).thenReturn(new ShelterPage(List.of(
                 shelter(1, "쉼터A", "서울 A", 37.5, 127.0, 1)), 100)); // totalCount=100인데 1건만 → incomplete
 
-        service.ingestAll(true);
+        assertThatThrownBy(() -> service.ingestAll(true))
+                .isInstanceOf(ShelterApiException.class)
+                .hasMessageContaining("reportedTotal");
 
+        verify(upsertRepository, never()).upsertPlaces(any(), anyString(), any(), anyBoolean());
         verify(upsertRepository, never()).deactivateStale(anyString(), any());
+        verify(upsertRepository, never()).backfillFeatures(anyString(), any(), any());
     }
 
     @Test
@@ -114,5 +120,19 @@ class ShelterIngestionServiceTest {
         verify(upsertRepository).upsertPlaces(captor.capture(), eq(SOURCE), eq(PlaceCategory.COOLING_SHELTER), eq(true));
         assertThat(captor.getValue()).hasSize(1);
         assertThat(captor.getValue().get(0).lat()).isEqualTo(37.5);
+    }
+
+    @Test
+    @DisplayName("이름은 있지만 좌표와 주소가 모두 없는 쉼터는 skipped인 PARTIAL이며 stale 비활성화를 막는다")
+    void invalidLocationIsSkipped() {
+        when(apiClient.fetchPage(1, 1000)).thenReturn(new ShelterPage(List.of(
+                shelter(1, "위치없는쉼터", "", null, null, 1)), 1));
+
+        var summary = service.ingestAll(true);
+
+        assertThat(summary.complete()).isFalse();
+        assertThat(summary.skipped()).isEqualTo(1);
+        assertThat(com.geuneul.domain.ingest.IngestRunResult.from(summary).partial()).isTrue();
+        verify(upsertRepository, never()).deactivateStale(anyString(), any());
     }
 }

@@ -67,10 +67,11 @@ public class StoreIngestionService {
     }
 
     public record StoreIngestSummary(int totalFetched, int classified, int upserted, int geocoded,
-                                     int geocodeFailed, Map<PlaceCategory, Integer> byCategory) {
+                                     int geocodeFailed, int featuresBackfilled,
+                                     Map<PlaceCategory, Integer> byCategory) {
 
         static StoreIngestSummary zero() {
-            return new StoreIngestSummary(0, 0, 0, 0, 0, new EnumMap<>(PlaceCategory.class));
+            return new StoreIngestSummary(0, 0, 0, 0, 0, 0, new EnumMap<>(PlaceCategory.class));
         }
 
         StoreIngestSummary plus(StoreIngestSummary o) {
@@ -79,7 +80,8 @@ public class StoreIngestionService {
             o.byCategory.forEach((k, v) -> merged.merge(k, v, Integer::sum));
             return new StoreIngestSummary(
                     totalFetched + o.totalFetched, classified + o.classified, upserted + o.upserted,
-                    geocoded + o.geocoded, geocodeFailed + o.geocodeFailed, merged);
+                    geocoded + o.geocoded, geocodeFailed + o.geocodeFailed,
+                    featuresBackfilled + o.featuresBackfilled, merged);
         }
     }
 
@@ -128,6 +130,7 @@ public class StoreIngestionService {
         int upserted = 0;
         int geocoded = 0;
         int geocodeFailed = 0;
+        int featuresBackfilled = 0;
         Map<PlaceCategory, Integer> byCategory = new EnumMap<>(PlaceCategory.class);
 
         for (Map.Entry<String, PlaceCategory> target : StoreCategoryMapper.targetCodes().entrySet()) {
@@ -144,15 +147,16 @@ public class StoreIngestionService {
                 if (r.bizesNm() == null || r.bizesNm().isBlank()) {
                     continue;
                 }
-                classified++;
                 String address = hasText(r.rdnmAdr()) ? r.rdnmAdr() : r.lnoAdr();
                 String externalId = hasText(r.bizesId())
                         ? r.bizesId() : IngestIds.fallbackId(r.bizesNm(), address);
 
                 if (validCoords(r.lat(), r.lon())) {
                     rows.add(new PlaceRow(externalId, r.bizesNm(), address, r.lat(), r.lon()));
+                    classified++;
                 } else if (hasText(address)) {
                     candidates.add(new GeocodeCandidate(externalId, r.bizesNm(), address));
+                    classified++;
                 }
             }
 
@@ -168,29 +172,47 @@ public class StoreIngestionService {
             Set<String> allIds = new HashSet<>();
             rows.forEach(row -> allIds.add(row.externalId()));
             candidates.forEach(c -> allIds.add(c.externalId()));
-            upsertRepository.backfillFeatures(sourceKey, allIds, DefaultFeatureBackfill.forCategory(cat));
+            featuresBackfilled += upsertRepository.backfillFeatures(
+                    sourceKey, allIds, DefaultFeatureBackfill.forCategory(cat));
         }
 
         StoreIngestSummary summary = new StoreIngestSummary(totalFetched, classified, upserted, geocoded,
-                geocodeFailed, byCategory);
-        log.debug("[store-api] region=({},{},{}m) fetched={} upserted={} geocoded={} geocodeFailed={} byCategory={}",
-                lat, lng, radiusMeters, totalFetched, upserted, geocoded, geocodeFailed, byCategory);
+                geocodeFailed, featuresBackfilled, byCategory);
+        log.debug("[store-api] region=({},{},{}m) fetched={} upserted={} geocoded={} geocodeFailed={} "
+                        + "featuresBackfilled={} byCategory={}",
+                lat, lng, radiusMeters, totalFetched, upserted, geocoded, geocodeFailed,
+                featuresBackfilled, byCategory);
         return summary;
     }
 
     private List<StoreRecord> fetchAll(double lat, double lng, int radiusMeters, String indsSclsCd) {
         List<StoreRecord> all = new ArrayList<>();
+        Integer reportedTotal = null;
         for (int pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
             StorePage page = apiClient.searchByRadius(lat, lng, radiusMeters, indsSclsCd, pageNo, PAGE_SIZE);
+            if (reportedTotal == null) {
+                reportedTotal = page.totalCount();
+            } else if (page.totalCount() != 0 && page.totalCount() != reportedTotal) {
+                throw new StoreApiException(pageNo, "페이지 간 totalCount 불일치");
+            }
             if (page.items().isEmpty()) {
-                break;
+                if (reportedTotal == 0 && all.isEmpty()) {
+                    return List.of();
+                }
+                throw new StoreApiException(pageNo, "reportedTotal 도달 전 NODATA");
+            }
+            if (reportedTotal <= 0 || all.size() + page.items().size() > reportedTotal) {
+                throw new StoreApiException(pageNo, "수집 건수와 reportedTotal 불일치");
             }
             all.addAll(page.items());
+            if (all.size() == reportedTotal) {
+                return List.copyOf(all);
+            }
             if (page.items().size() < PAGE_SIZE) {
-                break;
+                throw new StoreApiException(pageNo, "reportedTotal 도달 전 짧은 페이지");
             }
         }
-        return all;
+        throw new StoreApiException(MAX_PAGES, "안전 상한 내 reportedTotal 미도달");
     }
 
     private record GeocodeOutcome(int upserted, int geocoded, int failed) {
