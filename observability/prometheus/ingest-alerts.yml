@@ -1,0 +1,38 @@
+groups:
+  - name: geuneul-ingestion
+    rules:
+      - alert: GeuneulIngestLedgerUnreadable
+        expr: geuneul_ingest_ledger_readable == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "인제스천 운영 원장을 읽을 수 없음"
+          description: "API 프로세스가 DB 원장 snapshot을 읽지 못한 상태가 2분 이상 지속되었습니다."
+
+      - alert: GeuneulIngestRunNeedsAttention
+        expr: geuneul_ingest_last_run_status{status=~"FAILED|PARTIAL"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "인제스천 최신 실행이 {{ $labels.status }}"
+          description: "source={{ $labels.source }} 최신 실행과 집계형 dead letter를 확인하세요."
+
+      - alert: GeuneulIngestDeadLettersOpen
+        expr: geuneul_ingest_open_dead_letter_records > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "미해결 인제스천 레코드 존재"
+          description: "source={{ $labels.source }} unresolved aggregate records={{ $value }}"
+
+      - alert: GeuneulScheduledLibraryIngestStale
+        expr: (geuneul_ingest_has_success{source="library_api"} == 0) or (geuneul_ingest_last_success_age_seconds{source="library_api"} > 3024000)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "월간 도서관 동기화 freshness 초과"
+          description: "완전 성공 이력이 없거나 마지막 완전 성공 후 35일을 넘었습니다. 스케줄 실행 원장과 ECS 종료 상태를 확인하세요."

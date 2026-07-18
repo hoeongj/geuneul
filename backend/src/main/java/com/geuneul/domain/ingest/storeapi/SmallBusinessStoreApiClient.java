@@ -60,25 +60,40 @@ public class SmallBusinessStoreApiClient implements StoreApiClient {
                     .body(StoreApiResponse.class);
 
             if (body == null) {
-                return StorePage.empty();
+                throw new StoreApiException(pageNo, "응답 envelope 누락");
             }
             StoreApiResponse.Header header = body.header();
-            if (header == null || !"00".equals(header.resultCode())) {
-                // "03" = NODATA(정상적 빈 결과)라 소음 로그를 남기지 않는다. 그 외만 warn.
-                if (header != null && !"03".equals(header.resultCode())) {
-                    log.warn("[store-api] 비정상 응답 page={} resultCode={} msg={}",
-                            pageNo, header.resultCode(), header.resultMsg());
-                }
+            String resultCode = safeResultCode(header == null ? null : header.resultCode());
+            if ("03".equals(resultCode)) {
                 return StorePage.empty();
+            }
+            if (!"00".equals(resultCode)) {
+                log.warn("[store-api] 비정상 응답 page={} resultCode={}", pageNo, resultCode);
+                throw new StoreApiException(pageNo, "비정상 resultCode=" + resultCode);
             }
             StoreApiResponse.Body data = body.body();
             if (data == null || data.items() == null) {
-                return StorePage.empty();
+                throw new StoreApiException(pageNo, "응답 body/items 누락");
             }
-            return new StorePage(data.items(), data.totalCount() == null ? 0 : data.totalCount());
+            int totalCount = data.totalCount() == null ? -1 : data.totalCount();
+            if (totalCount < 0 || (totalCount == 0 && !data.items().isEmpty())) {
+                throw new StoreApiException(pageNo, "유효하지 않은 totalCount");
+            }
+            return new StorePage(data.items(), totalCount);
+        } catch (StoreApiException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("[store-api] 호출 실패 page={}: {}", pageNo, e.getMessage());
-            return StorePage.empty();
+            // RestClient 예외 URI에는 serviceKey가 포함될 수 있어 타입 외 값을 로그에 남기지 않는다.
+            log.warn("[store-api] 호출 실패 page={} type={}", pageNo, e.getClass().getSimpleName());
+            throw new StoreApiException(pageNo, "HTTP 또는 응답 파싱 오류");
         }
+    }
+
+    private static String safeResultCode(String value) {
+        if (value == null || value.isBlank()) {
+            return "missing";
+        }
+        String trimmed = value.trim();
+        return trimmed.matches("[0-9]{2,4}") ? trimmed : "invalid";
     }
 }

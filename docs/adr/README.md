@@ -34,3 +34,4 @@
 | [0027](./0027-shade-waypoint-route.md) | 그늘 경유 경로(C4) — 쿨링쉼터/실내 경유지 1곳(F3 화장실 경로와 대칭), 자체 가중 라우팅 없이 PostGIS corridor로 경유지 선택 | 승인 |
 | [0028](./0028-alb-cloudfront-origin-lockdown.md) | ALB를 CloudFront origin-facing prefix list로 격리 — 인터넷 직접 HTTP 노출 제거, BFF도 CloudFront(HTTPS) 경유로 전환 | 승인·라이브 |
 | [0029](./0029-rds-encryption-backup-snapshot-restore.md) | RDS 저장 암호화 + 자동 백업 — 스냅샷을 KMS 암호화 복사 후 복원(무손실), 프리티어 retention 1일 | 승인·라이브 |
+| [0030](./0030-ingest-operational-ledger-deterministic-load.md) | 인제스천 운영 원장 + 결정적 공간 부하 입력 — retry/dead-letter/freshness와 seed 기반 JSON summary | 승인(로컬 실 PostGIS·30만 부하 검증, 운영 적용 전) |

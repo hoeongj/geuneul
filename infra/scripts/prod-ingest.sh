@@ -5,14 +5,36 @@
 # 서비스와 동일한 태스크 정의(이미지·SSM 비밀·SG)를 재사용하므로 별도 인프라가 필요 없다.
 #
 # 사용법:
-#   ./prod-ingest.sh <source> <csv-url> [charset]
-#   ./prod-ingest.sh public_toilet  https://github.com/ghdtjdwn/geuneul/releases/download/data-v1/toilets.csv MS949
-#   ./prod-ingest.sh cooling_shelter https://.../shelters.csv UTF-8
+#   ./prod-ingest.sh <source> <csv-url> <sha256> [charset]
+#   ./prod-ingest.sh public_toilet  https://github.com/.../toilets.csv <64자리-sha256> MS949
+#   ./prod-ingest.sh cooling_shelter https://.../shelters.csv <64자리-sha256> UTF-8
 set -euo pipefail
 
 SOURCE="${1:?source 필요 (cooling_shelter | public_toilet)}"
 URL="${2:?csv url 필요}"
-CHARSET="${3:-UTF-8}"
+SHA256="${3:?csv sha256 필요}"
+CHARSET="${4:-UTF-8}"
+
+case "$SOURCE" in
+  cooling_shelter|public_toilet) ;;
+  *) echo "지원하지 않는 source: $SOURCE" >&2; exit 2 ;;
+esac
+case "$CHARSET" in
+  UTF-8|MS949|EUC-KR) ;;
+  *) echo "지원하지 않는 charset: $CHARSET" >&2; exit 2 ;;
+esac
+if [[ ! "$URL" =~ ^https:// ]]; then
+  echo "csv url은 HTTPS여야 합니다" >&2
+  exit 2
+fi
+case "$URL" in
+  *[[:space:]]*|*\"*|*\\*|*\?*|*\#*) echo "csv url에 허용되지 않는 문자가 있습니다" >&2; exit 2 ;;
+esac
+SHA256="$(printf '%s' "$SHA256" | tr '[:upper:]' '[:lower:]')"
+if [[ ! "$SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "sha256은 64자리 hex여야 합니다" >&2
+  exit 2
+fi
 
 REGION=ap-northeast-2
 CLUSTER=geuneul
@@ -30,6 +52,10 @@ echo "    subnet=$SUBNET sg=$SG"
 # 키는 이 셸의 환경변수로만 전달 — 스크립트/레포에 하드코딩 금지(규칙 D).
 ENV_OVERRIDE=""
 if [ -n "${KAKAO_REST_API_KEY:-}" ]; then
+  if [[ ! "$KAKAO_REST_API_KEY" =~ ^[A-Za-z0-9._~-]+$ ]]; then
+    echo "KAKAO_REST_API_KEY 형식이 안전하지 않습니다" >&2
+    exit 2
+  fi
   ENV_OVERRIDE=",\"environment\":[{\"name\":\"KAKAO_REST_API_KEY\",\"value\":\"$KAKAO_REST_API_KEY\"}]"
   echo "==> KAKAO_REST_API_KEY 주입됨 (지오코딩 활성)"
 fi
@@ -40,7 +66,7 @@ TASK_ARN=$(aws ecs run-task --region $REGION \
   --task-definition geuneul \
   --launch-type FARGATE \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SG],assignPublicIp=ENABLED}" \
-  --overrides "{\"containerOverrides\":[{\"name\":\"geuneul\",\"command\":[\"--ingest.source=$SOURCE\",\"--ingest.url=$URL\",\"--ingest.charset=$CHARSET\",\"--ingest.exit-after=true\",\"--server.port=8081\"]$ENV_OVERRIDE}]}" \
+  --overrides "{\"containerOverrides\":[{\"name\":\"geuneul\",\"command\":[\"--ingest.source=$SOURCE\",\"--ingest.url=$URL\",\"--ingest.sha256=$SHA256\",\"--ingest.charset=$CHARSET\",\"--ingest.exit-after=true\",\"--server.port=8081\"]$ENV_OVERRIDE}]}" \
   --query 'tasks[0].taskArn' --output text)
 echo "    task=$TASK_ARN"
 

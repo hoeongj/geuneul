@@ -42,6 +42,7 @@ services:
     profiles: ["observability"]
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/ingest-alerts.yml:/etc/prometheus/ingest-alerts.yml:ro
     ports:
       - "127.0.0.1:9090:9090"
     extra_hosts:

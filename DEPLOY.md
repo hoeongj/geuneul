@@ -52,13 +52,16 @@ RDS는 프라이빗 서브넷이라 로컬에서 직접 접속할 수 없다(의
 # 1) 데이터 스냅샷을 URL로 접근 가능하게 (GitHub Release 자산 권장 — 레포 비대화 방지 + 버저닝)
 gh release create data-v1 shelters.csv toilets.csv --title "공공데이터 스냅샷 v1" --notes "무더위쉼터/공중화장실 표준데이터"
 
-# 2) one-off task 실행 (다운로드→파싱→멱등 upsert→종료)
-./infra/scripts/prod-ingest.sh cooling_shelter <shelters.csv 릴리즈 URL> UTF-8
+# 2) 릴리즈 자산의 SHA-256을 고정한 뒤 one-off task 실행
+# macOS: shasum -a 256 shelters.csv / Linux: sha256sum shelters.csv
+./infra/scripts/prod-ingest.sh cooling_shelter <shelters.csv 릴리즈 URL> <sha256> UTF-8
 # 공중화장실은 59,768행 전량 좌표 미제공 → 카카오 지오코딩 필수(ADR-0003).
 # REST 키는 셸 환경변수로만 전달(스크립트가 태스크에 주입 — 레포 하드코딩 금지):
-KAKAO_REST_API_KEY=<카카오 REST 키> ./infra/scripts/prod-ingest.sh public_toilet <toilets.csv 릴리즈 URL> MS949
+KAKAO_REST_API_KEY=<카카오 REST 키> ./infra/scripts/prod-ingest.sh public_toilet <toilets.csv 릴리즈 URL> <sha256> MS949
 ```
-멱등(ON CONFLICT upsert)이므로 재실행·데이터 갱신 모두 같은 명령이다. 도서관(오픈API 전량 수집)은 EventBridge Scheduler가 월 1회 무인 동기화한다(ADR-0011).
+태스크는 다운로드한 바이트의 SHA-256이 기대값과 다르면 DB 변경 전에 실패한다. 멱등(ON CONFLICT upsert)이므로
+같은 digest 재실행·검증된 새 스냅샷 갱신 모두 같은 명령이다. 도서관(오픈API 전량 수집)은 EventBridge Scheduler가
+월 1회 무인 동기화한다(ADR-0011).
 
 ### 데이터 갱신 기준
 

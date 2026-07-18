@@ -14,9 +14,9 @@
 [![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger&logoColor=black)](https://d2pedv974beobb.cloudfront.net/swagger-ui.html)
 
 [![Public Data](https://img.shields.io/badge/공공데이터-150k%2B_POI-2f9e44)](#데이터--etl-멱등-적재--지오코딩)
-[![Radius p95](https://img.shields.io/badge/반경검색_p95-~1.4s-17957e)](./docs/adr/0012-k6-load-explain-index-tuning.md)
-[![Coverage](https://img.shields.io/badge/JaCoCo-71%25-17957e)](#기술-스택)
-[![ADR](https://img.shields.io/badge/ADR-29-informational)](./docs/adr/README.md)
+[![Radius p95](https://img.shields.io/badge/반경검색_p95-1.35s_로컬30만-17957e)](./docs/adr/0030-ingest-operational-ledger-deterministic-load.md)
+[![Coverage](https://img.shields.io/badge/JaCoCo-86.8%25-17957e)](#기술-스택)
+[![ADR](https://img.shields.io/badge/ADR-30-informational)](./docs/adr/README.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](./LICENSE)
 
 [![CI](https://github.com/ghdtjdwn/geuneul/actions/workflows/ci.yml/badge.svg)](https://github.com/ghdtjdwn/geuneul/actions/workflows/ci.yml)
@@ -49,8 +49,8 @@
 
 ## 핵심 설계
 
-- 공간 검색은 DB 레이어에서 — 반경 `ST_DWithin` · 최근접 kNN `<->` · bounds 조회를 PostGIS GiST 인덱스로 처리한다. `EXPLAIN`으로 인덱스 사용을 실증하고, k6 부하테스트로 반경 검색 p95를 2.68s→~1.4s로 튜닝했다(병목이 GiST가 아니라 CPU임을 측정으로 확정, [ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)).
-- 멱등 ETL + 지오코딩 — `source + source_external_id` 자연키로 재실행해도 중복 없는 배치 upsert. 무더위쉼터 60,297 · 공중화장실 52,334 · 도서관 3,551 · 상권 카페/스터디카페 등 전국 표준데이터를 그대로 적재하고, WGS84 결측 좌표는 카카오 지오코딩으로 보완한다(결과 저장·rate limit 회피).
+- 공간 검색은 DB 레이어에서 — 반경 `ST_DWithin` · 최근접 kNN `<->` · bounds 조회를 PostGIS GiST 인덱스로 처리한다. 프로덕션 저부하 k6로 반경 p95를 2.68s→~1.4s로 튜닝했고([ADR-0012](./docs/adr/0012-k6-load-explain-index-tuning.md)), 현재 코드는 fingerprint를 고정한 로컬 30만 places에서 p95 1.35s·실패율 0%를 재검증했다(조건이 달라 개선률은 직접 비교하지 않음, [ADR-0030](./docs/adr/0030-ingest-operational-ledger-deterministic-load.md)).
+- 멱등 ETL + 지오코딩 — `source + source_external_id` 자연키로 재실행해도 중복 없는 배치 upsert. 무더위쉼터 60,297 · 공중화장실 52,334 · 도서관 3,551 · 상권 카페/스터디카페 등 전국 표준데이터를 그대로 적재하고, WGS84 결측 좌표는 카카오 지오코딩으로 보완한다. V20 실행 원장은 retry/dead-letter/backfill/freshness를 원본 payload 없이 추적하며, API 부분 응답과 원격 CSV digest 불일치는 DB 변경 전에 실패시킨다([ADR-0030](./docs/adr/0030-ingest-operational-ledger-deterministic-load.md)).
 - 실시간 UGC 시공간 스코어링 — 제보(휘발성 상태)/후기(영구 평판) 2단 UGC를 신뢰도 가중으로 `survival_score`에 집계. 제보 급증은 Postgres `LISTEN/NOTIFY` → 멀티 인스턴스 팬아웃 → SSE로, 관심 장소 알림은 `INSERT … RETURNING`으로 정확히 1회 푸시한다([ADR-0016](./docs/adr/0016-realtime-report-surge-listen-notify-sse.md)·[0026](./docs/adr/0026-bookmark-status-change-notification.md)).
 
 > 스택: Spring Boot 4 · Java 21 · PostgreSQL+PostGIS · Redis · AWS ECS Fargate · Terraform · Next.js(PWA)
@@ -85,7 +85,7 @@ freshness 버킷:  0~1h=1.0 | 1~3h=0.8 | 오늘=0.6 | 이번주=0.3 | 그 외=0.
 
 ## 데이터 · ETL (멱등 적재 + 지오코딩)
 
-전국 공공 표준데이터를 멱등(idempotent) 하게 적재한다 — 같은 소스를 두 번 넣어도 `source + source_external_id` 자연키 upsert라 중복이 없고, 스냅샷에서 사라진 행은 soft-delete로 비활성화된다. 공중화장실은 2025-02 이후 WGS84 좌표 미제공 → 카카오 로컬 API로 주소→좌표를 보완하고 결과를 저장한다(멱등·rate limit 회피). 상세 흐름은 [docs/architecture.md](./docs/architecture.md#데이터--etl).
+전국 공공 표준데이터를 멱등(idempotent) 하게 적재한다 — 같은 소스를 두 번 넣어도 `source + source_external_id` 자연키 upsert라 중복이 없고, 스냅샷에서 사라진 행은 soft-delete로 비활성화된다. 공중화장실은 2025-02 이후 WGS84 좌표 미제공 → 카카오 로컬 API로 주소→좌표를 보완하고 결과를 저장한다(멱등·rate limit 회피). one-off 실행 결과는 DB 원장에 남아 상시 API의 로컬 Prometheus/Grafana 대시보드에서 freshness·부분 실패·재실행 계보를 확인할 수 있다. 상세 흐름은 [docs/architecture.md](./docs/architecture.md#데이터--etl).
 
 ## 빠른 시작 (로컬)
 
@@ -143,13 +143,13 @@ GET /alerts/stream            # text/event-stream (SSE)
 | Backend | Spring Boot 4 · Java 21 · PostgreSQL + PostGIS(Hibernate Spatial + JTS) · Flyway · Redis |
 | Frontend | Next.js 16(App Router) · TypeScript · Tailwind v4 · TanStack Query · Kakao Maps · Serwist(PWA) — `frontend/` ([README](./frontend/README.md)) |
 | Infra | AWS ECS Fargate · RDS · Terraform · GitHub Actions(OIDC) · ECR · ALB · Vercel |
-| Test/Ops | Testcontainers(실 PostGIS) · JaCoCo(line 71%·게이트 70%) · k6 부하테스트 · gitleaks · Swagger |
+| Test/Ops | Testcontainers 2(실 PostGIS, 506 tests·skip 0) · JaCoCo(line 86.8%·게이트 70%) · DB/요청 seed 고정 k6+JSON summary · Prometheus/Grafana · gitleaks · Swagger |
 
 ## 문서
 
 - 프로젝트 스펙(목표·범위·ERD·API): [`docs/SPEC.md`](./docs/SPEC.md)
 - 전체 기능·구현 방식·기술 스택: [`docs/FEATURES.md`](./docs/FEATURES.md)
-- 아키텍처·데모: [`docs/architecture.md`](./docs/architecture.md) · 의사결정 기록(ADR): [`docs/adr/`](./docs/adr) (0001–0029, [색인](./docs/adr/README.md))
+- 아키텍처·데모: [`docs/architecture.md`](./docs/architecture.md) · 의사결정 기록(ADR): [`docs/adr/`](./docs/adr) (0001–0030, [색인](./docs/adr/README.md))
 - 배포(AWS): [`DEPLOY.md`](./DEPLOY.md)
 - 디자인·API 계약 레퍼런스: [`docs/design-brief.md`](./docs/design-brief.md) · 프론트엔드: [`frontend/README.md`](./frontend/README.md)
 

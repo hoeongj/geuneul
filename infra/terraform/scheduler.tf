@@ -109,6 +109,7 @@ resource "aws_scheduler_schedule" "public_data_sync" {
           # server.port=8081: 서비스 태스크(8080, ALB 대상)와 겹치지 않는 one-off 전용 포트(prod-ingest.sh 관례).
           Command = [
             "--ingest.source=library",
+            "--ingest.trigger=scheduled",
             "--ingest.deactivate-stale=true",
             "--ingest.exit-after=true",
             "--server.port=8081"

@@ -165,7 +165,8 @@ public class IngestionService {
                         // geocode()는 계약상 오류 시 Optional.empty()지만, 예상외 런타임 예외가 새면
                         // 이 태스크가 조용히 사라져 카운터 합(geocoded+reused+failed)이 안 맞는다 → failed로 집계.
                         failed.incrementAndGet();
-                        log.warn("[ingest] 지오코딩 태스크 실패(예상외) addr={}", c.address(), e);
+                        log.warn("[ingest] 지오코딩 태스크 실패(예상외) type={}",
+                                e.getClass().getSimpleName());
                     }
                 });
             }

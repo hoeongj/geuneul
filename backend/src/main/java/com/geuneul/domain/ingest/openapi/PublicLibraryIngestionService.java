@@ -53,7 +53,8 @@ public class PublicLibraryIngestionService {
         this.geocodingClient = geocodingClient;
     }
 
-    public record LibraryIngestSummary(int totalFetched, int pages, int upserted, int geocoded,
+    public record LibraryIngestSummary(int totalFetched, int reportedTotal, boolean complete,
+                                       int pages, int upserted, int skipped, int geocoded,
                                        int geocodeReused, int geocodeFailed,
                                        int deactivated, int featuresBackfilled) {
     }
@@ -65,15 +66,18 @@ public class PublicLibraryIngestionService {
      *                        (IngestionService의 안전 규약과 동일하게 opt-in).
      */
     public LibraryIngestSummary ingestAll(boolean deactivateStale) {
-        List<PublicLibraryRecord> all = fetchAll();
+        Fetch fetch = fetchAll();
+        List<PublicLibraryRecord> all = fetch.records();
 
         List<PlaceRow> rows = new ArrayList<>();
         List<GeocodeCandidate> needGeocode = new ArrayList<>();
         Set<String> studyOkIds = new HashSet<>();
         Set<String> currentExternalIds = new HashSet<>();
+        int skipped = 0;
 
         for (PublicLibraryRecord r : all) {
             if (r.lbrryNm() == null || r.lbrryNm().isBlank()) {
+                skipped++;
                 continue;
             }
             String externalId = IngestIds.fallbackId(r.lbrryNm(), r.rdnmadr());
@@ -90,43 +94,71 @@ public class PublicLibraryIngestionService {
                 rows.add(new PlaceRow(externalId, r.lbrryNm(), r.rdnmadr(), lat, lng));
             } else if (r.rdnmadr() != null && !r.rdnmadr().isBlank()) {
                 needGeocode.add(new GeocodeCandidate(externalId, r.lbrryNm(), r.rdnmadr()));
+            } else {
+                skipped++;
             }
         }
 
         int upserted = upsertRepository.upsertPlaces(rows, SOURCE_KEY, PlaceCategory.LIBRARY, false);
         GeocodeOutcome outcome = geocodeAndUpsert(needGeocode);
 
-        int deactivated = deactivateStale
+        // 전량 응답이어도 식별 불가능 행이 있으면 현재 external-id 집합이 불완전하다.
+        boolean complete = skipped == 0;
+        int deactivated = (deactivateStale && complete)
                 ? upsertRepository.deactivateStale(SOURCE_KEY, currentExternalIds)
                 : 0;
+        if (deactivateStale && !complete) {
+            log.warn("[library-api] 식별 불가능 행 {}건 → deactivateStale 건너뜀", skipped);
+        }
 
         // ADR-0006: 열람좌석수(seatCo)>0인 도서관만 study_ok/quiet — 레코드 조건부라 DefaultFeatureBackfill(카테고리 균일)을 쓰지 않는다.
         int featuresBackfilled = upsertRepository.backfillFeatures(SOURCE_KEY, studyOkIds,
                 List.of(new FeatureSpec("study_ok", "true", 0.6), new FeatureSpec("quiet", "true", 0.5)));
 
-        LibraryIngestSummary summary = new LibraryIngestSummary(all.size(), Math.min(MAX_PAGES, pagesFor(all.size())),
-                upserted + outcome.upserted(), outcome.geocoded(), outcome.reused(), outcome.failed(),
-                deactivated, featuresBackfilled);
-        log.info("[library-api] fetched={} upserted={} geocoded={} geocodeReused={} geocodeFailed={} "
-                        + "deactivated={} featuresBackfilled={}",
-                summary.totalFetched(), summary.upserted(), summary.geocoded(), summary.geocodeReused(),
-                summary.geocodeFailed(), summary.deactivated(), summary.featuresBackfilled());
+        LibraryIngestSummary summary = new LibraryIngestSummary(all.size(), fetch.reportedTotal(), complete,
+                fetch.pages(), upserted + outcome.upserted(), skipped, outcome.geocoded(), outcome.reused(),
+                outcome.failed(), deactivated, featuresBackfilled);
+        log.info("[library-api] fetched={} reportedTotal={} complete={} upserted={} skipped={} geocoded={} "
+                        + "geocodeReused={} geocodeFailed={} deactivated={} featuresBackfilled={}",
+                summary.totalFetched(), summary.reportedTotal(), summary.complete(), summary.upserted(),
+                summary.skipped(), summary.geocoded(), summary.geocodeReused(), summary.geocodeFailed(),
+                summary.deactivated(), summary.featuresBackfilled());
         return summary;
     }
 
-    private List<PublicLibraryRecord> fetchAll() {
+    private record Fetch(List<PublicLibraryRecord> records, int reportedTotal, int pages) {
+    }
+
+    private Fetch fetchAll() {
         List<PublicLibraryRecord> all = new ArrayList<>();
+        Integer reportedTotal = null;
+        int pages = 0;
         for (int pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
             LibraryPage page = apiClient.fetchPage(pageNo, PAGE_SIZE);
+            if (reportedTotal == null) {
+                reportedTotal = page.totalCount();
+                if (reportedTotal <= 0) {
+                    throw new LibraryApiException(pageNo, "빈 전량 스냅샷은 안전하게 확정할 수 없음");
+                }
+            } else if (page.totalCount() != 0 && page.totalCount() != reportedTotal) {
+                throw new LibraryApiException(pageNo, "페이지 간 totalCount 불일치");
+            }
             if (page.items().isEmpty()) {
-                break; // 정상 종료(NODATA_ERROR)든 오류든 — 더 이상 가져올 페이지가 없다는 뜻으로 취급.
+                throw new LibraryApiException(pageNo, "reportedTotal 도달 전 NODATA");
+            }
+            if (all.size() + page.items().size() > reportedTotal) {
+                throw new LibraryApiException(pageNo, "수집 건수가 reportedTotal을 초과함");
             }
             all.addAll(page.items());
+            pages++;
+            if (all.size() == reportedTotal) {
+                return new Fetch(List.copyOf(all), reportedTotal, pages);
+            }
             if (page.items().size() < PAGE_SIZE) {
-                break; // 마지막 페이지(요청보다 적게 옴)
+                throw new LibraryApiException(pageNo, "reportedTotal 도달 전 짧은 페이지");
             }
         }
-        return all;
+        throw new LibraryApiException(MAX_PAGES, "안전 상한 내 reportedTotal 미도달");
     }
 
     private record GeocodeOutcome(int upserted, int geocoded, int reused, int failed) {
@@ -159,10 +191,6 @@ public class PublicLibraryIngestionService {
         }
         int upserted = upsertRepository.upsertPlaces(geocodedRows, SOURCE_KEY, PlaceCategory.LIBRARY, true);
         return new GeocodeOutcome(upserted, geocodedRows.size(), reused, failed);
-    }
-
-    private static int pagesFor(int totalFetched) {
-        return (int) Math.ceil(totalFetched / (double) PAGE_SIZE);
     }
 
     private static Double parseDouble(String value) {

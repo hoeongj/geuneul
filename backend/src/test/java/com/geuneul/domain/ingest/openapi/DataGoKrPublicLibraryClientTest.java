@@ -13,6 +13,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -78,13 +79,31 @@ class DataGoKrPublicLibraryClientTest {
     }
 
     @Test
-    @DisplayName("HTTP 오류는 예외를 던지지 않고 빈 페이지로 처리한다")
-    void errorResponseYieldsEmptyPage() {
+    @DisplayName("HTTP 오류는 서비스키를 노출하지 않는 예외로 전파해 부분 스냅샷을 차단한다")
+    void errorResponseFailsClosedWithoutLeakingKey() {
         server.expect(requestTo(containsString("/openapi/tn_pubr_public_lbrry_api")))
                 .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators
                         .withStatus(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThat(client.fetchPage(1, 500).items()).isEmpty();
+        assertThatThrownBy(() -> client.fetchPage(1, 500))
+                .isInstanceOf(LibraryApiException.class)
+                .hasMessageContaining("page=1")
+                .hasMessageNotContaining("test-key");
+    }
+
+    @Test
+    @DisplayName("외부 resultCode는 숫자 계약 밖 값을 로그·예외에 복제하지 않는다")
+    void sanitizesUnexpectedResultCode() {
+        server.expect(requestTo(containsString("/openapi/tn_pubr_public_lbrry_api")))
+                .andRespond(withSuccess(
+                        "{\"response\":{\"header\":{\"resultCode\":\"test-key\",\"resultMsg\":\"body-secret\"}}}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.fetchPage(1, 500))
+                .isInstanceOf(LibraryApiException.class)
+                .hasMessageContaining("resultCode=invalid")
+                .hasMessageNotContaining("test-key")
+                .hasMessageNotContaining("body-secret");
     }
 
     @Test

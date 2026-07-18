@@ -11,9 +11,12 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -79,9 +82,13 @@ class StoreIngestionServiceTest {
                 store("S-1", "그늘카페", "I21201", "서울 동작구 A", 126.95, 37.50)), 1));
         when(apiClient.searchByRadius(37.5, 127.0, 500, "R10202", 1, 1000)).thenReturn(new StorePage(List.of(
                 store("S-2", "상도독서실", "R10202", "서울 동작구 B", 126.96, 37.51)), 1));
+        when(upsertRepository.backfillFeatures(eq("store_study_cafe_api"), any(),
+                eq(com.geuneul.domain.ingest.DefaultFeatureBackfill.forCategory(PlaceCategory.STUDY_CAFE))))
+                .thenReturn(3);
 
-        service.ingestRegion(37.5, 127.0, 500);
+        var summary = service.ingestRegion(37.5, 127.0, 500);
 
+        assertThat(summary.featuresBackfilled()).isEqualTo(3);
         verify(upsertRepository).backfillFeatures(eq("store_study_cafe_api"), any(),
                 eq(com.geuneul.domain.ingest.DefaultFeatureBackfill.forCategory(PlaceCategory.STUDY_CAFE)));
         verify(upsertRepository).backfillFeatures(eq("store_cafe_api"), any(), eq(List.of()));
@@ -126,5 +133,38 @@ class StoreIngestionServiceTest {
         // 셀마다 카페 1건씩 → 2셀이면 CAFE 집계 2. (upsert 반환값은 목이라 0이지만 byCategory는 rows.size 누적)
         assertThat(summary.byCategory()).containsEntry(PlaceCategory.CAFE, 2);
         verify(apiClient, atLeast(2)).searchByRadius(anyDouble(), anyDouble(), eq(1500), eq("I21201"), eq(1), eq(1000));
+    }
+
+    @Test
+    @DisplayName("reportedTotal 전 두 번째 페이지 장애는 해당 업종을 mutation 전에 실패시킨다")
+    void secondPageFailureStopsBeforeMutation() {
+        List<StoreRecord> firstPage = IntStream.range(0, 1000)
+                .mapToObj(i -> store("S-" + i, "상가" + i, "R10202", "서울 " + i, 126.95, 37.5))
+                .toList();
+        when(apiClient.searchByRadius(anyDouble(), anyDouble(), anyInt(), anyString(), eq(1), eq(1000)))
+                .thenReturn(new StorePage(firstPage, 1001));
+        when(apiClient.searchByRadius(anyDouble(), anyDouble(), anyInt(), anyString(), eq(2), eq(1000)))
+                .thenThrow(new StoreApiException(2, "HTTP 또는 응답 파싱 오류"));
+
+        assertThatThrownBy(() -> service.ingestRegion(37.5, 127.0, 500))
+                .isInstanceOf(StoreApiException.class)
+                .hasMessageContaining("page=2");
+
+        verify(upsertRepository, never()).upsertPlaces(any(), anyString(), any(), anyBoolean());
+        verify(upsertRepository, never()).backfillFeatures(anyString(), any(), any());
+    }
+
+    @Test
+    @DisplayName("이름은 있지만 좌표와 주소가 모두 없는 상가는 skipped인 PARTIAL 결과가 된다")
+    void invalidLocationIsSkipped() {
+        when(apiClient.searchByRadius(37.5, 127.0, 500, "R10202", 1, 1000)).thenReturn(new StorePage(List.of(
+                store("S-1", "위치없는 독서실", "R10202", "", null, null)), 1));
+
+        var summary = service.ingestRegion(37.5, 127.0, 500);
+
+        assertThat(summary.totalFetched()).isEqualTo(1);
+        assertThat(summary.classified()).isZero();
+        assertThat(com.geuneul.domain.ingest.IngestRunResult.from(summary).partial()).isTrue();
+        verify(geocodingClient, never()).geocode(anyString());
     }
 }

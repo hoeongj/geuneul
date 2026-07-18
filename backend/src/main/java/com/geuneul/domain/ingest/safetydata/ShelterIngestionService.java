@@ -56,7 +56,7 @@ public class ShelterIngestionService {
         this.geocodingClient = geocodingClient;
     }
 
-    public record ShelterIngestSummary(int totalFetched, int reportedTotal, boolean complete, int upserted,
+    public record ShelterIngestSummary(int totalFetched, int reportedTotal, boolean complete, int upserted, int skipped,
                                        int geocoded, int geocodeReused, int geocodeFailed,
                                        int deactivated, int airConditionedBackfilled) {
     }
@@ -72,12 +72,19 @@ public class ShelterIngestionService {
         List<GeocodeCandidate> needGeocode = new ArrayList<>();
         Set<String> airConditionedIds = new HashSet<>();
         Set<String> currentExternalIds = new HashSet<>();
+        int skipped = 0;
 
         for (ShelterRecord r : all) {
             if (r.rstrNm() == null || r.rstrNm().isBlank()) {
+                skipped++;
                 continue;
             }
             String address = hasText(r.rnDtlAdres()) ? r.rnDtlAdres() : r.dtlAdres();
+            boolean validCoords = validCoords(r.la(), r.lo());
+            if (!validCoords && !hasText(address)) {
+                skipped++;
+                continue;
+            }
             String externalId = r.rstrFcltyNo() != null
                     ? "shelter:" + r.rstrFcltyNo()
                     : IngestIds.fallbackId(r.rstrNm(), address);
@@ -86,9 +93,9 @@ public class ShelterIngestionService {
                 airConditionedIds.add(externalId);
             }
 
-            if (validCoords(r.la(), r.lo())) {
+            if (validCoords) {
                 rows.add(new PlaceRow(externalId, r.rstrNm(), address, r.la(), r.lo()));
-            } else if (hasText(address)) {
+            } else {
                 needGeocode.add(new GeocodeCandidate(externalId, r.rstrNm(), address));
             }
         }
@@ -97,52 +104,59 @@ public class ShelterIngestionService {
         GeocodeOutcome outcome = geocodeAndUpsert(needGeocode);
 
         // 부분 수집일 때 deactivateStale을 켜면 안 덮인 멀쩡한 쉼터가 비활성화되는 사고 → complete일 때만.
-        int deactivated = (deactivateStale && fetch.complete())
+        boolean complete = skipped == 0;
+        int deactivated = (deactivateStale && complete)
                 ? upsertRepository.deactivateStale(SOURCE_KEY, currentExternalIds)
                 : 0;
-        if (deactivateStale && !fetch.complete()) {
-            log.warn("[shelter-api] deactivateStale 요청됐으나 전량 수집 미완료(fetched={} reportedTotal={}) → 건너뜀(사고 방지)",
-                    all.size(), fetch.reportedTotal());
+        if (deactivateStale && !complete) {
+            log.warn("[shelter-api] 식별 불가능 행 {}건 → deactivateStale 건너뜀", skipped);
         }
 
         int airBackfilled = upsertRepository.backfillFeatures(SOURCE_KEY, airConditionedIds,
                 List.of(new FeatureSpec("air_conditioned", "true", 0.6)));
 
         ShelterIngestSummary summary = new ShelterIngestSummary(all.size(), fetch.reportedTotal(),
-                fetch.complete(), upserted + outcome.upserted(), outcome.geocoded(), outcome.reused(),
+                complete, upserted + outcome.upserted(), skipped, outcome.geocoded(), outcome.reused(),
                 outcome.failed(), deactivated, airBackfilled);
-        log.info("[shelter-api] fetched={} reportedTotal={} complete={} upserted={} geocoded={} geocodeReused={} "
+        log.info("[shelter-api] fetched={} reportedTotal={} complete={} upserted={} skipped={} geocoded={} geocodeReused={} "
                         + "geocodeFailed={} deactivated={} airConditionedBackfilled={}",
                 summary.totalFetched(), summary.reportedTotal(), summary.complete(), summary.upserted(),
-                summary.geocoded(), summary.geocodeReused(), summary.geocodeFailed(), summary.deactivated(),
+                summary.skipped(), summary.geocoded(), summary.geocodeReused(), summary.geocodeFailed(), summary.deactivated(),
                 summary.airConditionedBackfilled());
         return summary;
     }
 
-    private record Fetch(List<ShelterRecord> records, int reportedTotal, boolean complete) {
+    private record Fetch(List<ShelterRecord> records, int reportedTotal) {
     }
 
     private Fetch fetchAll() {
         List<ShelterRecord> all = new ArrayList<>();
-        int reportedTotal = 0;
-        boolean sawEmptyOrError = false;
+        Integer reportedTotal = null;
         for (int pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
             ShelterPage page = apiClient.fetchPage(pageNo, PAGE_SIZE);
-            if (pageNo == 1) {
+            if (reportedTotal == null) {
                 reportedTotal = page.totalCount();
+                if (reportedTotal <= 0) {
+                    throw new ShelterApiException(pageNo, "빈 전량 snapshot은 안전하게 확정할 수 없음");
+                }
+            } else if (page.totalCount() != 0 && page.totalCount() != reportedTotal) {
+                throw new ShelterApiException(pageNo, "페이지 간 totalCount 불일치");
             }
             if (page.items().isEmpty()) {
-                sawEmptyOrError = true; // 오류/NODATA — 전량 수집을 보장할 수 없다
-                break;
+                throw new ShelterApiException(pageNo, "reportedTotal 도달 전 NODATA");
+            }
+            if (all.size() + page.items().size() > reportedTotal) {
+                throw new ShelterApiException(pageNo, "수집 건수가 reportedTotal을 초과함");
             }
             all.addAll(page.items());
+            if (all.size() == reportedTotal) {
+                return new Fetch(List.copyOf(all), reportedTotal);
+            }
             if (page.items().size() < PAGE_SIZE) {
-                break; // 마지막 페이지(요청보다 적게 옴) — 정상 종료
+                throw new ShelterApiException(pageNo, "reportedTotal 도달 전 짧은 페이지");
             }
         }
-        // complete = 첫 페이지 totalCount만큼(이상) 모았고, 중간에 빈/오류 페이지로 끊기지 않았다.
-        boolean complete = reportedTotal > 0 && all.size() >= reportedTotal && !sawEmptyOrError;
-        return new Fetch(all, reportedTotal, complete);
+        throw new ShelterApiException(MAX_PAGES, "안전 상한 내 reportedTotal 미도달");
     }
 
     private record GeocodeOutcome(int upserted, int geocoded, int reused, int failed) {
